@@ -1,0 +1,19 @@
+{
+    "files.associations": {
+        "bitset": "cpp",
+        "functional": "cpp",
+        "istream": "cpp",
+        "streambuf": "cpp",
+        "variant": "cpp",
+        "format": "cpp",
+        "__tree": "cpp",
+        "algorithm": "cpp",
+        "deque": "cpp",
+        "memory_resource": "cpp",
+        "iterator": "cpp",
+        "locale": "cpp",
+        "random": "cpp",
+        "memory": "cpp",
+        "optional": "cpp"
+    }
+}
