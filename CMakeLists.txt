@@ -146,7 +146,17 @@ if(VAMP_BUILD_CPP_DEMO)
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(vamp_rrtc_example PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
   endif()
-endif()
+
+  add_executable(vamp_task_constraint_example scripts/cpp/task_constraint_example.cc)
+  target_link_libraries(vamp_task_constraint_example PRIVATE vamp_cpp)
+  
+  # Disable strict warnings for demos to maintain compatibility
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(vamp_task_constraint_example PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
+  endif()
+
+
+  endif()
 
 # OMPL integration demo
 if(VAMP_BUILD_OMPL_DEMO)

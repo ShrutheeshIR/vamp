@@ -944,141 +944,107 @@ namespace vamp::robots
             output.first.emplace_back(
                 sphere_environment_get_collisions<decltype(x[0])>(environment, y[96], y[97], y[98], y[99]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[100], y[101], y[102], y[103]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[100], y[101], y[102], y[103]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[104], y[105], y[106], y[107]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[104], y[105], y[106], y[107]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[108], y[109], y[110], y[111]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[108], y[109], y[110], y[111]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[112], y[113], y[114], y[115]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[112], y[113], y[114], y[115]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[116], y[117], y[118], y[119]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[116], y[117], y[118], y[119]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[120], y[121], y[122], y[123]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[120], y[121], y[122], y[123]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[124], y[125], y[126], y[127]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[124], y[125], y[126], y[127]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[128], y[129], y[130], y[131]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[128], y[129], y[130], y[131]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[132], y[133], y[134], y[135]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[132], y[133], y[134], y[135]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[136], y[137], y[138], y[139]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[136], y[137], y[138], y[139]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[140], y[141], y[142], y[143]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[140], y[141], y[142], y[143]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[144], y[145], y[146], y[147]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[144], y[145], y[146], y[147]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[148], y[149], y[150], y[151]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[148], y[149], y[150], y[151]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[152], y[153], y[154], y[155]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[152], y[153], y[154], y[155]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[156], y[157], y[158], y[159]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[156], y[157], y[158], y[159]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[160], y[161], y[162], y[163]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[160], y[161], y[162], y[163]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[164], y[165], y[166], y[167]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[164], y[165], y[166], y[167]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[168], y[169], y[170], y[171]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[168], y[169], y[170], y[171]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[172], y[173], y[174], y[175]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[172], y[173], y[174], y[175]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[176], y[177], y[178], y[179]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[176], y[177], y[178], y[179]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[180], y[181], y[182], y[183]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[180], y[181], y[182], y[183]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[184], y[185], y[186], y[187]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[184], y[185], y[186], y[187]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[188], y[189], y[190], y[191]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[188], y[189], y[190], y[191]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[192], y[193], y[194], y[195]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[192], y[193], y[194], y[195]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[196], y[197], y[198], y[199]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[196], y[197], y[198], y[199]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[200], y[201], y[202], y[203]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[200], y[201], y[202], y[203]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[204], y[205], y[206], y[207]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[204], y[205], y[206], y[207]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[208], y[209], y[210], y[211]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[208], y[209], y[210], y[211]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[212], y[213], y[214], y[215]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[212], y[213], y[214], y[215]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[216], y[217], y[218], y[219]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[216], y[217], y[218], y[219]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[220], y[221], y[222], y[223]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[220], y[221], y[222], y[223]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[224], y[225], y[226], y[227]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[224], y[225], y[226], y[227]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[228], y[229], y[230], y[231]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[228], y[229], y[230], y[231]));
 
-            output.first.emplace_back(
-                sphere_environment_get_collisions<decltype(x[0])>(
-                    environment, y[232], y[233], y[234], y[235]));
+            output.first.emplace_back(sphere_environment_get_collisions<decltype(x[0])>(
+                environment, y[232], y[233], y[234], y[235]));
 
             if (sphere_sphere_self_collision<decltype(x[0])>(
                     y[0], y[1], y[2], y[3], y[68], y[69], y[70], y[71]))
@@ -15549,6 +15515,364 @@ namespace vamp::robots
             y[8] = 0.70710678118623 * v[12] + 0.707106781186865 * v[35];
 
             return to_isometry(y.data());
+        }
+
+        inline static auto
+        jacobian(const std::array<float, 7> &x) noexcept -> Eigen::Matrix<float, 6, Eigen::Dynamic>
+        {
+            std::array<float, 52> v;
+            std::array<float, 42> y;
+
+            v[0] = cos(x[1]);
+            v[1] = cos(x[2]);
+            v[2] = cos(x[3]);
+            v[3] = cos(x[4]);
+            v[4] = cos(x[5]);
+            y[34] = cos(x[6]);
+            v[5] = sin(x[5]);
+            v[6] = -v[5];
+            y[33] = sin(x[6]);
+            v[7] = 4.89663865010925e-12 * y[33];
+            v[8] = v[4] * y[34] + v[6] * v[7];
+            v[9] = sin(x[4]);
+            v[10] = -v[9];
+            v[11] = 4.89663865010925e-12 * v[5];
+            v[12] = 4.89663865010925e-12 * v[4];
+            v[13] = v[11] * y[34] + v[12] * v[7] + -1. * y[33];
+            v[14] = v[3] * v[8] + v[10] * v[13];
+            v[15] = sin(x[3]);
+            v[16] = -v[15];
+            v[17] = 4.89663865010925e-12 * v[9];
+            v[18] = 4.89663865010925e-12 * v[3];
+            y[27] = v[5] * y[34] + v[4] * v[7] + 4.89663865010925e-12 * y[33];
+            v[19] = v[17] * v[8] + v[18] * v[13] + y[27];
+            v[20] = v[2] * v[14] + v[16] * v[19];
+            v[21] = sin(x[2]);
+            v[22] = -v[21];
+            v[23] = 4.89663865010925e-12 * v[15];
+            v[24] = 4.89663865010925e-12 * v[2];
+            v[9] = -1. * v[9];
+            v[25] = -1. * v[3];
+            y[21] = v[9] * v[8] + v[25] * v[13] + 4.89663865010925e-12 * y[27];
+            v[26] = v[23] * v[14] + v[24] * v[19] + -1. * y[21];
+            v[27] = v[1] * v[20] + v[22] * v[26];
+            v[28] = sin(x[1]);
+            v[29] = -v[28];
+            v[30] = 4.89663865010925e-12 * v[21];
+            v[31] = 4.89663865010925e-12 * v[1];
+            y[15] = v[15] * v[14] + v[2] * v[19] + 4.89663865010925e-12 * y[21];
+            v[32] = v[30] * v[20] + v[31] * v[26] + -1. * y[15];
+            v[33] = 4.89663865010925e-12 * v[28];
+            v[34] = 0.088 * v[4];
+            v[35] = 0.088 * v[11];
+            v[36] = -0.0825 + v[3] * v[34] + v[10] * v[35];
+            v[37] = 0.088 * v[5];
+            v[38] = 0.384 + v[17] * v[34] + v[18] * v[35] + v[37];
+            v[39] = 0.0825 + v[2] * v[36] + v[16] * v[38];
+            v[37] = v[9] * v[34] + v[25] * v[35] + 4.89663865010925e-12 * v[37];
+            v[40] = v[23] * v[36] + v[24] * v[38] + -1. * v[37];
+            v[41] = v[1] * v[39] + v[22] * v[40];
+            v[42] = 4.89663865010925e-12 * v[0];
+            v[37] = v[15] * v[36] + v[2] * v[38] + 4.89663865010925e-12 * v[37];
+            v[43] = -0.316 + v[30] * v[39] + v[31] * v[40] + -1. * v[37];
+            v[37] = -(
+                v[33] * v[41] + v[42] * v[43] + v[21] * v[39] + v[1] * v[40] + 4.89663865010925e-12 * v[37]);
+            y[9] = v[21] * v[20] + v[1] * v[26] + 4.89663865010925e-12 * y[15];
+            v[44] = v[0] * v[41] + v[29] * v[43];
+            y[0] = (v[0] * v[27] + v[29] * v[32]) * v[37] + (v[33] * v[27] + v[42] * v[32] + y[9]) * v[44];
+            v[45] = -y[33];
+            v[46] = 4.89663865010925e-12 * y[34];
+            v[47] = v[4] * v[45] + v[6] * v[46];
+            v[11] = v[11] * v[45] + v[12] * v[46] + -1. * y[34];
+            v[48] = v[3] * v[47] + v[10] * v[11];
+            y[28] = v[5] * v[45] + v[4] * v[46] + 4.89663865010925e-12 * y[34];
+            v[45] = v[17] * v[47] + v[18] * v[11] + y[28];
+            v[5] = v[2] * v[48] + v[16] * v[45];
+            y[22] = v[9] * v[47] + v[25] * v[11] + 4.89663865010925e-12 * y[28];
+            v[49] = v[23] * v[48] + v[24] * v[45] + -1. * y[22];
+            v[50] = v[1] * v[5] + v[22] * v[49];
+            y[16] = v[15] * v[48] + v[2] * v[45] + 4.89663865010925e-12 * y[22];
+            v[51] = v[30] * v[5] + v[31] * v[49] + -1. * y[16];
+            y[10] = v[21] * v[5] + v[1] * v[49] + 4.89663865010925e-12 * y[16];
+            y[1] = (v[0] * v[50] + v[29] * v[51]) * v[37] + (v[33] * v[50] + v[42] * v[51] + y[10]) * v[44];
+            v[6] = -1. * v[6];
+            v[12] = -4.89663865010925e-12 + -1. * v[12];
+            v[10] = v[3] * v[6] + v[10] * v[12];
+            y[29] = 2.39770700697438e-23 + -1. * v[4];
+            v[18] = v[17] * v[6] + v[18] * v[12] + y[29];
+            v[16] = v[2] * v[10] + v[16] * v[18];
+            y[23] = v[9] * v[6] + v[25] * v[12] + 4.89663865010925e-12 * y[29];
+            v[24] = v[23] * v[10] + v[24] * v[18] + -1. * y[23];
+            v[22] = v[1] * v[16] + v[22] * v[24];
+            y[17] = v[15] * v[10] + v[2] * v[18] + 4.89663865010925e-12 * y[23];
+            v[31] = v[30] * v[16] + v[31] * v[24] + -1. * y[17];
+            y[11] = v[21] * v[16] + v[1] * v[24] + 4.89663865010925e-12 * y[17];
+            y[2] = (v[0] * v[22] + v[29] * v[31]) * v[37] + (v[33] * v[22] + v[42] * v[31] + y[11]) * v[44];
+            v[28] = -1. * v[28];
+            v[0] = -1. * v[0];
+            y[3] = v[28] * v[27] + v[0] * v[32] + 4.89663865010925e-12 * y[9];
+            y[4] = v[28] * v[50] + v[0] * v[51] + 4.89663865010925e-12 * y[10];
+            y[5] = v[28] * v[22] + v[0] * v[31] + 4.89663865010925e-12 * y[11];
+            v[43] = -v[43];
+            y[6] = v[27] * v[43] + v[32] * v[41];
+            y[7] = v[50] * v[43] + v[51] * v[41];
+            y[8] = v[22] * v[43] + v[31] * v[41];
+            v[40] = -v[40];
+            y[12] = v[20] * v[40] + v[26] * v[39];
+            y[13] = v[5] * v[40] + v[49] * v[39];
+            y[14] = v[16] * v[40] + v[24] * v[39];
+            v[38] = -v[38];
+            y[18] = v[14] * v[38] + v[19] * v[36];
+            y[19] = v[48] * v[38] + v[45] * v[36];
+            y[20] = v[10] * v[38] + v[18] * v[36];
+            v[35] = -v[35];
+            y[24] = v[8] * v[35] + v[13] * v[34];
+            y[25] = v[47] * v[35] + v[11] * v[34];
+            y[26] = v[6] * v[35] + v[12] * v[34];
+            y[30] = 0.088 * v[7];
+            y[31] = 0.088 * v[46];
+            // dependent variables without operations
+            y[32] = -0.088;
+            y[35] = 4.89663865010925e-12;
+            y[36] = 0.;
+            y[37] = 0.;
+            y[38] = 0.;
+            y[39] = 0.;
+            y[40] = 0.;
+            y[41] = 1.;
+
+            return to_matrix(y.data(), 6, 42 / 6);
+        }
+
+        inline static auto jacobian_eefk(
+            const std::array<float, 7> &x,
+            Eigen::Matrix<float, 6, Eigen::Dynamic>& jac,
+            Eigen::Isometry3f &fk) noexcept
+        {
+            std::array<float, 52> v;
+            std::array<float, 54> y;
+
+            v[0] = cos(x[0]);
+            v[1] = sin(x[1]);
+            v[2] = -v[1];
+            v[3] = sin(x[0]);
+            v[4] = -v[3];
+            v[5] = cos(x[1]);
+            v[6] = 4.89663865010925e-12 * v[5];
+            v[7] = v[0] * v[2] + v[4] * v[6];
+            v[8] = 4.89663865010925e-12 * v[1];
+            v[9] = v[0] * v[5] + v[4] * v[8];
+            v[10] = cos(x[2]);
+            v[11] = sin(x[2]);
+            v[12] = 4.89663865010925e-12 * v[11];
+            v[13] = v[9] * v[10] + v[7] * v[12] + v[4] * v[11];
+            v[14] = cos(x[3]);
+            v[15] = -v[11];
+            v[16] = 4.89663865010925e-12 * v[10];
+            v[9] = v[9] * v[15] + v[7] * v[16] + v[4] * v[10];
+            v[17] = sin(x[3]);
+            v[18] = 4.89663865010925e-12 * v[17];
+            v[4] = -1. * v[7] + 4.89663865010925e-12 * v[4];
+            v[19] = v[13] * v[14] + v[9] * v[18] + v[4] * v[17];
+            v[20] = -v[17];
+            v[21] = 4.89663865010925e-12 * v[14];
+            v[22] = v[13] * v[20] + v[9] * v[21] + v[4] * v[14];
+            v[23] = cos(x[4]);
+            v[24] = sin(x[4]);
+            v[25] = 4.89663865010925e-12 * v[24];
+            v[4] = -1. * v[9] + 4.89663865010925e-12 * v[4];
+            v[9] = -1. * v[24];
+            v[26] = v[19] * v[23] + v[22] * v[25] + v[4] * v[9];
+            v[27] = cos(x[5]);
+            v[24] = -v[24];
+            v[28] = 4.89663865010925e-12 * v[23];
+            v[29] = -1. * v[23];
+            v[30] = v[19] * v[24] + v[22] * v[28] + v[4] * v[29];
+            v[31] = sin(x[5]);
+            v[32] = 4.89663865010925e-12 * v[31];
+            v[4] = v[22] + 4.89663865010925e-12 * v[4];
+            v[33] = v[26] * v[27] + v[30] * v[32] + v[4] * v[31];
+            v[34] = -v[31];
+            v[35] = 4.89663865010925e-12 * v[27];
+            v[26] = v[26] * v[34] + v[30] * v[35] + v[4] * v[27];
+            v[4] = -1. * v[30] + 4.89663865010925e-12 * v[4];
+            y[9] = -1. * v[26] + 4.89663865010925e-12 * v[4];
+            y[0] = -0.316 * v[7] + 0.0825 * v[13] + -0.0825 * v[19] + 0.384 * v[22] + 0.088 * v[33] +
+                   0.212 * y[9];
+            v[6] = v[3] * v[2] + v[0] * v[6];
+            v[8] = v[3] * v[5] + v[0] * v[8];
+            v[3] = v[8] * v[10] + v[6] * v[12] + v[0] * v[11];
+            v[8] = v[8] * v[15] + v[6] * v[16] + v[0] * v[10];
+            v[0] = -1. * v[6] + 4.89663865010925e-12 * v[0];
+            v[2] = v[3] * v[14] + v[8] * v[18] + v[0] * v[17];
+            v[22] = v[3] * v[20] + v[8] * v[21] + v[0] * v[14];
+            v[0] = -1. * v[8] + 4.89663865010925e-12 * v[0];
+            v[8] = v[2] * v[23] + v[22] * v[25] + v[0] * v[9];
+            v[19] = v[2] * v[24] + v[22] * v[28] + v[0] * v[29];
+            v[0] = v[22] + 4.89663865010925e-12 * v[0];
+            v[13] = v[8] * v[27] + v[19] * v[32] + v[0] * v[31];
+            v[8] = v[8] * v[34] + v[19] * v[35] + v[0] * v[27];
+            v[0] = -1. * v[19] + 4.89663865010925e-12 * v[0];
+            y[10] = -1. * v[8] + 4.89663865010925e-12 * v[0];
+            y[1] = -0.316 * v[6] + 0.0825 * v[3] + -0.0825 * v[2] + 0.384 * v[22] + 0.088 * v[13] +
+                   0.212 * y[10];
+            v[5] = -1. * v[5];
+            v[1] = -1. * v[1];
+            v[12] = v[1] * v[10] + v[5] * v[12] + 4.89663865010925e-12 * v[11];
+            v[1] = v[1] * v[15] + v[5] * v[16] + 4.89663865010925e-12 * v[10];
+            v[16] = 2.39770700697438e-23 + -1. * v[5];
+            v[18] = v[12] * v[14] + v[1] * v[18] + v[16] * v[17];
+            v[21] = v[12] * v[20] + v[1] * v[21] + v[16] * v[14];
+            v[16] = -1. * v[1] + 4.89663865010925e-12 * v[16];
+            v[9] = v[18] * v[23] + v[21] * v[25] + v[16] * v[9];
+            v[29] = v[18] * v[24] + v[21] * v[28] + v[16] * v[29];
+            v[16] = v[21] + 4.89663865010925e-12 * v[16];
+            v[32] = v[9] * v[27] + v[29] * v[32] + v[16] * v[31];
+            v[9] = v[9] * v[34] + v[29] * v[35] + v[16] * v[27];
+            v[16] = -1. * v[29] + 4.89663865010925e-12 * v[16];
+            y[11] = -1. * v[9] + 4.89663865010925e-12 * v[16];
+            y[2] = 0.333 + -0.316 * v[5] + 0.0825 * v[12] + -0.0825 * v[18] + 0.384 * v[21] + 0.088 * v[32] +
+                   0.212 * y[11];
+            v[21] = cos(x[6]);
+            v[18] = sin(x[6]);
+            v[12] = 4.89663865010925e-12 * v[18];
+            v[5] = v[33] * v[21] + v[26] * v[12] + v[4] * v[18];
+            v[29] = -v[18];
+            v[35] = 4.89663865010925e-12 * v[21];
+            v[4] = v[33] * v[29] + v[26] * v[35] + v[4] * v[21];
+            y[3] = 0.707106781186865 * v[5] + -0.70710678118623 * v[4];
+            v[26] = v[13] * v[21] + v[8] * v[12] + v[0] * v[18];
+            v[0] = v[13] * v[29] + v[8] * v[35] + v[0] * v[21];
+            y[4] = 0.707106781186865 * v[26] + -0.70710678118623 * v[0];
+            v[12] = v[32] * v[21] + v[9] * v[12] + v[16] * v[18];
+            v[35] = v[32] * v[29] + v[9] * v[35] + v[16] * v[21];
+            y[5] = 0.707106781186865 * v[12] + -0.70710678118623 * v[35];
+            y[6] = 0.70710678118623 * v[5] + 0.707106781186865 * v[4];
+            y[7] = 0.70710678118623 * v[26] + 0.707106781186865 * v[0];
+            y[8] = 0.70710678118623 * v[12] + 0.707106781186865 * v[35];
+            v[35] = cos(x[1]);
+            v[12] = cos(x[2]);
+            v[0] = cos(x[3]);
+            v[26] = cos(x[4]);
+            v[4] = cos(x[5]);
+            y[46] = cos(x[6]);
+            v[5] = sin(x[5]);
+            v[29] = -v[5];
+            y[45] = sin(x[6]);
+            v[21] = 4.89663865010925e-12 * y[45];
+            v[16] = v[4] * y[46] + v[29] * v[21];
+            v[9] = sin(x[4]);
+            v[32] = -v[9];
+            v[18] = 4.89663865010925e-12 * v[5];
+            v[8] = 4.89663865010925e-12 * v[4];
+            v[13] = v[18] * y[46] + v[8] * v[21] + -1. * y[45];
+            v[33] = v[26] * v[16] + v[32] * v[13];
+            v[34] = sin(x[3]);
+            v[27] = -v[34];
+            v[31] = 4.89663865010925e-12 * v[9];
+            v[28] = 4.89663865010925e-12 * v[26];
+            y[39] = v[5] * y[46] + v[4] * v[21] + 4.89663865010925e-12 * y[45];
+            v[24] = v[31] * v[16] + v[28] * v[13] + y[39];
+            v[25] = v[0] * v[33] + v[27] * v[24];
+            v[23] = sin(x[2]);
+            v[1] = -v[23];
+            v[20] = 4.89663865010925e-12 * v[34];
+            v[14] = 4.89663865010925e-12 * v[0];
+            v[9] = -1. * v[9];
+            v[17] = -1. * v[26];
+            y[33] = v[9] * v[16] + v[17] * v[13] + 4.89663865010925e-12 * y[39];
+            v[15] = v[20] * v[33] + v[14] * v[24] + -1. * y[33];
+            v[10] = v[12] * v[25] + v[1] * v[15];
+            v[11] = sin(x[1]);
+            v[22] = -v[11];
+            v[2] = 4.89663865010925e-12 * v[23];
+            v[3] = 4.89663865010925e-12 * v[12];
+            y[27] = v[34] * v[33] + v[0] * v[24] + 4.89663865010925e-12 * y[33];
+            v[6] = v[2] * v[25] + v[3] * v[15] + -1. * y[27];
+            v[19] = 4.89663865010925e-12 * v[11];
+            v[7] = 0.088 * v[4];
+            v[30] = 0.088 * v[18];
+            v[36] = -0.0825 + v[26] * v[7] + v[32] * v[30];
+            v[37] = 0.088 * v[5];
+            v[38] = 0.384 + v[31] * v[7] + v[28] * v[30] + v[37];
+            v[39] = 0.0825 + v[0] * v[36] + v[27] * v[38];
+            v[37] = v[9] * v[7] + v[17] * v[30] + 4.89663865010925e-12 * v[37];
+            v[40] = v[20] * v[36] + v[14] * v[38] + -1. * v[37];
+            v[41] = v[12] * v[39] + v[1] * v[40];
+            v[42] = 4.89663865010925e-12 * v[35];
+            v[37] = v[34] * v[36] + v[0] * v[38] + 4.89663865010925e-12 * v[37];
+            v[43] = -0.316 + v[2] * v[39] + v[3] * v[40] + -1. * v[37];
+            v[37] = -(
+                v[19] * v[41] + v[42] * v[43] + v[23] * v[39] + v[12] * v[40] + 4.89663865010925e-12 * v[37]);
+            y[21] = v[23] * v[25] + v[12] * v[15] + 4.89663865010925e-12 * y[27];
+            v[44] = v[35] * v[41] + v[22] * v[43];
+            y[12] = (v[35] * v[10] + v[22] * v[6]) * v[37] + (v[19] * v[10] + v[42] * v[6] + y[21]) * v[44];
+            v[45] = -y[45];
+            v[46] = 4.89663865010925e-12 * y[46];
+            v[47] = v[4] * v[45] + v[29] * v[46];
+            v[18] = v[18] * v[45] + v[8] * v[46] + -1. * y[46];
+            v[48] = v[26] * v[47] + v[32] * v[18];
+            y[40] = v[5] * v[45] + v[4] * v[46] + 4.89663865010925e-12 * y[46];
+            v[45] = v[31] * v[47] + v[28] * v[18] + y[40];
+            v[5] = v[0] * v[48] + v[27] * v[45];
+            y[34] = v[9] * v[47] + v[17] * v[18] + 4.89663865010925e-12 * y[40];
+            v[49] = v[20] * v[48] + v[14] * v[45] + -1. * y[34];
+            v[50] = v[12] * v[5] + v[1] * v[49];
+            y[28] = v[34] * v[48] + v[0] * v[45] + 4.89663865010925e-12 * y[34];
+            v[51] = v[2] * v[5] + v[3] * v[49] + -1. * y[28];
+            y[22] = v[23] * v[5] + v[12] * v[49] + 4.89663865010925e-12 * y[28];
+            y[13] = (v[35] * v[50] + v[22] * v[51]) * v[37] + (v[19] * v[50] + v[42] * v[51] + y[22]) * v[44];
+            v[29] = -1. * v[29];
+            v[8] = -4.89663865010925e-12 + -1. * v[8];
+            v[32] = v[26] * v[29] + v[32] * v[8];
+            y[41] = 2.39770700697438e-23 + -1. * v[4];
+            v[28] = v[31] * v[29] + v[28] * v[8] + y[41];
+            v[27] = v[0] * v[32] + v[27] * v[28];
+            y[35] = v[9] * v[29] + v[17] * v[8] + 4.89663865010925e-12 * y[41];
+            v[14] = v[20] * v[32] + v[14] * v[28] + -1. * y[35];
+            v[1] = v[12] * v[27] + v[1] * v[14];
+            y[29] = v[34] * v[32] + v[0] * v[28] + 4.89663865010925e-12 * y[35];
+            v[3] = v[2] * v[27] + v[3] * v[14] + -1. * y[29];
+            y[23] = v[23] * v[27] + v[12] * v[14] + 4.89663865010925e-12 * y[29];
+            y[14] = (v[35] * v[1] + v[22] * v[3]) * v[37] + (v[19] * v[1] + v[42] * v[3] + y[23]) * v[44];
+            v[11] = -1. * v[11];
+            v[35] = -1. * v[35];
+            y[15] = v[11] * v[10] + v[35] * v[6] + 4.89663865010925e-12 * y[21];
+            y[16] = v[11] * v[50] + v[35] * v[51] + 4.89663865010925e-12 * y[22];
+            y[17] = v[11] * v[1] + v[35] * v[3] + 4.89663865010925e-12 * y[23];
+            v[43] = -v[43];
+            y[18] = v[10] * v[43] + v[6] * v[41];
+            y[19] = v[50] * v[43] + v[51] * v[41];
+            y[20] = v[1] * v[43] + v[3] * v[41];
+            v[40] = -v[40];
+            y[24] = v[25] * v[40] + v[15] * v[39];
+            y[25] = v[5] * v[40] + v[49] * v[39];
+            y[26] = v[27] * v[40] + v[14] * v[39];
+            v[38] = -v[38];
+            y[30] = v[33] * v[38] + v[24] * v[36];
+            y[31] = v[48] * v[38] + v[45] * v[36];
+            y[32] = v[32] * v[38] + v[28] * v[36];
+            v[30] = -v[30];
+            y[36] = v[16] * v[30] + v[13] * v[7];
+            y[37] = v[47] * v[30] + v[18] * v[7];
+            y[38] = v[29] * v[30] + v[8] * v[7];
+            y[42] = 0.088 * v[21];
+            y[43] = 0.088 * v[46];
+            // dependent variables without operations
+            y[44] = -0.088;
+            y[47] = 4.89663865010925e-12;
+            y[48] = 0.;
+            y[49] = 0.;
+            y[50] = 0.;
+            y[51] = 0.;
+            y[52] = 0.;
+            y[53] = 1.;
+
+            std::array<float, 12> pose_arr;
+            std::copy_n(&y[0], 12, pose_arr.begin());
+            fk = to_isometry(pose_arr.data());
+
+            jac = to_matrix(&y[12], 6, (54 - 12) / 6);
         }
     };
 }  // namespace vamp::robots

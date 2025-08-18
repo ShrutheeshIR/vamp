@@ -6,7 +6,8 @@
 
 #include <vamp/collision/factory.hh>
 #include <vamp/planning/validate.hh>
-#include <vamp/planning/rrtc.hh>
+#include <vamp/planning/cbirrt.hh>
+#include <vamp/planning/task_space_constraints.hh>
 #include <vamp/planning/simplify.hh>
 #include <vamp/robots/panda.hh>
 #include <vamp/random/halton.hh>
