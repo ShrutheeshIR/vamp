@@ -49,3 +49,10 @@ inline static auto to_isometry(const DataT *buf) -> Eigen::Transform<DataT, 3, E
 
     return out;
 }
+
+template <typename DataT>
+inline static auto to_matrix(const DataT *buf, const size_t rows, const size_t cols) -> Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>
+{
+    const Eigen::Map<const Eigen::MatrixXf> out(buf, rows, cols);
+    return out;
+}
