@@ -6,6 +6,7 @@
 #include <vamp/planning/nn.hh>
 #include <vamp/planning/plan.hh>
 #include <vamp/planning/validate.hh>
+#include <vamp/planning/validate_constraint.hh>
 #include <vamp/planning/rrtc_settings.hh>
 #include <vamp/random/rng.hh>
 #include <vamp/utils.hh>
@@ -14,9 +15,10 @@
 namespace vamp::planning
 {
     template <typename Robot, std::size_t rake, std::size_t resolution>
-    struct RRTC
+    struct CRRTC
     {
         using Configuration = typename Robot::Configuration;
+        using ConfigurationArray = typename Robot::ConfigurationArray;
         static constexpr auto dimension = Robot::dimension;
         using RNG = typename vamp::rng::RNG<Robot>;
 
@@ -25,9 +27,10 @@ namespace vamp::planning
             const Configuration &goal,
             const collision::Environment<FloatVector<rake>> &environment,
             const RRTCSettings &settings,
+            TaskSpaceConstraint<Robot> &constraint,
             typename RNG::Ptr rng) noexcept -> PlanningResult<Robot>
         {
-            return solve(start, std::vector<Configuration>{goal}, environment, settings, rng);
+            return solve(start, std::vector<Configuration>{goal}, environment, settings, constraint, rng);
         }
 
         inline static auto solve(
@@ -35,12 +38,14 @@ namespace vamp::planning
             const std::vector<Configuration> &goals,
             const collision::Environment<FloatVector<rake>> &environment,
             const RRTCSettings &settings,
+            TaskSpaceConstraint<Robot> &constraint,
             typename RNG::Ptr rng) noexcept -> PlanningResult<Robot>
         {
             PlanningResult<Robot> result;
 
             NN<dimension> start_tree;
             NN<dimension> goal_tree;
+            std::vector <Configuration> projected_vector;
 
             constexpr const std::size_t start_index = 0;
 
@@ -132,15 +137,19 @@ namespace vamp::planning
                 bool reach = nearest_distance < settings.range;
                 auto extension_vector =
                     (reach) ? nearest_vector : nearest_vector * (settings.range / nearest_distance);
-
-                if (validate_vector<Robot, rake, resolution>(
+                if (project_constraint_vector<Robot, rake, resolution>(
                         nearest_configuration,
                         extension_vector,
                         (reach) ? nearest_distance : settings.range,
-                        environment))
+                        projected_vector,
+                        constraint,
+                        environment
+                    ))
+
                 {
                     float *new_configuration_index = buffer_index(free_index);
-                    auto new_configuration = nearest_configuration + extension_vector;
+                    // auto new_configuration = nearest_configuration + extension_vector;
+                    auto new_configuration = projected_vector.back();
                     new_configuration.to_array(new_configuration_index);
                     tree_a->insert(NNNode<dimension>{free_index, {new_configuration_index}});
 
@@ -174,13 +183,19 @@ namespace vamp::planning
                     auto prior = new_configuration;
                     // This is the discrete geodesic part
 
-                    for (; i_extension < n_extensions and
-                           validate_vector<Robot, rake, resolution>(
-                               prior, increment, increment_length, environment) and
+                    for (; i_extension < n_extensions and 
+                        project_constraint_vector<Robot, rake, resolution>(
+                            nearest_configuration,
+                            extension_vector,
+                            increment_length,
+                            projected_vector,
+                            constraint,
+                            environment
+                        ) and
                            free_index < settings.max_samples;
                          ++i_extension)
                     {
-                        auto next = prior + increment;
+                        auto next = projected_vector.back();
                         float *next_index = buffer_index(free_index);
                         next.to_array(next_index);
                         tree_a->insert(NNNode<dimension>{free_index, {next_index}});

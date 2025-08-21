@@ -6,7 +6,7 @@
 
 #include <vamp/collision/factory.hh>
 #include <vamp/planning/validate.hh>
-#include <vamp/planning/cbirrt.hh>
+#include <vamp/planning/rrtc.hh>
 #include <vamp/planning/task_space_constraints.hh>
 #include <vamp/planning/simplify.hh>
 #include <vamp/robots/panda.hh>
@@ -58,6 +58,13 @@ auto main(int, char **) -> int
     // Create RNG for planning
     auto rng = std::make_shared<vamp::rng::Halton<Robot>>();
 
+
+    auto fk = Robot::eefk(start);
+    auto fkg = Robot::eefk(goal);
+    std::cout << fk.matrix() <<std::endl;
+    std::cout << fkg.matrix() <<std::endl;
+
+
     // Setup RRTC and plan
     vamp::planning::RRTCSettings rrtc_settings;
     rrtc_settings.range = 1.0;
@@ -78,14 +85,21 @@ auto main(int, char **) -> int
         for (const auto &config : simplify_result.path)
         {
             const auto &array = config.to_array();
+            Robot::ConfigurationArray soln;
             for (auto i = 0U; i < Robot::dimension; ++i)
             {
                 std::cout << array[i] << ", ";
+                soln[i] = array[i];
             }
+
+            auto fka = Robot::eefk(soln);
+            std::cout <<std::endl << fka.matrix() <<std::endl;
 
             std::cout << std::endl;
         }
     }
+    else
+        std::cout << "Failed" << std::endl;
 
     return 0;
 }

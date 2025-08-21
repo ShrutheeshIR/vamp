@@ -75,6 +75,7 @@
         "forward_list": "cpp",
         "list": "cpp",
         "shared_mutex": "cpp",
-        "cinttypes": "cpp"
+        "cinttypes": "cpp",
+        "ranges": "cpp"
     }
 }

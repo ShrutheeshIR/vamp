@@ -28,7 +28,7 @@ namespace vamp::planning
                     q_new[i] = q[i] + update_vector(i);
             }
 
-            double projectStep(const ConfigurationArray &q, ConfigurationArray &q_new, bool update_q = true)
+            double projectStepOld(const ConfigurationArray &q, ConfigurationArray &q_new, bool update_q = true)
             {
                 Eigen::Matrix<float, 6, Eigen::Dynamic> J;
                 Eigen::Transform<float, 3, Eigen::Isometry> eef_pose;
@@ -39,27 +39,79 @@ namespace vamp::planning
                 if (update_q)
                 {
                     // need to convert jacobian into ref frame
-                    const Eigen::Matrix<float, Eigen::Dynamic, 1> update = J.transpose() * (J * J.transpose() + 1e-6 * Eigen::Matrix<float, 6, 6>::Identity()).ldlt().solve(distance);
+                    const Eigen::Matrix<float, Eigen::Dynamic, 1> update = -J.transpose() * (J * J.transpose() + 1e-6 * Eigen::Matrix<float, 6, 6>::Identity()).ldlt().solve(distance);
                     integrateJointConfiguration(q, q_new, update);
                 }
                 return distance.squaredNorm();
 
             }
 
+
+            double projectStepJT(const ConfigurationArray &q, ConfigurationArray &q_new, bool update_q = true)
+            {
+                Eigen::Matrix<float, 6, Eigen::Dynamic> J;
+                Eigen::Transform<float, 3, Eigen::Isometry> eef_pose;
+
+                Robot::jacobian_eefk(q, J, eef_pose); // can be parallel from distance
+                const Eigen::Vector<float, 6> distance = distanceToConstraintEEF(eef_pose);
+
+                if (update_q)
+                {
+                    // need to convert jacobian into ref frame
+                    const Eigen::Matrix<float, Eigen::Dynamic, 1> update = -J.transpose() * distance;
+                    integrateJointConfiguration(q, q_new, update);
+                }
+                return distance.squaredNorm();
+
+            }
+
+            // project with vamp inverse
+            double projectStep(const ConfigurationArray &q, ConfigurationArray &q_new, bool update_q = true)
+            {
+                Eigen::Matrix<float, 6, Eigen::Dynamic> J;
+                Eigen::Transform<float, 3, Eigen::Isometry> eef_pose;
+                Eigen::Matrix<float, 7, 1> grad;
+
+                Robot::jacobian_eefk(q, J, eef_pose); // can be parallel from distance
+                const Eigen::Vector<float, 6> distance = distanceToConstraintEEF(eef_pose);
+
+                std::array<float, 6> dist_arr;
+                std::copy(distance.data(), distance.data() + distance.size(), dist_arr.begin());
+
+
+
+                if (update_q)
+                {
+                    // ;
+                    
+                    Robot::jacobian_solve(q, dist_arr, grad);
+                    // std::cout << grad << std::endl;
+                    integrateJointConfiguration(q, q_new, -grad);
+                }
+                return distance.squaredNorm();
+
+            }
+
+
             bool project(const ConfigurationArray &q, ConfigurationArray &q_new)
             {
                 double distance = projectStep(q, q_new, false);
                 size_t project_iter = 0;
                 bool success = false;
-                std::cout << distance << " " << std::endl;
+                // std::cout << distance << " " << std::endl;
                 while ((project_iter < max_project_iters) && (distance > tolerance))
                 {
-                    distance = projectStep(q_new, q_new, true);
-                    std::cout << distance << " " << std::endl;
+                    distance = projectStepJT(q_new, q_new, true);
+                    // std::cout << distance << " " << std::endl;
                 }
                 if (distance < tolerance)
+                {
+                    // std::cout << distance << " " << std::endl;
+                    const auto fk = Robot::eefk(q_new);
+                    std::cout << fk.matrix()(2,3) << std::endl;
+
                     success = true;
-                
+                }
                 return success;
                     
             }
@@ -89,6 +141,7 @@ namespace vamp::planning
             Eigen::Transform<float, 3, Eigen::Isometry> eef_pose_w_ref_reference;
             Eigen::Transform<float, 3, Eigen::Isometry> ref_frame_w_world;
             Eigen::Transform<float, 3, Eigen::Isometry> world_frame_w_ref_frame;
+            Eigen::Transform<float, 3, Eigen::Isometry> eef_pose_w_world_reference;
             // std::pair<vamp::FloatVector<6>, vamp::FloatVector<6>> bounds;
             std::pair<Eigen::Vector<float, 6>, Eigen::Vector<float, 6>> bounds; 
             bool mComputeErrorFromCenter;
@@ -103,6 +156,7 @@ namespace vamp::planning
             ) : eef_pose_w_ref_reference(eef_pose_w_ref_reference),  ref_frame_w_world(ref_frame_w_world), bounds(bounds)
             {
                 world_frame_w_ref_frame = ref_frame_w_world.inverse();
+                eef_pose_w_world_reference = ref_frame_w_world * eef_pose_w_ref_reference;
             }
 
             const auto function(const Configuration &q) {
@@ -125,11 +179,17 @@ namespace vamp::planning
                 Eigen::Vector<float, 6> penalty;
 
 
-                const auto actual_pose = world_frame_w_ref_frame * computed_eef_pose_world_frame;
+                // const auto actual_pose = world_frame_w_ref_frame * computed_eef_pose_world_frame;
 
                 //Eigen::Vector3
-                const auto translation = actual_pose.translation() - eef_pose_w_ref_reference.translation();
-                const auto rot_error = actual_pose.linear() * eef_pose_w_ref_reference.linear().transpose(); // equivalent to putting transpose on actual_pose
+                // const auto translation = actual_pose.translation() - eef_pose_w_ref_reference.translation();
+                // const auto rot_error = actual_pose.linear() * eef_pose_w_ref_reference.linear().transpose(); // equivalent to putting transpose on actual_pose
+
+
+                const auto translation = computed_eef_pose_world_frame.translation() - eef_pose_w_world_reference.translation();
+                const auto rot_error = computed_eef_pose_world_frame.linear() * eef_pose_w_world_reference.linear().transpose(); // equivalent to putting transpose on actual_pose
+
+
                 Eigen::AngleAxisf aa(rot_error);
 
                 // Eigen::Vec6
@@ -146,6 +206,7 @@ namespace vamp::planning
                     else
                         penalty[i] = 0.0;
                 }
+
                 return penalty;
             }
 
