@@ -36,6 +36,20 @@ inline constexpr auto sqrt(const DataT &v) -> DataT
     return v.sqrt();
 }
 
+
+template <typename DataT>
+inline constexpr auto max(const DataT &x, const DataT &y) -> DataT
+{
+    return x.max(y);
+}
+
+template <typename DataT>
+inline constexpr auto min(const DataT &x, const DataT &y) -> DataT
+{
+    return x.min(y);
+}
+
+
 template <typename DataT>
 inline static auto to_isometry(const DataT *buf) -> Eigen::Transform<DataT, 3, Eigen::Isometry>
 {

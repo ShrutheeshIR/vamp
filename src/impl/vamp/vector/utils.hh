@@ -214,4 +214,25 @@ namespace vamp
     {
         static constexpr bool value = (S1::num_scalars == S2::num_scalars);
     };
+
+    // template <typename ArrT>
+    // struct VecContainer
+    // {
+    //     std::vector<ArrT> container;
+    //     std::vector<size_t> indices; // must be sorted
+
+    //     const ArrT& operator[](size_t index) const {
+    //         // Add bounds checking for robustness
+    //         if (index >= indices.back()) {
+    //             throw std::out_of_range("Index out of bounds");
+    //         }
+
+    //         for (size_t i = 0; i < container.size() - 1; i++)
+    //             if (index >= indices[i] && index < indices[i+1])
+    //                 return container[i];
+
+    //     }
+
+    // };
+
 }  // namespace vamp
