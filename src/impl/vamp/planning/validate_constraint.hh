@@ -6,6 +6,7 @@
 #include <vamp/vector.hh>
 #include <vamp/collision/environment.hh>
 #include <vamp/planning/task_space_constraints.hh>
+#include <vamp/planning/validate.hh>
 
 namespace vamp::planning
 {
@@ -27,50 +28,94 @@ namespace vamp::planning
         const typename Robot::Configuration &vector,
         float distance,
         std::vector<typename Robot::Configuration> &projected_vector, 
-        TaskSpaceConstraint<Robot> &constraint,
+        TaskSpaceConstraint<Robot, rake> &constraint,
         const collision::Environment<FloatVector<rake>> &environment
         ) -> bool
     {
+        // std::cout << "Started a round of validation with " << start << vector << std::endl;
 
         projected_vector.clear();
+
         // TODO: Fix use of reinterpret_cast in pack() so that this can be constexpr
-        // const auto percents = FloatVector<rake>(Percents<rake>::percents);
-        typename Robot::template ConfigurationArray block;
-        bool project_success = false;
-        
+        const auto percents = FloatVector<rake>(Percents<rake>::percents);
+
+        typename Robot::template ConfigurationBlock<rake> block;
+        typename Robot::template ConfigurationBlock<rake> projected_block;
+
+        // HACK: broadcast() implicitly assumes that the rake is exactly VectorWidth
         for (auto i = 0U; i < Robot::dimension; ++i)
-        {
-            block[i] = start.to_array()[i];
-
-        }
-
-
-        // typename Robot::template ConfigurationBlock<rake> block;
+            block[i] = start.broadcast(i) + (vector.broadcast(i) * percents);
 
         const std::size_t n = std::max(std::ceil(distance / static_cast<float>(rake) * resolution), 1.F);
 
-        const auto backstep = vector / (rake * n);
+        // std::cout << "\nBlock is " << block << std::endl;
+
+        bool ableToProject = constraint.project(block, projected_block);
+        if (not ableToProject)
+        {
+            std::cout << "Unable to project initially : " << ableToProject<< std::endl;
+            return ableToProject;
+        }
+
+
+
+        bool valid = (environment.attachments) ? Robot::template fkcc_attach<rake>(environment, projected_block) :
+                                                 Robot::template fkcc<rake>(environment, projected_block);
+
+
+        typename Robot::ConfigurationArray last_projected;
+        for (auto i = 0U; i < rake; i++)
+        {
+            for (auto j = 0U; j < Robot::dimension; j++)
+                last_projected[j] = projected_block[{j, i-1}];
+            projected_vector.push_back(typename Robot::Configuration(last_projected));
+        }
+
+        if (not valid or n == 1)
+        {
+            std::cout << "Unable to validate initially : " << valid << n << projected_block <<  block << std::endl;
+            return valid;
+        }
+
+
+        const typename Robot::Configuration new_vector = typename Robot::Configuration(last_projected) - start;
+
+        // extract out the last element from here, this is a 7 x 8 block, I need the 7 x 1 of the last element
+        // auto new_vector = projected_block;
+
+        const auto backstep = new_vector / (rake * n);
         for (auto i = 1U; i < n; ++i)
         {
             for (auto j = 0U; j < Robot::dimension; ++j)
             {
-                block[j] = block[j] - backstep.to_array()[j];
+                block[j] = block[j] - backstep.broadcast(j);
             }
-            typename Robot::template ConfigurationArray projected_config;
-            project_success = constraint.project(block, projected_config);
-            if (project_success == false)
+
+            if (not constraint.project(block, projected_block))
             {
-                return false;
-            }
-            if (not Robot::template fkcc<rake>(environment, typename Robot::Configuration(block)))
-            {
+                // std::cout << "Unable to project inside : " << ableToProject;
                 return false;
             }
 
-            projected_vector.push_back(typename Robot::Configuration(projected_config));
+            if (not Robot::template fkcc<rake>(environment, projected_block))
+            {
+                // std::cout << "Unable to validate inside : " << valid << std::endl;
+                return false;
+            }
+        }
+        // projected_vector.push_back(typename Robot::Configuration(last_projected));
+
+        for (auto i = 0U; i < Robot::dimension; i++) {  
+            last_projected[i] = projected_block[{i, rake-1}];
         }
 
+
+        // std::cout << "projected : " <<  typename Robot::Configuration(last_projected) << "from " << start << block << projected_block << std::endl;
+
+        projected_vector.push_back(typename Robot::Configuration(last_projected));
         return true;
+
+
     }
 
     template <typename Robot, std::size_t rake, std::size_t resolution>
@@ -78,7 +123,7 @@ namespace vamp::planning
         const typename Robot::Configuration &start,
         const typename Robot::Configuration &goal,
         std::vector<typename Robot::Configuration> &projected_vector, 
-        TaskSpaceConstraint<Robot> &constraint,
+        TaskSpaceConstraint<Robot, rake> &constraint,
         const collision::Environment<FloatVector<rake>> &environment
         ) -> bool
     {

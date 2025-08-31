@@ -7,7 +7,7 @@
 #include <vamp/collision/factory.hh>
 #include <vamp/planning/validate.hh>
 // #include <vamp/planning/cbirrt.hh>
-// #include <vamp/planning/task_space_constraints.hh>
+#include <vamp/planning/task_space_constraints.hh>
 
 #include <vamp/planning/simplify.hh>
 #include <vamp/robots/panda.hh>
@@ -22,6 +22,7 @@ using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 // Start and goal configurations
 static constexpr Robot::ConfigurationArray start = {0., -0.785, 0., -2.356, 0., 1.571, 0.785};
 static constexpr Robot::ConfigurationArray goal = {2.35, 1., 0., -0.8, 0, 2.5, 0.785};
+static constexpr Robot::ConfigurationArray goal2 = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
 
 
 // Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
@@ -75,22 +76,29 @@ auto main(int, char **) -> int
     // std::cout << std::endl;
 
 
-    Eigen::Vector<float, 6> lower_bound = {
-        -3.14, -3.14, -3.14, -10.25, -10.0, -0.09
+    std::array<float, 6> lower_bound = {
+        -10.25, -10.0, -0.09, -3.14, -3.14, -3.14
     };
-    Eigen::Vector<float, 6> upper_bound = {
-        3.14, 3.14, 3.14, 10.25, 10.0, 0.09
+    std::array<float, 6> upper_bound = {
+        10.25, 10.0, 0.09, 3.14, 3.14, 3.14
     };
 
-    // const auto in_hand_pose = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
+
 
     // fk(2, 3) -= 0.08;
     // const auto eef_target_pose = fk;
 
+
+
+
     // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
     Eigen::Matrix<float, 4, 4> T;
     T << 1,  0.000398163,  4.62412e-17, 0.30702, 0.000398163, -1, -6.92765e-12, -5.94873e-12, -2.7121e-15,  6.92765e-12, -1, 0.48527, 0.0, 0.0, 0.0, 1;
-    Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
+    const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
+
+    const auto in_hand_pose = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
+    vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(target_pose, in_hand_pose, std::make_pair(lower_bound, upper_bound));
+
 
     // const auto jacobian = Robot::jacobian(start);
     // std::cout << "-----Printing Jacobian------" << std::endl;
@@ -106,7 +114,56 @@ auto main(int, char **) -> int
     std::cout << J << std::endl;
     std::cout << "-----Printed Jacobian------" << std::endl;
     std::cout << efk.matrix() << std::endl;
-    std::cout << target_pose.matrix() << std::endl;
+    // std::cout << target_pose.matrix() << std::endl;
+
+
+    typename Robot::template ConfigurationBlock<rake> block;
+    typename Robot::template ConfigurationBlock<rake> projected_block;
+
+    for (auto i = 0U; i < Robot::dimension; ++i)
+    {
+        block[i] = Robot::Configuration(goal).broadcast(i);
+    }
+
+    // std::cout << block << std::endl;
+
+
+    vamp::FloatVector<rake, 6 * 7>JB;
+    vamp::FloatVector<rake, 16> rTeB;
+
+    Robot::jacobian_eefk(block, rTeB, JB);
+
+    // std::cout << rTeB << std::endl;
+    // std::cout << JB << std::endl;
+
+    const auto dist = task_constraint.distanceToConstraint(block);
+    std::cout << "From block : " << dist << std::endl;
+
+    const Eigen::Vector<float, 6> distance_vec = task_constraint.distanceToConstraint(goal);
+    std::cout << "From single : "<< distance_vec << std::endl;
+
+
+    bool success = task_constraint.project(block, projected_block);
+    std::cout << success << std::endl;
+    std::cout << block << std::endl;
+    std::cout << projected_block << std::endl;
+    std::cout << " printed config " << std::endl;
+
+    // std::array<float, 16> rTe;
+    // rTeB = vamp::Vector(rTe, true);
+    // rTeB = vamp::Vector(rTe, true);
+
+    // std::array<float, 7> q = {0., -0.785, 0., -2.356, 0., 1.571, 0.785};
+    // vamp::FloatVector<rake, 7> block;
+
+
+    // block = vamp::Vector(q, true);
+
+    // vamp::Vector<float, 2, 4> my_vector(2.0F);
+
+
+
+    // auto fk_jac = Robot::jacobian_eefk(block, wTeqB, JB);
 
 
 
@@ -145,16 +202,16 @@ auto main(int, char **) -> int
     std::array<float, Robot::dimension> grad;
     std::array<float, 6> error_vec;
 
-    const auto d = Robot::jacobian_solve(jacobian_array, error_se3_array, grad, error_vec);
-    std::cout << d << std::endl;
-    std::cout << "Print error " << std::endl;
-    for (auto i = 0U; i < 6; i++)
-        std::cout << error_vec[i] << ", ";
-    std::cout << "Printed error " << std::endl;
-    std::cout << "Print grad " << std::endl;
-    for (auto i = 0U; i < 7; i++)
-        std::cout << grad[i] << ", ";
-    std::cout << "Printed grad " << std::endl;
+    // const auto d = Robot::jacobian_solve(jacobian_array, error_se3_array, grad, error_vec);
+    // std::cout << d << std::endl;
+    // std::cout << "Print error " << std::endl;
+    // for (auto i = 0U; i < 6; i++)
+    //     std::cout << error_vec[i] << ", ";
+    // std::cout << "Printed error " << std::endl;
+    // std::cout << "Print grad " << std::endl;
+    // for (auto i = 0U; i < 7; i++)
+    //     std::cout << grad[i] << ", ";
+    // std::cout << "Printed grad " << std::endl;
 
 
 
@@ -163,13 +220,13 @@ auto main(int, char **) -> int
 
     std::cout << "Starting to project " << std::endl;
     Robot::ConfigurationArray q_ar = {2.35, 1., 0., -0.8, 0, 2.5, 0.785};
-    // Robot::Configuration q(q_ar);
+    Robot::Configuration q(q_ar);
 
     // for (auto k = 0U; k < Robot::dimension; k++)
     //     std::cout << q[k] << ", ";
     // std::cout << std::endl;
 
-    for (auto i = 0U; i < 325; i++)
+    for (auto i = 0U; i < 1; i++)
     {
         Robot::jacobian_eefk(q_ar, J, efk);
 
@@ -227,27 +284,27 @@ auto main(int, char **) -> int
         q_ar[5] = -0.08730000257492065 + (q_ar[5] * 3.909600019454956);
         q_ar[6] = -2.967099905014038 + (q_ar[6] * 5.934199810028076);
 
-        // Robot::descale_configuration(q);
-        // q.clamp(0.F, 1.F);
-        // Robot::scale_configuration(q);
-        // for (auto k = 0U; k < Robot::dimension; k++)
-        //     std::cout << q_ar[k] << ", ";
-        // std::cout << std::endl;
+        Robot::descale_configuration(q);
+        q.clamp(0.F, 1.F);
+        Robot::scale_configuration(q);
+        for (auto k = 0U; k < Robot::dimension; k++)
+            std::cout << q_ar[k] << ", ";
+        std::cout << std::endl;
         
 
 
 
     }
 
-    for (auto k = 0U; k < Robot::dimension; k++)
-        std::cout << q_ar[k] << ", ";
-    std::cout << std::endl;
+    // for (auto k = 0U; k < Robot::dimension; k++)
+    //     std::cout << q_ar[k] << ", ";
+    // std::cout << std::endl;
 
-    Robot::KinJacBlock<rake> JB;
-    Robot::SE3Block<rake> TB;
-    Robot::ConfigurationBlock<rake> grad_out;
+    // Robot::KinJacBlock<rake> JB;
+    // Robot::SE3Block<rake> TB;
+    // Robot::ConfigurationBlock<rake> grad_out;
     // vamp::FloatVector<rake, 6> error_out;
-    Robot::ConfigurationBlock<rake> error_out;
+    // Robot::ConfigurationBlock<rake> error_out;
 
     // std::vector<Robot::ConfigurationBlock<rake>> content = {grad_out, error_out};
     // std::vector<size_t> inds = {7, 7};
@@ -274,12 +331,8 @@ auto main(int, char **) -> int
 
 
 
-    // vamp::planning::TaskSpaceConstraint<Robot> task_constraint(eef_target_pose, in_hand_pose, std::make_pair(lower_bound, upper_bound));
 
 
-    // const Eigen::Vector<float, 6> distance_vec = task_constraint.distanceToConstraint(start);
-
-    // std::cout << distance_vec << std::endl;
 
     // Robot::ConfigurationArray q_new;
 

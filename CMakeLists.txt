@@ -156,6 +156,15 @@ if(VAMP_BUILD_CPP_DEMO)
   endif()
 
 
+  add_executable(vamp_tsr_example scripts/cpp/project_constraint_example.cc)
+  target_link_libraries(vamp_tsr_example PRIVATE vamp_cpp)
+  
+  # Disable strict warnings for demos to maintain compatibility
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(vamp_tsr_example PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
+  endif()
+
+
   endif()
 
 # OMPL integration demo

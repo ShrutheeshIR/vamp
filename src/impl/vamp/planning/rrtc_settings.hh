@@ -4,12 +4,12 @@ namespace vamp::planning
 {
     struct RRTCSettings
     {
-        float range = 2.;
+        float range = 0.1;
 
-        bool dynamic_domain = true;
-        float radius = 4.;
+        bool dynamic_domain = false;
+        float radius = 0.1;
         float alpha = 0.0001;
-        float min_radius = 1.;
+        float min_radius = 0.01;
 
         bool balance = true;
         float tree_ratio = 1.;

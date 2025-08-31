@@ -37,14 +37,14 @@ inline constexpr auto sqrt(const DataT &v) -> DataT
 }
 
 
-template <typename DataT>
-inline constexpr auto max(const DataT &x, const DataT &y) -> DataT
+template <typename DataT, typename DataTB>
+inline constexpr auto max(const DataT &x, const DataTB &y) -> DataT
 {
     return x.max(y);
 }
 
-template <typename DataT>
-inline constexpr auto min(const DataT &x, const DataT &y) -> DataT
+template <typename DataT, typename DataTB>
+inline constexpr auto min(const DataT &x, const DataTB &y) -> DataT
 {
     return x.min(y);
 }

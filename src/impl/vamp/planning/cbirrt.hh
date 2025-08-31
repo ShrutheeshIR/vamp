@@ -5,7 +5,7 @@
 #include <vamp/collision/environment.hh>
 #include <vamp/planning/nn.hh>
 #include <vamp/planning/plan.hh>
-#include <vamp/planning/validate.hh>
+// #include <vamp/planning/validate.hh>
 #include <vamp/planning/validate_constraint.hh>
 #include <vamp/planning/rrtc_settings.hh>
 #include <vamp/random/rng.hh>
@@ -27,7 +27,7 @@ namespace vamp::planning
             const Configuration &goal,
             const collision::Environment<FloatVector<rake>> &environment,
             const RRTCSettings &settings,
-            TaskSpaceConstraint<Robot> &constraint,
+            TaskSpaceConstraint<Robot, rake> &constraint,
             typename RNG::Ptr rng) noexcept -> PlanningResult<Robot>
         {
             return solve(start, std::vector<Configuration>{goal}, environment, settings, constraint, rng);
@@ -38,7 +38,7 @@ namespace vamp::planning
             const std::vector<Configuration> &goals,
             const collision::Environment<FloatVector<rake>> &environment,
             const RRTCSettings &settings,
-            TaskSpaceConstraint<Robot> &constraint,
+            TaskSpaceConstraint<Robot, rake> &constraint,
             typename RNG::Ptr rng) noexcept -> PlanningResult<Robot>
         {
             PlanningResult<Robot> result;
@@ -62,20 +62,20 @@ namespace vamp::planning
 
             auto start_time = std::chrono::steady_clock::now();
 
-            for (const auto &goal : goals)
-            {
-                if (validate_motion<Robot, rake, resolution>(start, goal, environment))
-                {
-                    result.path.emplace_back(start);
-                    result.path.emplace_back(goal);
-                    result.nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
-                    result.iterations = 0;
-                    result.size.emplace_back(1);
-                    result.size.emplace_back(1);
+            // for (const auto &goal : goals)
+            // {
+            //     if (validate_motion<Robot, rake, resolution>(start, goal, environment))
+            //     {
+            //         result.path.emplace_back(start);
+            //         result.path.emplace_back(goal);
+            //         result.nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
+            //         result.iterations = 0;
+            //         result.size.emplace_back(1);
+            //         result.size.emplace_back(1);
 
-                    return result;
-                }
-            }
+            //         return result;
+            //     }
+            // }
 
             // trees
             bool tree_a_is_start = not settings.start_tree_first;
@@ -99,9 +99,12 @@ namespace vamp::planning
                 radii[free_index] = std::numeric_limits<float>::max();
                 free_index++;
             }
+            bool connected = false;
 
-            while (iter++ < settings.max_iterations and free_index < settings.max_samples)
-            {
+            while (iter++ < 100000 and free_index < settings.max_samples and not connected)
+            {   
+                if (iter % 1 == 0)
+                    std::cout << "Starting iteration : " << iter << std::endl;
                 float asize = tree_a->size();
                 float bsize = tree_b->size();
                 float ratio = std::abs(asize - bsize) / asize;
@@ -119,6 +122,7 @@ namespace vamp::planning
                 const auto nearest = tree_a->nearest(NNFloatArray<dimension>{temp_array.data()});
                 if (not nearest)
                 {
+                    // std::cout << "Not nearest ! " << std::endl;
                     continue;
                 }
 
@@ -127,6 +131,7 @@ namespace vamp::planning
 
                 if (settings.dynamic_domain and nearest_radius < nearest_distance)
                 {
+                    // std::cout << "Dyndom ! " << std::endl;
                     continue;
                 }
 
@@ -147,6 +152,7 @@ namespace vamp::planning
                     ))
 
                 {
+                    // std::cout << "Got a valid projection "  << projected_vector.back() << std::endl;
                     float *new_configuration_index = buffer_index(free_index);
                     // auto new_configuration = nearest_configuration + extension_vector;
                     auto new_configuration = projected_vector.back();
@@ -163,38 +169,58 @@ namespace vamp::planning
                         radii[nearest_node.index] *= (1 + settings.alpha);
                     }
 
-                    // Extend to goal tree
-                    const auto other_nearest =
-                        tree_b->nearest(NNFloatArray<dimension>{new_configuration_index});
-                    if (not other_nearest)
-                    {
-                        continue;
-                    }
-
-                    const auto &[other_nearest_node, other_nearest_distance] = *other_nearest;
-                    const auto other_nearest_configuration = other_nearest_node.as_vector();
-                    auto other_nearest_vector = other_nearest_configuration - new_configuration;
-
-                    const std::size_t n_extensions = std::ceil(other_nearest_distance / settings.range);
-                    const float increment_length = other_nearest_distance / static_cast<float>(n_extensions);
-                    auto increment = other_nearest_vector * (1.0F / static_cast<float>(n_extensions));
-
-                    std::size_t i_extension = 0;
                     auto prior = new_configuration;
-                    // This is the discrete geodesic part
 
-                    for (; i_extension < n_extensions and 
-                        project_constraint_vector<Robot, rake, resolution>(
-                            nearest_configuration,
-                            extension_vector,
-                            increment_length,
+
+
+                    auto counter = 0U;
+                    while (not connected)
+                    {   
+                        counter++;
+                        if (counter > 3)
+                            break;
+                        // Extend to goal tree
+                        const auto other_nearest =
+                            tree_b->nearest(NNFloatArray<dimension>{new_configuration_index});
+                        if (not other_nearest)
+                            break;
+
+
+                        const auto &[other_nearest_node, other_nearest_distance] = *other_nearest;
+                        const auto other_nearest_configuration = other_nearest_node.as_vector();
+
+                        // std::cout << "\n\n\n ----> The nearest node in the goal tree is : " << other_nearest_configuration << prior << std::endl;
+
+
+                        
+                        // This is the discrete geodesic part
+
+
+
+                        auto other_nearest_vector = other_nearest_configuration - prior;
+                        bool other_reach = other_nearest_distance < settings.range;
+                        // const std::size_t n_extensions = std::ceil(other_nearest_distance / settings.range);
+                        // const float increment_length = other_nearest_distance / static_cast<float>(n_extensions);
+                        // auto increment = other_nearest_vector * (1.0F / static_cast<float>(n_extensions));
+
+
+                        if(not project_constraint_vector<Robot, rake, resolution>(
+                            prior,
+                            other_nearest_vector,
+                            (other_reach) ? other_nearest_distance : settings.range,
                             projected_vector,
                             constraint,
                             environment
-                        ) and
-                           free_index < settings.max_samples;
-                         ++i_extension)
-                    {
+                            )
+                        )
+                        {
+                            // std::cout << "Invalid config " << std::endl;
+                            break;
+                        }
+                        if (free_index >= settings.max_samples)
+                            break;
+
+                        // std::cout << "Trying to extend " << other_reach << std::endl;
                         auto next = projected_vector.back();
                         float *next_index = buffer_index(free_index);
                         next.to_array(next_index);
@@ -205,39 +231,45 @@ namespace vamp::planning
                         free_index++;
 
                         prior = next;
-                    }
 
-                    if (i_extension == n_extensions)  // connected
-                    {
-                        auto current = free_index - 1;
-                        result.path.emplace_back(buffer_index(current));
-                        while (parents[current] != current)
+
+
+
+
+
+                        if (other_reach)  // connected
                         {
-                            auto parent = parents[current];
-                            result.path.emplace_back(buffer_index(parent));
-                            result.cost += result.path[result.path.size() - 1].distance(
-                                result.path[result.path.size() - 2]);
-                            current = parent;
-                        }
+                            auto current = free_index - 1;
+                            result.path.emplace_back(buffer_index(current));
+                            while (parents[current] != current)
+                            {
+                                auto parent = parents[current];
+                                result.path.emplace_back(buffer_index(parent));
+                                result.cost += result.path[result.path.size() - 1].distance(
+                                    result.path[result.path.size() - 2]);
+                                current = parent;
+                            }
 
-                        std::reverse(result.path.begin(), result.path.end());
-                        current = other_nearest_node.index;
-
-                        while (parents[current] != current)
-                        {
-                            auto parent = parents[current];
-                            result.path.emplace_back(buffer_index(parent));
-                            result.cost += result.path[result.path.size() - 1].distance(
-                                result.path[result.path.size() - 2]);
-                            current = parent;
-                        }
-
-                        if (not tree_a_is_start)
-                        {
                             std::reverse(result.path.begin(), result.path.end());
-                        }
+                            current = other_nearest_node.index;
 
-                        break;
+                            while (parents[current] != current)
+                            {
+                                auto parent = parents[current];
+                                result.path.emplace_back(buffer_index(parent));
+                                result.cost += result.path[result.path.size() - 1].distance(
+                                    result.path[result.path.size() - 2]);
+                                current = parent;
+                            }
+
+                            if (not tree_a_is_start)
+                            {
+                                std::reverse(result.path.begin(), result.path.end());
+                            }
+                            connected = true;
+
+                            break;
+                        }
                     }
                 }
                 else if (settings.dynamic_domain)
@@ -250,8 +282,11 @@ namespace vamp::planning
                     {
                         radii[nearest_node.index] =
                             std::max(radii[nearest_node.index] * (1.F - settings.alpha), settings.min_radius);
+                        // std::cout << "Resetting radius to " <<  radii[nearest_node.index] << std::endl;
                     }
                 }
+                // else
+                    // std::cout << "Extension failed ! Try another ! " << std::endl;
             }
 
             result.nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
