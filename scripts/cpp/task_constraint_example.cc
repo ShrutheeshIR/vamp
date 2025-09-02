@@ -92,354 +92,354 @@ auto main(int, char **) -> int
 
 
     // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
-    Eigen::Matrix<float, 4, 4> T;
-    T << 1,  0.000398163,  4.62412e-17, 0.30702, 0.000398163, -1, -6.92765e-12, -5.94873e-12, -2.7121e-15,  6.92765e-12, -1, 0.48527, 0.0, 0.0, 0.0, 1;
-    const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
+    // Eigen::Matrix<float, 4, 4> T;
+    // T << 1,  0.000398163,  4.62412e-17, 0.30702, 0.000398163, -1, -6.92765e-12, -5.94873e-12, -2.7121e-15,  6.92765e-12, -1, 0.48527, 0.0, 0.0, 0.0, 1;
+    // const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
 
-    const auto in_hand_pose = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
-    vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(target_pose, in_hand_pose, std::make_pair(lower_bound, upper_bound));
-
-
-    // const auto jacobian = Robot::jacobian(start);
-    // std::cout << "-----Printing Jacobian------" << std::endl;
-    // std::cout << jacobian << std::endl;
-    // std::cout << "-----Printed Jacobian------" << std::endl;
+    // const auto in_hand_pose = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
+    // vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(target_pose, in_hand_pose, std::make_pair(lower_bound, upper_bound));
 
 
-    Eigen::Transform<float, 3, Eigen::Isometry> efk;
-    Eigen::Matrix<float, 6, Eigen::Dynamic> J;
-
-    Robot::jacobian_eefk(goal, J, efk);
-    std::cout << "-----Printing Jacobian------" << std::endl;
-    std::cout << J << std::endl;
-    std::cout << "-----Printed Jacobian------" << std::endl;
-    std::cout << efk.matrix() << std::endl;
-    // std::cout << target_pose.matrix() << std::endl;
-
-
-    typename Robot::template ConfigurationBlock<rake> block;
-    typename Robot::template ConfigurationBlock<rake> projected_block;
-
-    for (auto i = 0U; i < Robot::dimension; ++i)
-    {
-        block[i] = Robot::Configuration(goal).broadcast(i);
-    }
-
-    // std::cout << block << std::endl;
-
-
-    vamp::FloatVector<rake, 6 * 7>JB;
-    vamp::FloatVector<rake, 16> rTeB;
-
-    Robot::jacobian_eefk(block, rTeB, JB);
-
-    // std::cout << rTeB << std::endl;
-    // std::cout << JB << std::endl;
-
-    const auto dist = task_constraint.distanceToConstraint(block);
-    std::cout << "From block : " << dist << std::endl;
-
-    const Eigen::Vector<float, 6> distance_vec = task_constraint.distanceToConstraint(goal);
-    std::cout << "From single : "<< distance_vec << std::endl;
-
-
-    bool success = task_constraint.project(block, projected_block);
-    std::cout << success << std::endl;
-    std::cout << block << std::endl;
-    std::cout << projected_block << std::endl;
-    std::cout << " printed config " << std::endl;
-
-    // std::array<float, 16> rTe;
-    // rTeB = vamp::Vector(rTe, true);
-    // rTeB = vamp::Vector(rTe, true);
-
-    // std::array<float, 7> q = {0., -0.785, 0., -2.356, 0., 1.571, 0.785};
-    // vamp::FloatVector<rake, 7> block;
-
-
-    // block = vamp::Vector(q, true);
-
-    // vamp::Vector<float, 2, 4> my_vector(2.0F);
-
-
-
-    // auto fk_jac = Robot::jacobian_eefk(block, wTeqB, JB);
-
-
-
-    // Eigen::Matrix<float, 4, 4> T2;
-    // T2 << -0.537531,    -0.544099,    -0.644218 , -0.753648 , 0.711539, -0.702646, -0.000256504 , 0.218136 , -0.452518, -0.458524, 0.764842 , -0.848243 , 0.0, 0.0, 0.0, 1;
-    // T2 << -0.537748, 0.711259, -0.4527, -0.637404, 0.543885, 0.70293, 0.458344, 0.64535, 0.644218, 0.000256504, -0.764842, 0.321956, 0.0, 0.0, 0.0, 1.0;
-    // Eigen::Transform<float, 3, Eigen::Isometry> og_pose(T2);
-    const auto og_pose = Robot::eefk(goal);
-
-    const auto error_se3 = og_pose.inverse() * target_pose;
-
-    // Eigen::Map<Eigen::Vector<float, 16>> error_se3_vec(error_se3.matrix(), 16);
-
-    std::cout << " --- EEF trans ---" << std::endl << og_pose.matrix() << std::endl;
-    std::cout << " --- Goal trans ---" << std::endl << target_pose.matrix() << std::endl;
-    std::cout << " --- Error trans ---" << std::endl << error_se3.matrix() << std::endl;
-
-    std::array<float, 16> error_se3_array;
-    for (auto i = 0U; i < 4; i++)
-        for (auto j = 0U; j < 4; j++)
-            error_se3_array[i*4 + j] = error_se3(j, i);
-
-
-    std::array<float, Robot::dimension * 6 > jacobian_array;
-    for (auto j = 0U; j < Robot::dimension; j++)
-        for (auto i = 0U; i < 6; i++)
-            jacobian_array[j*6 + i] = J(i, j);
-    // for (auto i = 0U; i < 6; i++)
-    //     for (auto j = 0U; j < Robot::dimension; j++)
-    //         jacobian_array[i*Robot::dimension + j] = jacobian(i, j);
-
-
-    // std::cout << error_se3_array[3] << ", " << error_se3_array[12] << std::endl;
-
-
-    std::array<float, Robot::dimension> grad;
-    std::array<float, 6> error_vec;
-
-    // const auto d = Robot::jacobian_solve(jacobian_array, error_se3_array, grad, error_vec);
-    // std::cout << d << std::endl;
-    // std::cout << "Print error " << std::endl;
-    // for (auto i = 0U; i < 6; i++)
-    //     std::cout << error_vec[i] << ", ";
-    // std::cout << "Printed error " << std::endl;
-    // std::cout << "Print grad " << std::endl;
-    // for (auto i = 0U; i < 7; i++)
-    //     std::cout << grad[i] << ", ";
-    // std::cout << "Printed grad " << std::endl;
-
+    // // const auto jacobian = Robot::jacobian(start);
+    // // std::cout << "-----Printing Jacobian------" << std::endl;
+    // // std::cout << jacobian << std::endl;
+    // // std::cout << "-----Printed Jacobian------" << std::endl;
 
 
     // Eigen::Transform<float, 3, Eigen::Isometry> efk;
     // Eigen::Matrix<float, 6, Eigen::Dynamic> J;
 
-    std::cout << "Starting to project " << std::endl;
-    Robot::ConfigurationArray q_ar = {2.35, 1., 0., -0.8, 0, 2.5, 0.785};
-    Robot::Configuration q(q_ar);
-
-    // for (auto k = 0U; k < Robot::dimension; k++)
-    //     std::cout << q[k] << ", ";
-    // std::cout << std::endl;
-
-    for (auto i = 0U; i < 1; i++)
-    {
-        Robot::jacobian_eefk(q_ar, J, efk);
-
-        // convert jacobian to array
-
-        for (auto k = 0U; k < Robot::dimension; k++)
-            for (auto j = 0U; j < 6; j++)
-                jacobian_array[k*6 + j] = J(j, k);
-
-        
-        // // compute error matrix
-        const auto error_se3_matrix = efk.inverse() * target_pose;
-
-        // // convert to arr
-        for (auto k = 0U; k < 4; k++)
-            for (auto j = 0U; j < 4; j++)
-                error_se3_array[k*4 + j] = error_se3_matrix(j, k);
-
-
-
-        const auto err_norm = Robot::jacobian_solve(jacobian_array, error_se3_array, grad, error_vec);
-        // for (auto k = 0U; k < Robot::dimension; k++)
-        //     std::cout << grad[k] << ", ";
-        // std::cout << std::endl;
-
-        for (auto k = 0U; k < Robot::dimension; k++)
-            q_ar[k] = q_ar[k] + grad[k] * 0.5;
-
-
-
-
-
-        q_ar[0] = 0.16851471364498138 * (q_ar[0] - -2.967099905014038);
-        q_ar[1] = 0.2728364169597626 * (q_ar[1] - -1.8325999975204468);
-        q_ar[2] = 0.16851471364498138 * (q_ar[2] - -2.967099905014038);
-        q_ar[3] = 0.30970299243927 * (q_ar[3] - -3.1415998935699463);
-        q_ar[4] = 0.16851471364498138 * (q_ar[4] - -2.967099905014038);
-        q_ar[5] = 0.2557806372642517 * (q_ar[5] - -0.08730000257492065);
-        q_ar[6] = 0.16851471364498138 * (q_ar[6] - -2.967099905014038);
-        for (auto k = 0U; k < Robot::dimension; k++)
-        {
-            if( q_ar[k] < 0.0)
-                q_ar[k] = 0.0;
-            if (q_ar[k] > 1.0)
-                q_ar[k] = 1.0;
-
-        }
-
-
-        q_ar[0] = -2.967099905014038 + (q_ar[0] * 5.934199810028076);
-        q_ar[1] = -1.8325999975204468 + (q_ar[1] * 3.6651999950408936);
-        q_ar[2] = -2.967099905014038 + (q_ar[2] * 5.934199810028076);
-        q_ar[3] = -3.1415998935699463 + (q_ar[3] * 3.2288999557495117);
-        q_ar[4] = -2.967099905014038 + (q_ar[4] * 5.934199810028076);
-        q_ar[5] = -0.08730000257492065 + (q_ar[5] * 3.909600019454956);
-        q_ar[6] = -2.967099905014038 + (q_ar[6] * 5.934199810028076);
-
-        Robot::descale_configuration(q);
-        q.clamp(0.F, 1.F);
-        Robot::scale_configuration(q);
-        for (auto k = 0U; k < Robot::dimension; k++)
-            std::cout << q_ar[k] << ", ";
-        std::cout << std::endl;
-        
-
-
-
-    }
-
-    // for (auto k = 0U; k < Robot::dimension; k++)
-    //     std::cout << q_ar[k] << ", ";
-    // std::cout << std::endl;
-
-    // Robot::KinJacBlock<rake> JB;
-    // Robot::SE3Block<rake> TB;
-    // Robot::ConfigurationBlock<rake> grad_out;
-    // vamp::FloatVector<rake, 6> error_out;
-    // Robot::ConfigurationBlock<rake> error_out;
-
-    // std::vector<Robot::ConfigurationBlock<rake>> content = {grad_out, error_out};
-    // std::vector<size_t> inds = {7, 7};
-
-
-    // vamp::VecContainer c= {content, inds};
-    // auto val = c[10];
-
-
-
-
-
-    // const auto val = Robot::jacobian_solve_config(JB, TB, grad_out, error_out);
-
-
-
-    // std::cout << grad;
-
-
-
-
-
-
-
-
-
-
-
-
-    // Robot::ConfigurationArray q_new;
-
-
-    // const auto jacobian = Robot::jacobian(start);
-    // std::cout << "-----Printing Jacobian------";
-    // std::cout << jacobian << std::endl;
-
-
-    // Eigen::Matrix<float, 6, Eigen::Dynamic> J;
-    // Eigen::Transform<float, 3, Eigen::Isometry> eef_pose;
-
-    // Robot::jacobian_eefk(start, J, eef_pose);
-    // std::cout << "-----Printing Jacobian EEFK ------";
+    // Robot::jacobian_eefk(goal, J, efk);
+    // std::cout << "-----Printing Jacobian------" << std::endl;
     // std::cout << J << std::endl;
-    // std::cout << eef_pose.matrix() << std::endl;
-    // std::cout << "-----Printed Jacobian EEFK ------";
+    // std::cout << "-----Printed Jacobian------" << std::endl;
+    // std::cout << efk.matrix() << std::endl;
+    // // std::cout << target_pose.matrix() << std::endl;
 
 
-    // std::cout << "projecting" << std::endl;
+    // typename Robot::template ConfigurationBlock<rake> block;
+    // typename Robot::template ConfigurationBlock<rake> projected_block;
 
-    // double distance = task_constraint.projectStep(start, q_new, true);
-    // std::cout << distance << std::endl;
-
-    // // task_constraint.project(start, q_new);
-    // for (float element : q_new) {
-    //     std::cout << element << " ";
-    // }
-    // std::cout << std::endl;
-
-
-    // distance = task_constraint.projectStepOld(start, q_new, true);
-    // std::cout << distance << std::endl;
-
-    // // task_constraint.project(start, q_new);
-    // for (float element : q_new) {
-    //     std::cout << element << " ";
-    // }
-    // std::cout << std::endl;
-
-    // distance = task_constraint.projectStepJT(start, q_new, true);
-    // std::cout << distance << std::endl;
-
-    // // task_constraint.project(start, q_new);
-    // for (float element : q_new) {
-    //     std::cout << element << " ";
-    // }
-    // std::cout << std::endl;
-
-    // bool success = task_constraint.project(start, q_new);
-    // std::cout << success << std::endl;
-
-    // // task_constraint.project(start, q_new);
-    // for (float element : q_new) {
-    //     std::cout << element << " ";
-    // }
-    // std::cout << std::endl;
-
-
-    // // Setup RRTC and plan
-    // vamp::planning::RRTCSettings rrtc_settings;
-    // rrtc_settings.range = 1.0;
-
-    // auto result =
-    //     CRRTC::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
-
-    // if (result.path.size() > 0)
+    // for (auto i = 0U; i < Robot::dimension; ++i)
     // {
-
-    //     // Output configurations of simplified path
-    //     std::cout << std::fixed << std::setprecision(3);
-    //     for (const auto &config : result.path)
-    //     {
-    //         const auto &array = config.to_array();
-    //         Robot::ConfigurationArray soln;
-    //         for (auto i = 0U; i < Robot::dimension; ++i)
-    //         {
-    //             std::cout << array[i] << ", ";
-    //             soln[i] = array[i];
-    //         }
-
-    //         auto fka = Robot::eefk(soln);
-    //         std::cout <<std::endl << fka.matrix() <<std::endl;
-
-    //         std::cout << std::endl;
-    //     }
+    //     block[i] = Robot::Configuration(goal).broadcast(i);
     // }
 
-    // Robot::ConfigurationBlock<rake> q;
+    // // std::cout << block << std::endl;
+
+
+    // vamp::FloatVector<rake, 6 * 7>JB;
+    // vamp::FloatVector<rake, 16> rTeB;
+
+    // Robot::jacobian_eefk(block, rTeB, JB);
+
+    // // std::cout << rTeB << std::endl;
+    // // std::cout << JB << std::endl;
+
+    // const auto dist = task_constraint.distanceToConstraint(block);
+    // std::cout << "From block : " << dist << std::endl;
+
+    // const Eigen::Vector<float, 6> distance_vec = task_constraint.distanceToConstraint(goal);
+    // std::cout << "From single : "<< distance_vec << std::endl;
+
+
+    // bool success = task_constraint.project(block, projected_block);
+    // std::cout << success << std::endl;
+    // std::cout << block << std::endl;
+    // std::cout << projected_block << std::endl;
+    // std::cout << " printed config " << std::endl;
+
+    // // std::array<float, 16> rTe;
+    // // rTeB = vamp::Vector(rTe, true);
+    // // rTeB = vamp::Vector(rTe, true);
+
+    // // std::array<float, 7> q = {0., -0.785, 0., -2.356, 0., 1.571, 0.785};
+    // // vamp::FloatVector<rake, 7> block;
+
+
+    // // block = vamp::Vector(q, true);
+
+    // // vamp::Vector<float, 2, 4> my_vector(2.0F);
+
+
+
+    // // auto fk_jac = Robot::jacobian_eefk(block, wTeqB, JB);
+
+
+
+    // // Eigen::Matrix<float, 4, 4> T2;
+    // // T2 << -0.537531,    -0.544099,    -0.644218 , -0.753648 , 0.711539, -0.702646, -0.000256504 , 0.218136 , -0.452518, -0.458524, 0.764842 , -0.848243 , 0.0, 0.0, 0.0, 1;
+    // // T2 << -0.537748, 0.711259, -0.4527, -0.637404, 0.543885, 0.70293, 0.458344, 0.64535, 0.644218, 0.000256504, -0.764842, 0.321956, 0.0, 0.0, 0.0, 1.0;
+    // // Eigen::Transform<float, 3, Eigen::Isometry> og_pose(T2);
+    // const auto og_pose = Robot::eefk(goal);
+
+    // const auto error_se3 = og_pose.inverse() * target_pose;
+
+    // // Eigen::Map<Eigen::Vector<float, 16>> error_se3_vec(error_se3.matrix(), 16);
+
+    // std::cout << " --- EEF trans ---" << std::endl << og_pose.matrix() << std::endl;
+    // std::cout << " --- Goal trans ---" << std::endl << target_pose.matrix() << std::endl;
+    // std::cout << " --- Error trans ---" << std::endl << error_se3.matrix() << std::endl;
+
+    // std::array<float, 16> error_se3_array;
+    // for (auto i = 0U; i < 4; i++)
+    //     for (auto j = 0U; j < 4; j++)
+    //         error_se3_array[i*4 + j] = error_se3(j, i);
+
+
+    // std::array<float, Robot::dimension * 6 > jacobian_array;
+    // for (auto j = 0U; j < Robot::dimension; j++)
+    //     for (auto i = 0U; i < 6; i++)
+    //         jacobian_array[j*6 + i] = J(i, j);
+    // // for (auto i = 0U; i < 6; i++)
+    // //     for (auto j = 0U; j < Robot::dimension; j++)
+    // //         jacobian_array[i*Robot::dimension + j] = jacobian(i, j);
+
+
+    // // std::cout << error_se3_array[3] << ", " << error_se3_array[12] << std::endl;
+
+
+    // std::array<float, Robot::dimension> grad;
+    // std::array<float, 6> error_vec;
+
+    // // const auto d = Robot::jacobian_solve(jacobian_array, error_se3_array, grad, error_vec);
+    // // std::cout << d << std::endl;
+    // // std::cout << "Print error " << std::endl;
+    // // for (auto i = 0U; i < 6; i++)
+    // //     std::cout << error_vec[i] << ", ";
+    // // std::cout << "Printed error " << std::endl;
+    // // std::cout << "Print grad " << std::endl;
+    // // for (auto i = 0U; i < 7; i++)
+    // //     std::cout << grad[i] << ", ";
+    // // std::cout << "Printed grad " << std::endl;
+
+
+
+    // // Eigen::Transform<float, 3, Eigen::Isometry> efk;
+    // // Eigen::Matrix<float, 6, Eigen::Dynamic> J;
+
+    // std::cout << "Starting to project " << std::endl;
+    // Robot::ConfigurationArray q_ar = {2.35, 1., 0., -0.8, 0, 2.5, 0.785};
+    // Robot::Configuration q(q_ar);
+
+    // // for (auto k = 0U; k < Robot::dimension; k++)
+    // //     std::cout << q[k] << ", ";
+    // // std::cout << std::endl;
+
+    // for (auto i = 0U; i < 1; i++)
+    // {
+    //     Robot::jacobian_eefk(q_ar, J, efk);
+
+    //     // convert jacobian to array
+
+    //     for (auto k = 0U; k < Robot::dimension; k++)
+    //         for (auto j = 0U; j < 6; j++)
+    //             jacobian_array[k*6 + j] = J(j, k);
+
+        
+    //     // // compute error matrix
+    //     const auto error_se3_matrix = efk.inverse() * target_pose;
+
+    //     // // convert to arr
+    //     for (auto k = 0U; k < 4; k++)
+    //         for (auto j = 0U; j < 4; j++)
+    //             error_se3_array[k*4 + j] = error_se3_matrix(j, k);
+
+
+
+    //     const auto err_norm = Robot::jacobian_solve(jacobian_array, error_se3_array, grad, error_vec);
+    //     // for (auto k = 0U; k < Robot::dimension; k++)
+    //     //     std::cout << grad[k] << ", ";
+    //     // std::cout << std::endl;
+
+    //     for (auto k = 0U; k < Robot::dimension; k++)
+    //         q_ar[k] = q_ar[k] + grad[k] * 0.5;
+
+
+
+
+
+    //     q_ar[0] = 0.16851471364498138 * (q_ar[0] - -2.967099905014038);
+    //     q_ar[1] = 0.2728364169597626 * (q_ar[1] - -1.8325999975204468);
+    //     q_ar[2] = 0.16851471364498138 * (q_ar[2] - -2.967099905014038);
+    //     q_ar[3] = 0.30970299243927 * (q_ar[3] - -3.1415998935699463);
+    //     q_ar[4] = 0.16851471364498138 * (q_ar[4] - -2.967099905014038);
+    //     q_ar[5] = 0.2557806372642517 * (q_ar[5] - -0.08730000257492065);
+    //     q_ar[6] = 0.16851471364498138 * (q_ar[6] - -2.967099905014038);
+    //     for (auto k = 0U; k < Robot::dimension; k++)
+    //     {
+    //         if( q_ar[k] < 0.0)
+    //             q_ar[k] = 0.0;
+    //         if (q_ar[k] > 1.0)
+    //             q_ar[k] = 1.0;
+
+    //     }
+
+
+    //     q_ar[0] = -2.967099905014038 + (q_ar[0] * 5.934199810028076);
+    //     q_ar[1] = -1.8325999975204468 + (q_ar[1] * 3.6651999950408936);
+    //     q_ar[2] = -2.967099905014038 + (q_ar[2] * 5.934199810028076);
+    //     q_ar[3] = -3.1415998935699463 + (q_ar[3] * 3.2288999557495117);
+    //     q_ar[4] = -2.967099905014038 + (q_ar[4] * 5.934199810028076);
+    //     q_ar[5] = -0.08730000257492065 + (q_ar[5] * 3.909600019454956);
+    //     q_ar[6] = -2.967099905014038 + (q_ar[6] * 5.934199810028076);
+
+    //     Robot::descale_configuration(q);
+    //     q.clamp(0.F, 1.F);
+    //     Robot::scale_configuration(q);
+    //     for (auto k = 0U; k < Robot::dimension; k++)
+    //         std::cout << q_ar[k] << ", ";
+    //     std::cout << std::endl;
+        
+
+
+
+    // }
+
+    // // for (auto k = 0U; k < Robot::dimension; k++)
+    // //     std::cout << q_ar[k] << ", ";
+    // // std::cout << std::endl;
+
+    // // Robot::KinJacBlock<rake> JB;
+    // // Robot::SE3Block<rake> TB;
+    // // Robot::ConfigurationBlock<rake> grad_out;
+    // // vamp::FloatVector<rake, 6> error_out;
+    // // Robot::ConfigurationBlock<rake> error_out;
+
+    // // std::vector<Robot::ConfigurationBlock<rake>> content = {grad_out, error_out};
+    // // std::vector<size_t> inds = {7, 7};
+
+
+    // // vamp::VecContainer c= {content, inds};
+    // // auto val = c[10];
+
+
+
+
+
+    // // const auto val = Robot::jacobian_solve_config(JB, TB, grad_out, error_out);
+
+
+
+    // // std::cout << grad;
+
+
+
+
+
+
+
+
+
+
+
+
+    // // Robot::ConfigurationArray q_new;
+
+
+    // // const auto jacobian = Robot::jacobian(start);
+    // // std::cout << "-----Printing Jacobian------";
+    // // std::cout << jacobian << std::endl;
+
+
+    // // Eigen::Matrix<float, 6, Eigen::Dynamic> J;
+    // // Eigen::Transform<float, 3, Eigen::Isometry> eef_pose;
+
+    // // Robot::jacobian_eefk(start, J, eef_pose);
+    // // std::cout << "-----Printing Jacobian EEFK ------";
+    // // std::cout << J << std::endl;
+    // // std::cout << eef_pose.matrix() << std::endl;
+    // // std::cout << "-----Printed Jacobian EEFK ------";
+
+
+    // // std::cout << "projecting" << std::endl;
+
+    // // double distance = task_constraint.projectStep(start, q_new, true);
+    // // std::cout << distance << std::endl;
+
+    // // // task_constraint.project(start, q_new);
+    // // for (float element : q_new) {
+    // //     std::cout << element << " ";
+    // // }
+    // // std::cout << std::endl;
+
+
+    // // distance = task_constraint.projectStepOld(start, q_new, true);
+    // // std::cout << distance << std::endl;
+
+    // // // task_constraint.project(start, q_new);
+    // // for (float element : q_new) {
+    // //     std::cout << element << " ";
+    // // }
+    // // std::cout << std::endl;
+
+    // // distance = task_constraint.projectStepJT(start, q_new, true);
+    // // std::cout << distance << std::endl;
+
+    // // // task_constraint.project(start, q_new);
+    // // for (float element : q_new) {
+    // //     std::cout << element << " ";
+    // // }
+    // // std::cout << std::endl;
+
+    // // bool success = task_constraint.project(start, q_new);
+    // // std::cout << success << std::endl;
+
+    // // // task_constraint.project(start, q_new);
+    // // for (float element : q_new) {
+    // //     std::cout << element << " ";
+    // // }
+    // // std::cout << std::endl;
+
+
+    // // // Setup RRTC and plan
+    // // vamp::planning::RRTCSettings rrtc_settings;
+    // // rrtc_settings.range = 1.0;
+
+    // // auto result =
+    // //     CRRTC::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
+
+    // // if (result.path.size() > 0)
+    // // {
+
+    // //     // Output configurations of simplified path
+    // //     std::cout << std::fixed << std::setprecision(3);
+    // //     for (const auto &config : result.path)
+    // //     {
+    // //         const auto &array = config.to_array();
+    // //         Robot::ConfigurationArray soln;
+    // //         for (auto i = 0U; i < Robot::dimension; ++i)
+    // //         {
+    // //             std::cout << array[i] << ", ";
+    // //             soln[i] = array[i];
+    // //         }
+
+    // //         auto fka = Robot::eefk(soln);
+    // //         std::cout <<std::endl << fka.matrix() <<std::endl;
+
+    // //         std::cout << std::endl;
+    // //     }
+    // // }
+
+    // // Robot::ConfigurationBlock<rake> q;
     
 
-    // std::vector<vamp::FloatVector<rake>> combined_vec;
-    // std::array<float, vamp::FloatVector<rake>> combined_arr;
-    // for (auto k = 0U; k < Robot::dimension; k++)
-    // {
-    //     const auto r = q.row(k);
-    //     std::cout << r << std::endl;
-    //     combined_arr[k] = r;
-    // }
-    // for (auto k = 0U; k < Robot::dimension; k++)
-    // {
-    //     const auto r = q.row(k);
-    //     std::cout << r << std::endl;
-    //     combined_arr[k] = r;
-    // }
+    // // std::vector<vamp::FloatVector<rake>> combined_vec;
+    // // std::array<float, vamp::FloatVector<rake>> combined_arr;
+    // // for (auto k = 0U; k < Robot::dimension; k++)
+    // // {
+    // //     const auto r = q.row(k);
+    // //     std::cout << r << std::endl;
+    // //     combined_arr[k] = r;
+    // // }
+    // // for (auto k = 0U; k < Robot::dimension; k++)
+    // // {
+    // //     const auto r = q.row(k);
+    // //     std::cout << r << std::endl;
+    // //     combined_arr[k] = r;
+    // // }
 
-    // vamp::FloatVector<rake, Robot::dimension * 2> q2(combined_arr);
+    // // vamp::FloatVector<rake, Robot::dimension * 2> q2(combined_arr);
 
     
 

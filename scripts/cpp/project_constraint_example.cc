@@ -26,6 +26,10 @@ using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution>;
 static constexpr Robot::ConfigurationArray goal = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
 static constexpr Robot::ConfigurationArray start = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
 
+// static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
+// static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
+
+
 // static constexpr Robot::ConfigurationArray goal = {-0.839708,  0.496555, -0.630832, -0.573204,  0.232247,  1.8259,   -0.467584};
 
 // Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
@@ -94,11 +98,18 @@ auto main(int, char **) -> int
     typename Robot::template ConfigurationBlock<rake> projected_block;
 
     for (auto i = 0U; i < Robot::dimension; ++i)
-        block[i] = Robot::Configuration(goal).broadcast(i);
+        block[i] = Robot::Configuration(goal).broadcast(i) + 0.05;
 
 
-    const auto dist = task_constraint.distanceToConstraint(block);
+    auto dist = task_constraint.distanceToConstraintAuto(block);
     std::cout << "From block : " << dist << std::endl;
+
+    for (auto i = 0U; i < Robot::dimension; ++i)
+        block[i] = Robot::Configuration(goal).broadcast(i) + 0.05;
+    dist = task_constraint.distanceToConstraint(block);
+    std::cout << "From block : " << dist << std::endl;
+
+
 
     // const Eigen::Vector<float, 6> distance_vec = task_constraint.distanceToConstraint(goal);
     // std::cout << "From single : "<< distance_vec << std::endl;
@@ -110,27 +121,27 @@ auto main(int, char **) -> int
     std::cout << projected_block << std::endl;
     std::cout << " printed config " << std::endl;
 
-    typename Robot::template ConfigurationArray last_projected;
-    for (auto i = 0U; i < Robot::dimension; ++i) {  
-        last_projected[i] = projected_block[{i, rake-1}];  
-    }
+    // typename Robot::template ConfigurationArray last_projected;
+    // for (auto i = 0U; i < Robot::dimension; ++i) {  
+    //     last_projected[i] = projected_block[{i, rake-1}];  
+    // }
 
-    std::cout << Robot::Configuration(last_projected) << std::endl;
+    // std::cout << Robot::Configuration(last_projected) << std::endl;
 
 
-    // Robot::Configuration vector = Robot::Configuration(std::array<float, 7>{-0.417048, 0.0170863, 0.146134, -0.450757, -0.393437, -0.309385, -0.592226});
-    // std::vector<Robot::Configuration> projected_vectors;
+    Robot::Configuration vector = Robot::Configuration(std::array<float, 7>{-0.109852, -0.302075, 0.31963, -0.108644, -0.0344217, -0.0659725, -0.164862});
+    std::vector<Robot::Configuration> projected_vectors;
 
-    // auto goal_config = Robot::Configuration(goal);
-    // std::cout << "\n\n---> Going to project a vector " << std::endl;
-    // auto valid = vamp::planning::project_constraint_vector<Robot, rake, Robot::resolution>(
-    //     goal_config,
-    //     vector,
-    //     0.53F,
-    //     projected_vectors,
-    //     task_constraint,
-    //     env_v
-    // );
+    auto goal_config = Robot::Configuration(start);
+    std::cout << "\n\n---> Going to project a vector " << std::endl;
+    auto valid = vamp::planning::project_constraint_vector<Robot, rake, Robot::resolution>(
+        goal_config,
+        vector,
+        0.53F,
+        projected_vectors,
+        task_constraint,
+        env_v
+    );
     // auto valid = vamp::planning::validate_vector<Robot, rake, Robot::resolution>(
     //     goal_config,
     //     vector,
@@ -138,7 +149,7 @@ auto main(int, char **) -> int
     //     env_v
     // );
 
-    // std::cout << "Are projects valid : " << valid << std::endl;
+    std::cout << "Are projects valid : " << valid << std::endl;
     // std::cout << projected_vectors.back() << std::endl;
 
 
@@ -146,7 +157,7 @@ auto main(int, char **) -> int
 
     // Setup RRTC and plan
     vamp::planning::RRTCSettings rrtc_settings;
-    rrtc_settings.range = 0.1;
+    rrtc_settings.range = 0.5;
     std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     auto result =
         CRRTC::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
@@ -170,10 +181,11 @@ auto main(int, char **) -> int
 
             auto fka = Robot::eefk(soln);
             // std::cout <<std::endl << fka.matrix() <<std::endl;
-
             std::cout << std::endl;
         }
     }
+
+    std::cout << "Planner took " << result.nanoseconds << std::endl;
 
 
 

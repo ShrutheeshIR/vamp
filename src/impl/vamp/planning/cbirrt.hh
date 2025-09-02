@@ -101,10 +101,10 @@ namespace vamp::planning
             }
             bool connected = false;
 
-            while (iter++ < 100000 and free_index < settings.max_samples and not connected)
+            while (iter++ < 10000 and free_index < settings.max_samples and not connected)
             {   
-                if (iter % 1 == 0)
-                    std::cout << "Starting iteration : " << iter << std::endl;
+                // if (iter % 1 == 0)
+                    // std::cout << "Starting iteration : " << iter << ", " << free_index << ", " <<connected << " , " << settings.max_samples << std::endl;
                 float asize = tree_a->size();
                 float bsize = tree_b->size();
                 float ratio = std::abs(asize - bsize) / asize;
@@ -152,24 +152,38 @@ namespace vamp::planning
                     ))
 
                 {
-                    // std::cout << "Got a valid projection "  << projected_vector.back() << std::endl;
-                    float *new_configuration_index = buffer_index(free_index);
-                    // auto new_configuration = nearest_configuration + extension_vector;
-                    auto new_configuration = projected_vector.back();
-                    new_configuration.to_array(new_configuration_index);
-                    tree_a->insert(NNNode<dimension>{free_index, {new_configuration_index}});
+                    // std::cout << "Initially projected " << nearest_configuration << " to " << projected_vector.back() << " trying to project to " << nearest_configuration + extension_vector << " with extension vector " << extension_vector << " with distance " << nearest_distance << std::endl;
 
-                    parents[free_index] = nearest_node.index;
-                    radii[free_index] = std::numeric_limits<float>::max();
+                    float *new_configuration_index;
+                    Configuration new_configuration;
+                    auto parent_index = nearest_node.index;
 
-                    free_index++;
-
-                    if (settings.dynamic_domain and nearest_radius != std::numeric_limits<float>::max())
+                    for(auto proj_vector : projected_vector)
                     {
-                        radii[nearest_node.index] *= (1 + settings.alpha);
+                        new_configuration_index = buffer_index(free_index);
+                        new_configuration = proj_vector;
+                        new_configuration.to_array(new_configuration_index);
+                        tree_a->insert(NNNode<dimension>{free_index, {new_configuration_index}});
+
+                        parents[free_index] = parent_index;
+                        radii[free_index] = std::numeric_limits<float>::max();
+
+
+                        if (settings.dynamic_domain and nearest_radius != std::numeric_limits<float>::max())
+                        {
+                            radii[parent_index] *= (1 + settings.alpha);
+                        }
+
+                        // std::cout << "Adding " << proj_vector << " with index " << free_index << " to tree with parent " << parent_index <<std::endl; 
+                        parent_index = free_index;
+                        free_index++;
+
                     }
+                    // std::cout << "Added projected vectors : " << free_index << std::endl; 
+
 
                     auto prior = new_configuration;
+                    auto prior_index = new_configuration_index;
 
 
 
@@ -181,7 +195,7 @@ namespace vamp::planning
                             break;
                         // Extend to goal tree
                         const auto other_nearest =
-                            tree_b->nearest(NNFloatArray<dimension>{new_configuration_index});
+                            tree_b->nearest(NNFloatArray<dimension>{prior_index});
                         if (not other_nearest)
                             break;
 
@@ -189,24 +203,15 @@ namespace vamp::planning
                         const auto &[other_nearest_node, other_nearest_distance] = *other_nearest;
                         const auto other_nearest_configuration = other_nearest_node.as_vector();
 
-                        // std::cout << "\n\n\n ----> The nearest node in the goal tree is : " << other_nearest_configuration << prior << std::endl;
-
-
-                        
-                        // This is the discrete geodesic part
-
-
-
                         auto other_nearest_vector = other_nearest_configuration - prior;
                         bool other_reach = other_nearest_distance < settings.range;
-                        // const std::size_t n_extensions = std::ceil(other_nearest_distance / settings.range);
-                        // const float increment_length = other_nearest_distance / static_cast<float>(n_extensions);
-                        // auto increment = other_nearest_vector * (1.0F / static_cast<float>(n_extensions));
 
+                        auto other_extension_vector =
+                            (other_reach) ? other_nearest_vector : other_nearest_vector * (settings.range / other_nearest_distance);
 
                         if(not project_constraint_vector<Robot, rake, resolution>(
                             prior,
-                            other_nearest_vector,
+                            other_extension_vector,
                             (other_reach) ? other_nearest_distance : settings.range,
                             projected_vector,
                             constraint,
@@ -221,16 +226,25 @@ namespace vamp::planning
                             break;
 
                         // std::cout << "Trying to extend " << other_reach << std::endl;
-                        auto next = projected_vector.back();
-                        float *next_index = buffer_index(free_index);
-                        next.to_array(next_index);
-                        tree_a->insert(NNNode<dimension>{free_index, {next_index}});
-                        parents[free_index] = free_index - 1;
-                        radii[free_index] = std::numeric_limits<float>::max();
+                        // std::cout << "Extend connected " << prior << " to " << projected_vector.back() << " trying to project to " << prior +  other_extension_vector  << " with distance " << other_nearest_distance << " with extension vector " << other_extension_vector << std::endl;
 
-                        free_index++;
 
+                        float *next_index;
+                        Configuration next;
+
+                        for(auto proj_vector : projected_vector)
+                        {
+                            next_index = buffer_index(free_index);
+                            next = proj_vector;
+                            next.to_array(next_index);
+                            tree_a->insert(NNNode<dimension>{free_index, {next_index}});
+                            parents[free_index] = free_index - 1;
+                            radii[free_index] = std::numeric_limits<float>::max();
+                            free_index++;
+                        }
                         prior = next;
+                        prior_index = next_index;
+
 
 
 
@@ -288,6 +302,8 @@ namespace vamp::planning
                 // else
                     // std::cout << "Extension failed ! Try another ! " << std::endl;
             }
+
+            // std::cout << "Terminated with  : " << iter << ", " << free_index << ", " <<connected << " , " << settings.max_samples << std::endl;
 
             result.nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
             result.iterations = iter;

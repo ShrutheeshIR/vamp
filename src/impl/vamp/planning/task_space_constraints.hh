@@ -25,111 +25,111 @@ namespace vamp::planning
             const double tolerance = 1e-2;
             const size_t max_project_iters = 10;
 
-        public:
-            void integrateJointConfiguration(const ConfigurationArray &q, ConfigurationArray &q_new, const Eigen::Matrix<float, Eigen::Dynamic, 1> &update_vector)
-            {
-                for (size_t i = 0; i < q.size(); i ++)
-                    // need to adjust joint limits
-                    q_new[i] = q[i] + update_vector(i);
-            }
+        // public:
+        //     void integrateJointConfiguration(const ConfigurationArray &q, ConfigurationArray &q_new, const Eigen::Matrix<float, Eigen::Dynamic, 1> &update_vector)
+        //     {
+        //         for (size_t i = 0; i < q.size(); i ++)
+        //             // need to adjust joint limits
+        //             q_new[i] = q[i] + update_vector(i);
+        //     }
 
-            double projectStepOld(const ConfigurationArray &q, ConfigurationArray &q_new, bool update_q = true)
-            {
-                Eigen::Matrix<float, 6, Eigen::Dynamic> J;
-                Eigen::Transform<float, 3, Eigen::Isometry> eef_pose;
+        //     double projectStepOld(const ConfigurationArray &q, ConfigurationArray &q_new, bool update_q = true)
+        //     {
+        //         Eigen::Matrix<float, 6, Eigen::Dynamic> J;
+        //         Eigen::Transform<float, 3, Eigen::Isometry> eef_pose;
 
-                Robot::jacobian_eefk(q, J, eef_pose); // can be parallel from distance
-                const Eigen::Vector<float, 6> distance = distanceToConstraintEEF(eef_pose);
+        //         Robot::jacobian_eefk(q, J, eef_pose); // can be parallel from distance
+        //         const Eigen::Vector<float, 6> distance = distanceToConstraintEEF(eef_pose);
 
-                if (update_q)
-                {
-                    // need to convert jacobian into ref frame
-                    const Eigen::Matrix<float, Eigen::Dynamic, 1> update = -J.transpose() * (J * J.transpose() + 1e-6 * Eigen::Matrix<float, 6, 6>::Identity()).ldlt().solve(distance);
-                    integrateJointConfiguration(q, q_new, update);
-                }
-                return distance.squaredNorm();
+        //         if (update_q)
+        //         {
+        //             // need to convert jacobian into ref frame
+        //             const Eigen::Matrix<float, Eigen::Dynamic, 1> update = -J.transpose() * (J * J.transpose() + 1e-6 * Eigen::Matrix<float, 6, 6>::Identity()).ldlt().solve(distance);
+        //             integrateJointConfiguration(q, q_new, update);
+        //         }
+        //         return distance.squaredNorm();
 
-            }
-
-
-            double projectStepJT(const ConfigurationArray &q, ConfigurationArray &q_new, bool update_q = true)
-            {
-                Eigen::Matrix<float, 6, Eigen::Dynamic> J;
-                Eigen::Transform<float, 3, Eigen::Isometry> eef_pose;
-
-                Robot::jacobian_eefk(q, J, eef_pose); // can be parallel from distance
-                const Eigen::Vector<float, 6> distance = distanceToConstraintEEF(eef_pose);
-
-                if (update_q)
-                {
-                    // need to convert jacobian into ref frame
-                    const Eigen::Matrix<float, Eigen::Dynamic, 1> update = -J.transpose() * distance;
-                    integrateJointConfiguration(q, q_new, update);
-                }
-                return distance.squaredNorm();
-
-            }
-
-            // project with vamp inverse
-            double projectStep(const ConfigurationArray &q, ConfigurationArray &q_new, bool update_q = true)
-            {
-                Eigen::Matrix<float, 6, Eigen::Dynamic> J;
-                Eigen::Transform<float, 3, Eigen::Isometry> eef_pose;
-                Eigen::Matrix<float, 7, 1> grad;
-
-                Robot::jacobian_eefk(q, J, eef_pose); // can be parallel from distance
-                const Eigen::Vector<float, 6> distance = distanceToConstraintEEF(eef_pose);
-
-                std::array<float, 6> dist_arr;
-                std::copy(distance.data(), distance.data() + distance.size(), dist_arr.begin());
+        //     }
 
 
+        //     double projectStepJT(const ConfigurationArray &q, ConfigurationArray &q_new, bool update_q = true)
+        //     {
+        //         Eigen::Matrix<float, 6, Eigen::Dynamic> J;
+        //         Eigen::Transform<float, 3, Eigen::Isometry> eef_pose;
 
-                if (update_q)
-                {
-                    // ;
+        //         Robot::jacobian_eefk(q, J, eef_pose); // can be parallel from distance
+        //         const Eigen::Vector<float, 6> distance = distanceToConstraintEEF(eef_pose);
+
+        //         if (update_q)
+        //         {
+        //             // need to convert jacobian into ref frame
+        //             const Eigen::Matrix<float, Eigen::Dynamic, 1> update = -J.transpose() * distance;
+        //             integrateJointConfiguration(q, q_new, update);
+        //         }
+        //         return distance.squaredNorm();
+
+        //     }
+
+        //     // project with vamp inverse
+        //     double projectStep(const ConfigurationArray &q, ConfigurationArray &q_new, bool update_q = true)
+        //     {
+        //         Eigen::Matrix<float, 6, Eigen::Dynamic> J;
+        //         Eigen::Transform<float, 3, Eigen::Isometry> eef_pose;
+        //         Eigen::Matrix<float, 7, 1> grad;
+
+        //         Robot::jacobian_eefk(q, J, eef_pose); // can be parallel from distance
+        //         const Eigen::Vector<float, 6> distance = distanceToConstraintEEF(eef_pose);
+
+        //         std::array<float, 6> dist_arr;
+        //         std::copy(distance.data(), distance.data() + distance.size(), dist_arr.begin());
+
+
+
+        //         if (update_q)
+        //         {
+        //             // ;
                     
-                    Robot::jacobian_solve(q, dist_arr, grad);
-                    // std::cout << grad << std::endl;
-                    integrateJointConfiguration(q, q_new, -grad);
-                }
-                return distance.squaredNorm();
+        //             Robot::jacobian_solve(q, dist_arr, grad);
+        //             // std::cout << grad << std::endl;
+        //             integrateJointConfiguration(q, q_new, -grad);
+        //         }
+        //         return distance.squaredNorm();
 
-            }
+        //     }
 
 
-            bool project(const ConfigurationArray &q, ConfigurationArray &q_new)
-            {
-                bool success = false;
-                // double distance = projectStep(q, q_new, false);
-                // size_t project_iter = 0;
-                // // std::cout << distance << " " << std::endl;
-                // while ((project_iter < max_project_iters) && (distance > tolerance))
-                // {
-                //     distance = projectStepJT(q_new, q_new, true);
-                //     // std::cout << distance << " " << std::endl;
-                // }
-                // if (distance < tolerance)
-                // {
-                //     // std::cout << distance << " " << std::endl;
-                //     const auto fk = Robot::eefk(q_new);
-                //     std::cout << fk.matrix()(2,3) << std::endl;
+        //     bool project(const ConfigurationArray &q, ConfigurationArray &q_new)
+        //     {
+        //         bool success = false;
+        //         // double distance = projectStep(q, q_new, false);
+        //         // size_t project_iter = 0;
+        //         // // std::cout << distance << " " << std::endl;
+        //         // while ((project_iter < max_project_iters) && (distance > tolerance))
+        //         // {
+        //         //     distance = projectStepJT(q_new, q_new, true);
+        //         //     // std::cout << distance << " " << std::endl;
+        //         // }
+        //         // if (distance < tolerance)
+        //         // {
+        //         //     // std::cout << distance << " " << std::endl;
+        //         //     const auto fk = Robot::eefk(q_new);
+        //         //     std::cout << fk.matrix()(2,3) << std::endl;
 
-                //     success = true;
-                // }
-                return success;
+        //         //     success = true;
+        //         // }
+        //         return success;
                     
-            }
+        //     }
 
-            bool isValid(const ConfigurationArray &q)
-            {
-                const Eigen::Transform<float, 3, Eigen::Isometry> eef_pose = Robot::eefk(q);
-                const Eigen::Vector<float, 6> distance = distanceToConstraintEEF(eef_pose);
+        //     bool isValid(const ConfigurationArray &q)
+        //     {
+        //         const Eigen::Transform<float, 3, Eigen::Isometry> eef_pose = Robot::eefk(q);
+        //         const Eigen::Vector<float, 6> distance = distanceToConstraintEEF(eef_pose);
 
-                return distance.squaredNorm() < tolerance;
-            }
+        //         return distance.squaredNorm() < tolerance;
+        //     }
 
-            virtual const Eigen::VectorXf distanceToConstraintEEF(Eigen::Transform<float, 3, Eigen::Isometry> computed_eef_pose_world_frame) = 0;
+        //     virtual const Eigen::VectorXf distanceToConstraintEEF(Eigen::Transform<float, 3, Eigen::Isometry> computed_eef_pose_world_frame) = 0;
             
     };
 
@@ -187,19 +187,68 @@ namespace vamp::planning
             };
             TSRErrInp tsr_distance_inp;
 
+            struct TSRFuncInput {
+                ConfigurationBlock q;
+                vamp::FloatVector<rake, 7>rTeB;
+                vamp::FloatVector<rake, 7> wTrB;
+                vamp::FloatVector<rake, 6> lbB;
+                vamp::FloatVector<rake, 6> ubB;
+                
+                auto operator[](size_t index) const {
+                    if (index >= 0 && index < 7) // q
+                        return q[index];
+
+                    if (index >= 7 && index < (2 * 7)) // rtE
+                        return rTeB[index - 7];
+
+                    else if (index >= (2 * 7) && index < (3 * 7))
+                        return wTrB[index - (2 * 7)];
+
+
+                    else if (index >= (3 * 7) && index < (3 * 7 + 6))
+                        return lbB[index - (3 * 7)];
+
+                    else if (index >= (3 * 7 + 6) && index < (3 * 7 + 6 * 2))
+                        return ubB[index - (3 * 7 + 6)];
+                    else
+                        return rTeB[0]; // to prevent complaining
+                }
+            };
+            TSRFuncInput tsr_function_inp;
+
+
             struct JacobianProjectInp {
                 vamp::FloatVector<rake, 6 * 7>J; // jacobian
                 vamp::FloatVector<rake, 6> err; // error vector
 
-                auto operator[](size_t index) const {
+                auto &operator[](size_t index) {
                     if (index >= 0 && index < 42)
                         return J[index];
                     else if (index >= 42 && index < 48)
                         return err[index - 42];
                     else
                         return err[0];
-
                 }
+
+                const auto operator[](size_t index) const {
+                    if (index >= 0 && index < 42)
+                        return J[index];
+                    else if (index >= 42 && index < 48)
+                        return err[index - 42];
+                    else
+                        return err[0];
+                }
+
+
+                JacobianProjectInp& operator=(vamp::FloatVector<rake, 6 + 6 * 7> y) {
+                    for(auto i=0U; i < 6; i++)
+                        err[i] = y[42 + i];
+                    for(auto i=0U; i < 42; i++)
+                        J[i] = y[42];
+                    return *this;
+                }
+
+
             };
             JacobianProjectInp jac_proj_inp;
 
@@ -238,6 +287,17 @@ namespace vamp::planning
                 assignBlock<6>(bounds.first, tsr_distance_inp.lbB);
                 assignBlock<6>(bounds.second, tsr_distance_inp.ubB);
 
+
+                Eigen::Quaternion<float> q1(eef_pose_w_ref_reference.linear());
+                std::array<float, 7> transform1 = {q1.w(), q1.x(), q1.y(), q1.z(), eef_pose_w_ref_reference.translation().x(), eef_pose_w_ref_reference.translation().y(), eef_pose_w_ref_reference.translation().z()};
+
+                Eigen::Quaternion<float> q2(ref_frame_w_world.linear());
+                std::array<float, 7> transform2 = {q2.w(), q2.x(), q2.y(), q2.z(), ref_frame_w_world.translation().x(), ref_frame_w_world.translation().y(), ref_frame_w_world.translation().z()};
+                assignBlock<7>(transform1, tsr_function_inp.rTeB);
+                assignBlock<7>(transform2, tsr_function_inp.wTrB);
+                
+                assignBlock<6>(bounds.first, tsr_function_inp.lbB);
+                assignBlock<6>(bounds.second, tsr_function_inp.ubB);
             }
 
             // const auto function(const Configuration &q) {
@@ -254,7 +314,7 @@ namespace vamp::planning
 
             // void setReferenceFrame(Eigen::Transform<float, 3, Eigen::Isometry> referenceFrame);
 
-            const Eigen::VectorXf distanceToConstraintEEF(Eigen::Transform<float, 3, Eigen::Isometry> computed_eef_pose_world_frame) override
+            const Eigen::VectorXf distanceToConstraintEEF(Eigen::Transform<float, 3, Eigen::Isometry> computed_eef_pose_world_frame) 
             {
                 Eigen::Vector<float, 6> displacement;
                 Eigen::Vector<float, 6> penalty;
@@ -277,7 +337,7 @@ namespace vamp::planning
 
                 Eigen::AngleAxisf aa(rot_error);
                 displacement << translation, aa.axis() * aa.angle() * 0.0;
-                std::cout << displacement << std::endl;
+                // std::cout << displacement << std::endl;
 
 
                 // (TODO) make this 0 if inside the bounds
@@ -312,6 +372,30 @@ namespace vamp::planning
         // How to combine floatvectors
         // how to compare blend operator
         // how to broadcast a single vector as n times -- broadcast_vector
+
+        const auto distanceToConstraintAuto(const ConfigurationBlock &q)
+        {
+            for (int i=0U; i < 7; i++)
+                tsr_function_inp.q[i] = q[i];
+
+
+            // for (int i=0U; i < 27; i++)
+            //     std::cout << tsr_function_inp[i] << " ";
+            // std::cout << std::endl;
+
+            // std::cout << tsr_function_inp[0] << "," << tsr_function_inp[10] <<std::endl;
+
+            Robot::tsr_function_jac(tsr_function_inp, jac_proj_inp);
+
+            for(int i=0U; i < 6;i++)
+            {
+                jac_proj_inp[i + 42] = (jac_proj_inp[i + 42] - tsr_function_inp[ 21 + i]).min(0.F) + (jac_proj_inp[i + 42] - tsr_function_inp[ 27 + i]).max(0.F);
+            }
+
+            auto d = (jac_proj_inp[0 + 42] * jac_proj_inp[0 + 42] + jac_proj_inp[1 + 42] * jac_proj_inp[1 + 42] + jac_proj_inp[2 + 42] * jac_proj_inp[2 + 42] + jac_proj_inp[3 + 42] * jac_proj_inp[3 + 42] + jac_proj_inp[4 + 42] * jac_proj_inp[4 + 42] + jac_proj_inp[5 + 42] * jac_proj_inp[5 + 42]).abs();
+            return d;
+        }
+
 
         const auto distanceToConstraint(const ConfigurationBlock &q)
         {
@@ -365,7 +449,11 @@ namespace vamp::planning
 
 
             for(int i=0U;i < 6;i++)
+            {
+                // std::cout << y[i] << " ";
                 y[i] = (y[i] - x[48+i]).min(0.F) + (y[i] - x[54+i]).max(0.F);
+            }
+            // std::cout << std::endl;
 
             y[6] = (y[0] * y[0] + y[1] * y[1] + y[2] * y[2]).abs();
 
@@ -383,7 +471,6 @@ namespace vamp::planning
         {
 
             vamp::FloatVector<rake, 7> y;
-
             y[0] = x[5] * x[47] + x[4] * x[46] + x[3] * x[45] + x[2] * x[44] + x[1] * x[43] + x[0] * x[42];
             y[1] = x[11] * x[47] + x[10] * x[46] + x[9] * x[45] + x[8] * x[44] + x[7] * x[43] + x[6] * x[42];
             y[2] =
@@ -419,12 +506,11 @@ namespace vamp::planning
 
         auto projectStepJT(const ConfigurationBlock &q, ConfigurationBlock &q_new, bool update_q = true)
         {
-            auto dist = distanceToConstraint(q);
+            auto dist = distanceToConstraintAuto(q);
 
             if (update_q)
             {
                 auto grad = jacobian_solve_config(jac_proj_inp);
-                // std::cout << "Grad is : " << grad << std::endl;
                 integrateJointConfiguration(q, q_new, grad);
 
             }
@@ -438,7 +524,9 @@ namespace vamp::planning
         {
             bool success = false;
             
-            auto dist = distanceToConstraint(q);
+            auto dist = distanceToConstraintAuto(q);
+
+            // std::cout << "Initial error is : " << jac_proj_inp.err << std::endl;
             size_t project_iter = 0;
             for (auto i = 0U; i < Robot::dimension; i++)
                 q_new[i] = q[i];
@@ -452,10 +540,11 @@ namespace vamp::planning
             if (dist.test_all_less_equal(0.00001F))
                 success = true;
 
-            std::cout << "Num steps : " << project_iter << std::endl;
+            // std::cout << "Num steps : " << project_iter << std::endl;
 
             // Robot::jacobian_eefk(q_new, tsr_distance_inp.wTeqB, jac_proj_inp.J);
             // std::cout << "FK after proj : " <<  tsr_distance_inp.wTeqB << std::endl;
+            Robot::jacobian_eefk(q_new, tsr_distance_inp.wTeqB, jac_proj_inp.J);
             // std::cout << "FK after proj : " << tsr_distance_inp.wTeqB[12] <<", " << tsr_distance_inp.wTeqB[13] <<", " << tsr_distance_inp.wTeqB[14] << std::endl;
             // std::cout << "Full error is : " << jac_proj_inp.err << std::endl;
             // std::cout << "Projected config is : " << q_new << std::endl;
@@ -470,151 +559,6 @@ namespace vamp::planning
 
 
 
-        // inline static auto tsr_error_simd(const std::array<float, 60> &x) noexcept
-        // {
-        //     std::array<float, 7> v;
-        //     std::array<float, 7> y;
-
-        //     v[0] = (-x[0]) * x[12] + (-x[1]) * x[13] + (-x[2]) * x[14];
-        //     v[1] = (-x[4]) * x[12] + (-x[5]) * x[13] + (-x[6]) * x[14];
-        //     v[2] = (-x[8]) * x[12] + (-x[9]) * x[13] + (-x[10]) * x[14];
-        //     v[3] = x[44] + x[32] * v[0] + x[36] * v[1] + x[40] * v[2];
-        //     v[4] = x[45] + x[33] * v[0] + x[37] * v[1] + x[41] * v[2];
-        //     v[2] = x[46] + x[34] * v[0] + x[38] * v[1] + x[42] * v[2];
-        //     v[1] = (-x[16]) * x[28] + (-x[17]) * x[29] + (-x[18]) * x[30] + x[16] * v[3] + x[17] * v[4] +
-        //            x[18] * v[2];
-        //     v[0] = v[1] - x[48];
-        //     v[0] = std::min(v[0], 0.);
-        //     // if (0. < v[0])
-        //     // {
-        //     //     v[0] = 0.;
-        //     // }
-        //     // else
-        //     // {
-        //     //     v[0] = v[0];
-        //     // }
-        //     v[5] = v[1] - x[54];
-        //     v[5] = std::max(v[5], 0.F);
-        //     // if (v[5] < 0.)
-        //     // {
-        //     //     v[5] = 0.;
-        //     // }
-        //     // else
-        //     // {
-        //     //     v[5] = v[5];
-        //     // }
-        //     y[0] = v[0] + v[5];
-        //     v[5] = (-x[20]) * x[28] + (-x[21]) * x[29] + (-x[22]) * x[30] + x[20] * v[3] + x[21] * v[4] +
-        //            x[22] * v[2];
-        //     v[0] = v[5] - x[49];
-        //     v[0] = std::min(v[0], 0.F);
-        //     // if (0. < v[0])
-        //     // {
-        //     //     v[0] = 0.;
-        //     // }
-        //     // else
-        //     // {
-        //     //     v[0] = v[0];
-        //     // }
-        //     v[6] = v[5] - x[55];
-        //     v[6] = std::max(v[6], 0.F);
-        //     // if (v[6] < 0.)
-        //     // {
-        //     //     v[6] = 0.;
-        //     // }
-        //     // else
-        //     // {
-        //     //     v[6] = v[6];
-        //     // }
-        //     y[1] = v[0] + v[6];
-        //     v[2] = (-x[24]) * x[28] + (-x[25]) * x[29] + (-x[26]) * x[30] + x[24] * v[3] + x[25] * v[4] +
-        //            x[26] * v[2];
-        //     v[4] = v[2] - x[50];
-        //     v[4] = std::min(v[4], 0.F);
-        //     // if (0. < v[4])
-        //     // {
-        //     //     v[4] = 0.;
-        //     // }
-        //     // else
-        //     // {
-        //     //     v[4] = v[4];
-        //     // }
-        //     v[3] = v[2] - x[56];
-        //     v[3] = std::max(v[3], 0.F);
-        //     // if (v[3] < 0.)
-        //     // {
-        //     //     v[3] = 0.;
-        //     // }
-        //     // else
-        //     // {
-        //     //     v[3] = v[3];
-        //     // }
-        //     y[2] = v[4] + v[3];
-        //     v[3] = 0. - x[51];
-        //     v[3] = std::min(v[3], 0.F);
-        //     // if (0. < v[3])
-        //     // {
-        //     //     v[3] = 0.;
-        //     // }
-        //     // else
-        //     // {
-        //     //     v[3] = v[3];
-        //     // }
-        //     v[4] = 0. - x[57];
-        //     v[4] = max(v[4], 0.F);
-        //     // if (v[4] < 0.)
-        //     // {
-        //     //     v[4] = 0.;
-        //     // }
-        //     // else
-        //     // {
-        //     //     v[4] = v[4];
-        //     // }
-        //     y[3] = v[3] + v[4];
-        //     v[4] = 0. - x[52];
-        //     v[4] = std::min(v[4], 0.F);
-        //     // if (0. < v[4])
-        //     // {
-        //     //     v[4] = 0.;
-        //     // }
-        //     // else
-        //     // {
-        //     //     v[4] = v[4];
-        //     // }
-        //     v[3] = 0. - x[58];
-        //     v[3] = std::max(v[3], 0.F);
-        //     // if (v[3] < 0.)
-        //     // {
-        //     //     v[3] = 0.;
-        //     // }
-        //     // else
-        //     // {
-        //     //     v[3] = v[3];
-        //     // }
-        //     y[4] = v[4] + v[3];
-        //     v[3] = 0. - x[53];
-        //     v[3] = std::min(v[3], 0.F);
-        //     // if (0. < v[3])
-        //     // {
-        //     //     v[3] = 0.;
-        //     // }
-        //     // else
-        //     // {
-        //     //     v[3] = v[3];
-        //     // }
-        //     v[4] = 0. - x[59];
-        //     v[4] = std::max(v[4], 0.F);
-        //     // if (v[4] < 0.)
-        //     // {
-        //     //     v[4] = 0.;
-        //     // }
-        //     // else
-        //     // {
-        //     //     v[4] = v[4];
-        //     // }
-        //     y[5] = v[3] + v[4];
-        //     y[6] = std::sqrt(v[1] * v[1] + v[5] * v[5] + v[2] * v[2]);
-        // }
 
 
 

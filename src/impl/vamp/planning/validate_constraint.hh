@@ -48,12 +48,11 @@ namespace vamp::planning
 
         const std::size_t n = std::max(std::ceil(distance / static_cast<float>(rake) * resolution), 1.F);
 
-        // std::cout << "\nBlock is " << block << std::endl;
 
         bool ableToProject = constraint.project(block, projected_block);
         if (not ableToProject)
         {
-            std::cout << "Unable to project initially : " << ableToProject<< std::endl;
+            // std::cout << "Unable to project initially : " << ableToProject<< std::endl;
             return ableToProject;
         }
 
@@ -62,28 +61,33 @@ namespace vamp::planning
         bool valid = (environment.attachments) ? Robot::template fkcc_attach<rake>(environment, projected_block) :
                                                  Robot::template fkcc<rake>(environment, projected_block);
 
+        // std::cout << "Block is " << block << std::endl;
+        // std::cout << "Projected Block is " << projected_block << std::endl;
 
         typename Robot::ConfigurationArray last_projected;
-        for (auto i = 0U; i < rake; i++)
-        {
-            for (auto j = 0U; j < Robot::dimension; j++)
-                last_projected[j] = projected_block[{j, i-1}];
-            projected_vector.push_back(typename Robot::Configuration(last_projected));
-        }
+        // for (auto i = 0U; i < rake; i++)
+        // {
+        //     for (auto j = 0U; j < Robot::dimension; j++)
+        //     {
+        //         last_projected[j] = projected_block[{j, i}];
+        //     }
+        //     projected_vector.push_back(typename Robot::Configuration(last_projected));
+        // }
 
         if (not valid or n == 1)
         {
-            std::cout << "Unable to validate initially : " << valid << n << projected_block <<  block << std::endl;
+            // std::cout << "Unable to validate initially : " << valid << n << projected_block <<  block << std::endl;
             return valid;
         }
 
 
-        const typename Robot::Configuration new_vector = typename Robot::Configuration(last_projected) - start;
+        // const typename Robot::Configuration new_vector = typename Robot::Configuration(last_projected) - start;
+        // std::cout << "Validating connection vector " << new_vector << " from " << start << " to " << typename Robot::Configuration(last_projected) << std::endl;
 
         // extract out the last element from here, this is a 7 x 8 block, I need the 7 x 1 of the last element
         // auto new_vector = projected_block;
 
-        const auto backstep = new_vector / (rake * n);
+        const auto backstep = vector / (rake * n);
         for (auto i = 1U; i < n; ++i)
         {
             for (auto j = 0U; j < Robot::dimension; ++j)
@@ -102,17 +106,27 @@ namespace vamp::planning
                 // std::cout << "Unable to validate inside : " << valid << std::endl;
                 return false;
             }
+
+            for (auto r = 0U; r < rake; r++)
+            {
+                for (auto j = 0U; j < Robot::dimension; j++)
+                {
+                    last_projected[j] = projected_block[{j, r}];
+                }
+                projected_vector.push_back(typename Robot::Configuration(last_projected));
+            }
+
         }
         // projected_vector.push_back(typename Robot::Configuration(last_projected));
 
-        for (auto i = 0U; i < Robot::dimension; i++) {  
-            last_projected[i] = projected_block[{i, rake-1}];
-        }
+        // for (auto i = 0U; i < Robot::dimension; i++) {  
+        //     last_projected[i] = projected_block[{i, rake-1}];
+        // }
 
 
         // std::cout << "projected : " <<  typename Robot::Configuration(last_projected) << "from " << start << block << projected_block << std::endl;
 
-        projected_vector.push_back(typename Robot::Configuration(last_projected));
+        // projected_vector.push_back(typename Robot::Configuration(last_projected));
         return true;
 
 
