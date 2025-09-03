@@ -431,7 +431,7 @@ namespace vamp::planning
             for (auto i = 0U; i < Robot::dimension; i++)
                 q_new[i] = q[i];
 
-            while ((project_iter < 1e4) and (not dist.test_all_less_equal(0.0001F)))
+            while ((project_iter < 1e3) and (not dist.test_all_less_equal(0.0001F)))
             {
                 dist = projectStep(q_new, q_new, true);
                 project_iter += 1;

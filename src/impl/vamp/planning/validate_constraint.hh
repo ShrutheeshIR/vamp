@@ -47,7 +47,7 @@ namespace vamp::planning
         for (auto i = 0U; i < Robot::dimension; ++i)
             block[i] = start.broadcast(i) + (vector.broadcast(i) * percents);
 
-        const std::size_t n = std::max(std::ceil(distance / static_cast<float>(rake) * resolution), 1.F);
+        std::size_t n = std::max(std::ceil(distance / static_cast<float>(rake) * resolution), 1.F);
 
 
         bool ableToProject = constraint.project(block, projected_block);
@@ -62,9 +62,6 @@ namespace vamp::planning
         bool valid = (environment.attachments) ? Robot::template fkcc_attach<rake>(environment, projected_block) :
                                                  Robot::template fkcc<rake>(environment, projected_block);
 
-        // std::cout << "Block is " << block << std::endl;
-        // std::cout << "Projected Block is " << projected_block << std::endl;
-
         typename Robot::ConfigurationArray last_projected;
         for (auto i = rake-1; i < rake; i++)
         {
@@ -76,24 +73,23 @@ namespace vamp::planning
         }
 
         if (not valid or n == 1)
-        {
-            // std::cout << "Unable to validate initially : " << valid << n << projected_block <<  block << std::endl;
             return valid;
-        }
-        // projected_vector.pop_back();
 
 
 
         const typename Robot::Configuration new_vector = typename Robot::Configuration(last_projected) - start;
 
-        if (new_vector.squared_l2_norm() > 2 * distance)
+        auto q_dist = new_vector.squared_l2_norm();
+        if (q_dist > 2 * distance)
             return false;
-        // std::cout << "Validating connection vector " << new_vector << " from " << start << " to " << typename Robot::Configuration(last_projected) << std::endl;
 
-        // extract out the last element from here, this is a 7 x 8 block, I need the 7 x 1 of the last element
-        // auto new_vector = projected_block;
+        for (auto i = 0U; i < Robot::dimension; ++i)
+            block[i] = start.broadcast(i) + (new_vector.broadcast(i) * percents);
+
+        n = std::max(std::ceil(q_dist / static_cast<float>(rake) * resolution), 1.F);
 
         const auto backstep = new_vector / (rake * n);
+
         for (auto i = 1U; i < n; ++i)
         {
             for (auto j = 0U; j < Robot::dimension; ++j)
