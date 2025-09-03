@@ -101,7 +101,7 @@ namespace vamp::planning
             }
             bool connected = false;
 
-            while (iter++ < 10000 and free_index < settings.max_samples and not connected)
+            while (iter++ < settings.max_iterations and free_index < settings.max_samples and not connected)
             {   
                 // if (iter % 1 == 0)
                     // std::cout << "Starting iteration : " << iter << ", " << free_index << ", " <<connected << " , " << settings.max_samples << std::endl;
@@ -152,7 +152,6 @@ namespace vamp::planning
                     ))
 
                 {
-                    // std::cout << "Initially projected " << nearest_configuration << " to " << projected_vector.back() << " trying to project to " << nearest_configuration + extension_vector << " with extension vector " << extension_vector << " with distance " << nearest_distance << std::endl;
 
                     float *new_configuration_index;
                     Configuration new_configuration;
@@ -174,12 +173,10 @@ namespace vamp::planning
                             radii[parent_index] *= (1 + settings.alpha);
                         }
 
-                        // std::cout << "Adding " << proj_vector << " with index " << free_index << " to tree with parent " << parent_index <<std::endl; 
                         parent_index = free_index;
                         free_index++;
 
                     }
-                    // std::cout << "Added projected vectors : " << free_index << std::endl; 
 
 
                     auto prior = new_configuration;
@@ -219,14 +216,10 @@ namespace vamp::planning
                             )
                         )
                         {
-                            // std::cout << "Invalid config " << std::endl;
                             break;
                         }
                         if (free_index >= settings.max_samples)
                             break;
-
-                        // std::cout << "Trying to extend " << other_reach << std::endl;
-                        std::cout << "Extend connected " << prior << " to " << projected_vector.back() << " trying to project to " << prior +  other_extension_vector  << " with distance " << other_nearest_distance << " with extension vector " << other_extension_vector << std::endl;
 
 
                         float *next_index;
@@ -253,7 +246,6 @@ namespace vamp::planning
 
                         if (other_reached)  // connected
                         {
-                            std::cout << "\n\nConnected - " << prior << " to " << other_nearest_configuration << " by projecting to " << next << std::endl;
                             auto current = free_index - 1;
                             result.path.emplace_back(buffer_index(current));
                             while (parents[current] != current)

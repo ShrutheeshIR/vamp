@@ -148,44 +148,9 @@ namespace vamp::planning
             // 6 is for SE3 space 
             Eigen::Transform<float, 3, Eigen::Isometry> eef_pose_w_ref_reference;
             Eigen::Transform<float, 3, Eigen::Isometry> ref_frame_w_world;
-            Eigen::Transform<float, 3, Eigen::Isometry> world_frame_w_ref_frame;
-            Eigen::Transform<float, 3, Eigen::Isometry> eef_pose_w_world_reference;
+
             // std::pair<vamp::FloatVector<6>, vamp::FloatVector<6>> bounds;
             std::pair<std::array<float, 6>, std::array<float, 6>> bounds; 
-
-            // creating std versions for block operations
-            std::array<float, 16> rTe;
-            std::array<float, 16> wTr;
-
-
-            bool mComputeErrorFromCenter;
-
-
-
-            // The following are internal data needed for computation
-            struct TSRErrInp {
-                vamp::FloatVector<rake, 16>rTeB;
-                vamp::FloatVector<rake, 16> wTrB;
-                vamp::FloatVector<rake, 16> wTeqB;
-                vamp::FloatVector<rake, 6> lbB;
-                vamp::FloatVector<rake, 6> ubB;
-                
-                auto operator[](size_t index) const {
-                    if (index >= 0 && index < 16)
-                        return rTeB[index];
-                    else if (index >= 16 && index < 32)
-                        return wTrB[index - 16];
-                    else if (index >= 32 && index < 48)
-                        return wTeqB[index - 32];
-                    else if (index >= 48 && index < 54)
-                        return lbB[index - 48];
-                    else if (index >= 54 && index < 60)
-                        return ubB[index - 54];
-                    else
-                        return rTeB[0]; // to prevent complaining
-                }
-            };
-            TSRErrInp tsr_distance_inp;
 
             struct TSRFuncInput {
                 ConfigurationBlock q;
@@ -195,7 +160,7 @@ namespace vamp::planning
                 vamp::FloatVector<rake, 6> ubB;
                 
                 auto operator[](size_t index) const {
-                    if (index >= 0 && index < 7) // q
+                    if (index < 7) // q
                         return q[index];
 
                     if (index >= 7 && index < (2 * 7)) // rtE
@@ -222,7 +187,7 @@ namespace vamp::planning
                 vamp::FloatVector<rake, 6> err; // error vector
 
                 auto &operator[](size_t index) {
-                    if (index >= 0 && index < 42)
+                    if (index < 42)
                         return J[index];
                     else if (index >= 42 && index < 48)
                         return err[index - 42];
@@ -231,7 +196,7 @@ namespace vamp::planning
                 }
 
                 const auto operator[](size_t index) const {
-                    if (index >= 0 && index < 42)
+                    if (index < 42)
                         return J[index];
                     else if (index >= 42 && index < 48)
                         return err[index - 42];
@@ -268,24 +233,6 @@ namespace vamp::planning
                 const std::pair<std::array<float, 6>, std::array<float, 6>> bounds
             ) : eef_pose_w_ref_reference(eef_pose_w_ref_reference),  ref_frame_w_world(ref_frame_w_world), bounds(bounds)
             {
-                world_frame_w_ref_frame = ref_frame_w_world.inverse();
-                eef_pose_w_world_reference = ref_frame_w_world * eef_pose_w_ref_reference;
-
-                // rTe = eigen_to_vector(eef_pose_w_ref_reference.matrix().reshaped());
-                // wTr = eigen_to_vector(ref_frame_w_world.matrix().reshaped());
-                for (auto i = 0U; i < 4; i++)
-                    for (auto j = 0U; j < 4; j++)
-                        rTe[i*4 + j] = eef_pose_w_ref_reference.matrix()(j, i);
-
-
-                for (auto i = 0U; i < 4; i++)
-                    for (auto j = 0U; j < 4; j++)
-                        wTr[i*4 + j] = ref_frame_w_world.matrix()(j, i);
-
-                assignBlock<16>(rTe, tsr_distance_inp.rTeB);
-                assignBlock<16>(wTr, tsr_distance_inp.wTrB);
-                assignBlock<6>(bounds.first, tsr_distance_inp.lbB);
-                assignBlock<6>(bounds.second, tsr_distance_inp.ubB);
 
 
                 Eigen::Quaternion<float> q1(eef_pose_w_ref_reference.linear());
@@ -300,90 +247,14 @@ namespace vamp::planning
                 assignBlock<6>(bounds.second, tsr_function_inp.ubB);
             }
 
-            // const auto function(const Configuration &q) {
-            //     return distanceToConstraint(q);
-            // }
-
-            void setComputeFromCenter(bool computeFromCenter) {
-                mComputeErrorFromCenter = computeFromCenter;
+            const auto function(const ConfigurationBlock &q) {
+                return distanceToConstraint(q);
             }
 
-            bool isComputingFromCenter() const {
-                return mComputeErrorFromCenter;
-            }
-
-            // void setReferenceFrame(Eigen::Transform<float, 3, Eigen::Isometry> referenceFrame);
-
-            const Eigen::VectorXf distanceToConstraintEEF(Eigen::Transform<float, 3, Eigen::Isometry> computed_eef_pose_world_frame) 
-            {
-                Eigen::Vector<float, 6> displacement;
-                Eigen::Vector<float, 6> penalty;
-
-
-                const auto actual_pose = world_frame_w_ref_frame * computed_eef_pose_world_frame;
-                // std::cout << actual_pose.translation() << std::endl;
-                // std::cout << eef_pose_w_ref_reference.translation() << std::endl;
-
-                //Eigen::Vector3
-                const auto translation = actual_pose.translation();
-                const auto rot_error = actual_pose.linear();
-
-                // const auto translation = actual_pose.translation() - eef_pose_w_ref_reference.translation();
-                // const auto rot_error = actual_pose.linear() * eef_pose_w_ref_reference.linear().transpose(); // equivalent to putting transpose on actual_pose
-
-                // const auto translation = computed_eef_pose_world_frame.translation() - eef_pose_w_world_reference.translation();
-                // const auto rot_error = computed_eef_pose_world_frame.linear() * eef_pose_w_world_reference.linear().transpose(); // equivalent to putting transpose on actual_pose
-
-
-                Eigen::AngleAxisf aa(rot_error);
-                displacement << translation, aa.axis() * aa.angle() * 0.0;
-                // std::cout << displacement << std::endl;
-
-
-                // (TODO) make this 0 if inside the bounds
-                for (size_t i = 0; i < 6; i++)
-                {
-                    if (displacement[i] < bounds.first[i])
-                        penalty[i] = displacement[i] - bounds.first[i];
-                    else if (displacement[i] > bounds.second[i])
-                        penalty[i] = displacement[i] - bounds.second[i];
-                    else
-                        penalty[i] = 0.0;
-                }
-
-                return penalty;
-            }
-
-            const Eigen::VectorXf distanceToConstraint(const ConfigurationArray &q)
-            {
-                const auto fk = Robot::eefk(q);
-                std::cout << fk.matrix() << std::endl;
-                return distanceToConstraintEEF(fk);
-
-            }
-
-
-            // inline statc 
-
-
-        // const vamp::FloatVector
-
-        // Questions to ask zak
-        // How to combine floatvectors
-        // how to compare blend operator
-        // how to broadcast a single vector as n times -- broadcast_vector
-
-        const auto distanceToConstraintAuto(const ConfigurationBlock &q)
+        const auto distanceToConstraint(const ConfigurationBlock &q)
         {
             for (int i=0U; i < 7; i++)
                 tsr_function_inp.q[i] = q[i];
-
-
-            // for (int i=0U; i < 27; i++)
-            //     std::cout << tsr_function_inp[i] << " ";
-            // std::cout << std::endl;
-
-            // std::cout << tsr_function_inp[0] << "," << tsr_function_inp[10] <<std::endl;
 
             Robot::tsr_function_jac(tsr_function_inp, jac_proj_inp);
 
@@ -404,79 +275,14 @@ namespace vamp::planning
         }
 
 
-        const auto distanceToConstraint(const ConfigurationBlock &q)
+        auto jacobian_solve_config_jt(const JacobianProjectInp &x) noexcept
         {
-            Robot::jacobian_eefk(q, tsr_distance_inp.wTeqB, jac_proj_inp.J);
-            // std::cout << "Translation is : " << tsr_distance_inp.wTeqB[12] <<", " << tsr_distance_inp.wTeqB[13] <<", " << tsr_distance_inp.wTeqB[14] << std::endl;
-            auto d = tsr_error_simd(tsr_distance_inp);
+            /**
+            @brief Calculates grad ~= J.t * error
 
-            return d;
-
-        }
-
-        // TODO(siyer) -- convert this code generatation to a class style
-        auto tsr_error_simd(const TSRErrInp &x) noexcept
-        {
-            vamp::FloatVector<rake, 5> v;
-            vamp::FloatVector<rake, 7> y;
-
-            v[0] = (-x[0]) * x[12] + (-x[1]) * x[13] + (-x[2]) * x[14];
-            v[1] = (-x[4]) * x[12] + (-x[5]) * x[13] + (-x[6]) * x[14];
-            v[2] = (-x[8]) * x[12] + (-x[9]) * x[13] + (-x[10]) * x[14];
-            v[3] = x[44] + x[32] * v[0] + x[36] * v[1] + x[40] * v[2];
-            v[4] = x[45] + x[33] * v[0] + x[37] * v[1] + x[41] * v[2];
-            v[2] = x[46] + x[34] * v[0] + x[38] * v[1] + x[42] * v[2];
-            y[0] = (-x[16]) * x[28] + (-x[17]) * x[29] + (-x[18]) * x[30] + x[16] * v[3] + x[17] * v[4] +
-                   x[18] * v[2];
-            y[1] = (-x[20]) * x[28] + (-x[21]) * x[29] + (-x[22]) * x[30] + x[20] * v[3] + x[21] * v[4] +
-                   x[22] * v[2];
-            y[2] = (-x[24]) * x[28] + (-x[25]) * x[29] + (-x[26]) * x[30] + x[24] * v[3] + x[25] * v[4] +
-                   x[26] * v[2];
-            // y[6] = sqrt(y[0] * y[0] + y[1] * y[1] + y[2] * y[2]);
-            // dependent variables without operations
-            y[3] = 0.;
-            y[4] = 0.;
-            y[5] = 0.;
-
-            // v[0] = x[28] + x[16] * x[12] + x[20] * x[13] + x[24] * x[14];
-            // v[1] = x[29] + x[17] * x[12] + x[21] * x[13] + x[25] * x[14];
-            // v[2] = x[30] + x[18] * x[12] + x[22] * x[13] + x[26] * x[14];
-            // y[0] = (-x[32]) * x[44] + (-x[33]) * x[45] + (-x[34]) * x[46] + x[32] * v[0] + x[33] * v[1] +
-            //        x[34] * v[2];
-            // y[1] = (-x[36]) * x[44] + (-x[37]) * x[45] + (-x[38]) * x[46] + x[36] * v[0] + x[37] * v[1] +
-            //        x[38] * v[2];
-            // y[2] = (-x[40]) * x[44] + (-x[41]) * x[45] + (-x[42]) * x[46] + x[40] * v[0] + x[41] * v[1] +
-            //        x[42] * v[2];
-            // // // dependent variables without operations
-            // y[3] = 0.;
-            // y[4] = 0.;
-            // y[5] = 0.;
-
-
-
-
-            for(int i=0U;i < 6;i++)
-            {
-                // std::cout << y[i] << " ";
-                y[i] = (y[i] - x[48+i]).min(0.F) + (y[i] - x[54+i]).max(0.F);
-            }
-            // std::cout << std::endl;
-
-            y[6] = (y[0] * y[0] + y[1] * y[1] + y[2] * y[2]).abs();
-
-
-            for(auto i=0U;i < 6; i++)
-                jac_proj_inp.err[i] = y[i];
-
-            // std::cout << "Error vec is : " << jac_proj_inp.err << std::endl;
-
-            return y[6];
-        }
-
-
-        auto jacobian_solve_config(const JacobianProjectInp &x) noexcept
-        {
-
+            @param x - A container for J and E with the [] operator
+            @return grad
+            */
             vamp::FloatVector<rake, 7> y;
             y[0] = x[5] * x[47] + x[4] * x[46] + x[3] * x[45] + x[2] * x[44] + x[1] * x[43] + x[0] * x[42];
             y[1] = x[11] * x[47] + x[10] * x[46] + x[9] * x[45] + x[8] * x[44] + x[7] * x[43] + x[6] * x[42];
@@ -494,8 +300,15 @@ namespace vamp::planning
             return y;
         }
 
-        auto jacobian_solve_configCholesky(const JacobianProjectInp &x) noexcept
+        auto jacobian_solve_config_cholesky(const JacobianProjectInp &x) noexcept
         {
+            /**
+            @brief Calculates grad = J.t (JJ.t + aI)-1 * error using a Cholesky decomp
+
+            @param x - A container for J and E with the [] operator
+            @return grad
+            */
+
             FloatVector<rake, 21> v;
             FloatVector<rake, 7> y;
             v[0] = (
@@ -588,33 +401,23 @@ namespace vamp::planning
 
         void integrateJointConfiguration(const ConfigurationBlock &q, ConfigurationBlock &q_new, const ConfigurationBlock &grad)
         {
-            // q_new = q + grad * 0.5;
             for (auto i = 0U; i < Robot::dimension; i++)
                 q_new[i] = q[i] + grad[i];
-            // std::cout << "q " << q << std::endl;
-            // std::cout << "grad " << grad << std::endl;
-            // std::cout << "q_new " << q_new << std::endl;
             Robot::descale_configuration_block(q_new);
             q_new = q_new.clamp(0.F, 1.F);
             Robot::scale_configuration_block(q_new);
-
-
         }
 
 
-        auto projectStepJT(const ConfigurationBlock &q, ConfigurationBlock &q_new, bool update_q = true)
+        auto projectStep(const ConfigurationBlock &q, ConfigurationBlock &q_new, bool update_q = true)
         {
-            auto dist = distanceToConstraintAuto(q);
-
+            auto dist = distanceToConstraint(q);
             if (update_q)
             {
-                auto grad = jacobian_solve_configCholesky(jac_proj_inp);
-                // std::cout << "Grad : " << grad << std::endl;
+                auto grad = jacobian_solve_config_cholesky(jac_proj_inp);
                 integrateJointConfiguration(q, q_new, grad);
-
             }
             return dist;
-
         }
 
 
@@ -622,18 +425,15 @@ namespace vamp::planning
         bool project(const ConfigurationBlock &q, ConfigurationBlock &q_new)
         {
             bool success = false;
-            
-            auto dist = distanceToConstraintAuto(q);
+            auto dist = distanceToConstraint(q);
 
-            // std::cout << "Initial error is : " << jac_proj_inp.err << std::endl;
             size_t project_iter = 0;
             for (auto i = 0U; i < Robot::dimension; i++)
                 q_new[i] = q[i];
 
             while ((project_iter < 1e3) and (not dist.test_all_less_equal(0.00001F)))
             {
-                dist = projectStepJT(q_new, q_new, true);
-                // std::cout << "Full error is : " << jac_proj_inp.err << std::endl;
+                dist = projectStep(q_new, q_new, true);
                 project_iter += 1;
             }
 
@@ -642,8 +442,6 @@ namespace vamp::planning
 
             // std::cout << "Num steps : " << project_iter << std::endl;
 
-            // Robot::jacobian_eefk(q_new, tsr_distance_inp.wTeqB, jac_proj_inp.J);
-            // std::cout << "FK after proj : " <<  tsr_distance_inp.wTeqB << std::endl;
             // Robot::jacobian_eefk(q_new, tsr_distance_inp.wTeqB, jac_proj_inp.J);
             // std::cout << "FK after proj : " << tsr_distance_inp.wTeqB[12] <<", " << tsr_distance_inp.wTeqB[13] <<", " << tsr_distance_inp.wTeqB[14] << std::endl;
             // std::cout << "Full error is : " << jac_proj_inp.err << std::endl;
@@ -656,11 +454,6 @@ namespace vamp::planning
             return success;
                 
         }
-
-
-
-
-
 
     };
 

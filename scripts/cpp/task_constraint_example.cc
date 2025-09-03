@@ -65,7 +65,7 @@ auto main(int, char **) -> int
 
     // Create RNG for planning
     // auto rng = std::make_shared<vamp::rng::Halton<Robot>>();
-    std::array<float, 12> out;
+    // std::array<float, 12> out;
 
     // auto idx = Robot::fk(start, out);
     // std::cout << "idx : " << idx << std::endl;
@@ -76,12 +76,12 @@ auto main(int, char **) -> int
     // std::cout << std::endl;
 
 
-    std::array<float, 6> lower_bound = {
-        -10.25, -10.0, -0.09, -3.14, -3.14, -3.14
-    };
-    std::array<float, 6> upper_bound = {
-        10.25, 10.0, 0.09, 3.14, 3.14, 3.14
-    };
+    // std::array<float, 6> lower_bound = {
+    //     -10.25, -10.0, -0.09, -3.14, -3.14, -3.14
+    // };
+    // std::array<float, 6> upper_bound = {
+    //     10.25, 10.0, 0.09, 3.14, 3.14, 3.14
+    // };
 
 
 

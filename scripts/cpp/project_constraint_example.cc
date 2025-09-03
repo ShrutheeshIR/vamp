@@ -23,11 +23,11 @@ using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution>;
 // Start and goal configurations
 // static constexpr Robot::ConfigurationArray start = {0., -0.785, 0., -2.356, 0., 1.571, 0.785};
 // static constexpr Robot::ConfigurationArray goal = {2.35, 1., 0., -0.8, 0, 2.5, 0.785};
-static constexpr Robot::ConfigurationArray goal = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
-static constexpr Robot::ConfigurationArray start = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
+// static constexpr Robot::ConfigurationArray goal = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
+// static constexpr Robot::ConfigurationArray start = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
 
-// static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
-// static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
+static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
+static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
 
 
 // static constexpr Robot::ConfigurationArray goal = {-0.839708,  0.496555, -0.630832, -0.573204,  0.232247,  1.8259,   -0.467584};
@@ -101,15 +101,15 @@ auto main(int, char **) -> int
         block[i] = Robot::Configuration(goal).broadcast(i) + 0.05;
 
 
-    auto dist = task_constraint.distanceToConstraintAuto(block);
-    std::cout << "From block : " << dist << std::endl;
+    // auto dist = task_constraint.distanceToConstraintAuto(block);
+    // std::cout << "From block : " << dist << std::endl;
 
 
     Robot::ConfigurationArray goal2 = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
     for (auto i = 0U; i < Robot::dimension; ++i)
         block[i] = Robot::Configuration(goal2).broadcast(i) + 0.05;
-    dist = task_constraint.distanceToConstraint(block);
-    std::cout << "From block : " << dist << std::endl;
+    auto dist = task_constraint.distanceToConstraint(block);
+    // std::cout << "From block : " << dist << std::endl;
 
 
 
@@ -119,9 +119,9 @@ auto main(int, char **) -> int
 
     bool success = task_constraint.project(block, projected_block);
     std::cout << success << std::endl;
-    std::cout << block << std::endl;
-    std::cout << projected_block << std::endl;
-    std::cout << " printed config " << std::endl;
+    // std::cout << block << std::endl;
+    // std::cout << projected_block << std::endl;
+    // std::cout << " printed config " << std::endl;
 
     // typename Robot::template ConfigurationArray last_projected;
     // for (auto i = 0U; i < Robot::dimension; ++i) {  
