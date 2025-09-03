@@ -8,19 +8,9 @@
 #include <vamp/planning/task_space_constraints.hh>
 #include <vamp/planning/validate.hh>
 
+
 namespace vamp::planning
 {
-    // template <std::size_t n, std::size_t... I>
-    // inline constexpr auto generate_percents(std::index_sequence<I...>) -> std::array<float, n>
-    // {
-    //     return {(static_cast<void>(I), static_cast<float>(I + 1) / static_cast<float>(n))...};
-    // }
-
-    // template <std::size_t n>
-    // struct Percents
-    // {
-    //     inline static constexpr auto percents = generate_percents<n>(std::make_index_sequence<n>());
-    // };
 
     template <typename Robot, std::size_t rake, std::size_t resolution>
     inline constexpr auto project_constraint_vector(
@@ -41,6 +31,7 @@ namespace vamp::planning
 
         typename Robot::template ConfigurationBlock<rake> block;
         typename Robot::template ConfigurationBlock<rake> projected_block;
+        typename Robot::template ConfigurationBlock<rake> initial_projected_block;
 
         // HACK: broadcast() implicitly assumes that the rake is exactly VectorWidth
         // std::cout << "--> Percents " << percents;
@@ -50,24 +41,21 @@ namespace vamp::planning
         std::size_t n = std::max(std::ceil(distance / static_cast<float>(rake) * resolution), 1.F);
 
 
-        bool ableToProject = constraint.project(block, projected_block);
+        bool ableToProject = constraint.project(block, initial_projected_block);
         if (not ableToProject)
-        {
-            // std::cout << "Unable to project initially : " << ableToProject<< std::endl;
             return ableToProject;
-        }
 
 
 
-        bool valid = (environment.attachments) ? Robot::template fkcc_attach<rake>(environment, projected_block) :
-                                                 Robot::template fkcc<rake>(environment, projected_block);
+        bool valid = (environment.attachments) ? Robot::template fkcc_attach<rake>(environment, initial_projected_block) :
+                                                 Robot::template fkcc<rake>(environment, initial_projected_block);
 
         typename Robot::ConfigurationArray last_projected;
         for (auto i = rake-1; i < rake; i++)
         {
             for (auto j = 0U; j < Robot::dimension; j++)
             {
-                last_projected[j] = projected_block[{j, i}];
+                last_projected[j] = initial_projected_block[{j, i}];
             }
             projected_vector.push_back(typename Robot::Configuration(last_projected));
         }
@@ -83,31 +71,20 @@ namespace vamp::planning
         if (q_dist > 2 * distance)
             return false;
 
-        for (auto i = 0U; i < Robot::dimension; ++i)
-            block[i] = start.broadcast(i) + (new_vector.broadcast(i) * percents);
 
         n = std::max(std::ceil(q_dist / static_cast<float>(rake) * resolution), 1.F);
-
         const auto backstep = new_vector / (rake * n);
 
         for (auto i = 1U; i < n; ++i)
         {
             for (auto j = 0U; j < Robot::dimension; ++j)
-            {
-                block[j] = block[j] - backstep.broadcast(j);
-            }
+                initial_projected_block[j] = initial_projected_block[j] - backstep.broadcast(j);
 
-            if (not constraint.project(block, projected_block))
-            {
-                // std::cout << "Unable to project inside : " << ableToProject;
+            if (not constraint.project(initial_projected_block, projected_block))
                 return false;
-            }
 
             if (not Robot::template fkcc<rake>(environment, projected_block))
-            {
-                // std::cout << "Unable to validate inside : " << valid << std::endl;
                 return false;
-            }
 
             // for (auto r = 0U; r < rake; r++)
             // {
