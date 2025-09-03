@@ -226,7 +226,7 @@ namespace vamp::planning
                             break;
 
                         // std::cout << "Trying to extend " << other_reach << std::endl;
-                        // std::cout << "Extend connected " << prior << " to " << projected_vector.back() << " trying to project to " << prior +  other_extension_vector  << " with distance " << other_nearest_distance << " with extension vector " << other_extension_vector << std::endl;
+                        std::cout << "Extend connected " << prior << " to " << projected_vector.back() << " trying to project to " << prior +  other_extension_vector  << " with distance " << other_nearest_distance << " with extension vector " << other_extension_vector << std::endl;
 
 
                         float *next_index;
@@ -242,8 +242,8 @@ namespace vamp::planning
                             radii[free_index] = std::numeric_limits<float>::max();
                             free_index++;
                         }
-                        prior = next;
-                        prior_index = next_index;
+
+                        bool other_reached = (other_nearest_configuration - next).squared_l2_norm() < 0.01;
 
 
 
@@ -251,8 +251,9 @@ namespace vamp::planning
 
 
 
-                        if (other_reach)  // connected
+                        if (other_reached)  // connected
                         {
+                            std::cout << "\n\nConnected - " << prior << " to " << other_nearest_configuration << " by projecting to " << next << std::endl;
                             auto current = free_index - 1;
                             result.path.emplace_back(buffer_index(current));
                             while (parents[current] != current)
@@ -284,6 +285,10 @@ namespace vamp::planning
 
                             break;
                         }
+
+                        prior = next;
+                        prior_index = next_index;
+
                     }
                 }
                 else if (settings.dynamic_domain)

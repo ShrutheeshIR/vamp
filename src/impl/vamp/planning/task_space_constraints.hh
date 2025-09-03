@@ -389,10 +389,17 @@ namespace vamp::planning
 
             for(int i=0U; i < 6;i++)
             {
-                jac_proj_inp[i + 42] = (jac_proj_inp[i + 42] - tsr_function_inp[ 21 + i]).min(0.F) + (jac_proj_inp[i + 42] - tsr_function_inp[ 27 + i]).max(0.F);
+                jac_proj_inp[i + 42] = (jac_proj_inp[i + 42] - tsr_function_inp[ 21 + i]).min(0.F) 
+                                    + (jac_proj_inp[i + 42] - tsr_function_inp[ 27 + i]).max(0.F);
             }
 
-            auto d = (jac_proj_inp[0 + 42] * jac_proj_inp[0 + 42] + jac_proj_inp[1 + 42] * jac_proj_inp[1 + 42] + jac_proj_inp[2 + 42] * jac_proj_inp[2 + 42] + jac_proj_inp[3 + 42] * jac_proj_inp[3 + 42] + jac_proj_inp[4 + 42] * jac_proj_inp[4 + 42] + jac_proj_inp[5 + 42] * jac_proj_inp[5 + 42]).abs();
+            auto d =(jac_proj_inp[0 + 42] * jac_proj_inp[0 + 42] +
+                      jac_proj_inp[1 + 42] * jac_proj_inp[1 + 42] +
+                      jac_proj_inp[2 + 42] * jac_proj_inp[2 + 42] + 
+                      jac_proj_inp[3 + 42] * jac_proj_inp[3 + 42] + 
+                      jac_proj_inp[4 + 42] * jac_proj_inp[4 + 42] + 
+                      jac_proj_inp[5 + 42] * jac_proj_inp[5 + 42]
+                    ).abs();
             return d;
         }
 
@@ -487,12 +494,103 @@ namespace vamp::planning
             return y;
         }
 
+        auto jacobian_solve_configCholesky(const JacobianProjectInp &x) noexcept
+        {
+            FloatVector<rake, 21> v;
+            FloatVector<rake, 7> y;
+            v[0] = (
+                0.0001 + x[0] * x[0] + x[6] * x[6] + x[12] * x[12] + x[18] * x[18] + x[24] * x[24] +
+                x[30] * x[30] + x[36] * x[36]).sqrt();
+            v[1] = (x[5] * x[0] + x[11] * x[6] + x[17] * x[12] + x[23] * x[18] + x[29] * x[24] +
+                    x[35] * x[30] + x[41] * x[36]) /
+                   v[0];
+            v[2] = (x[1] * x[0] + x[7] * x[6] + x[13] * x[12] + x[19] * x[18] + x[25] * x[24] +
+                    x[31] * x[30] + x[37] * x[36]) /
+                   v[0];
+            v[3] = (
+                0.0001 + x[1] * x[1] + x[7] * x[7] + x[13] * x[13] + x[19] * x[19] + x[25] * x[25] +
+                x[31] * x[31] + x[37] * x[37] - v[2] * v[2]).sqrt();
+            v[4] = (x[5] * x[1] + x[11] * x[7] + x[17] * x[13] + x[23] * x[19] + x[29] * x[25] +
+                    x[35] * x[31] + x[41] * x[37] - v[1] * v[2]) /
+                   v[3];
+            v[5] = (x[2] * x[0] + x[8] * x[6] + x[14] * x[12] + x[20] * x[18] + x[26] * x[24] +
+                    x[32] * x[30] + x[38] * x[36]) /
+                   v[0];
+            v[6] = (x[2] * x[1] + x[8] * x[7] + x[14] * x[13] + x[20] * x[19] + x[26] * x[25] +
+                    x[32] * x[31] + x[38] * x[37] - v[5] * v[2]) /
+                   v[3];
+            v[7] = (
+                0.0001 + x[2] * x[2] + x[8] * x[8] + x[14] * x[14] + x[20] * x[20] + x[26] * x[26] +
+                x[32] * x[32] + x[38] * x[38] - v[5] * v[5] - v[6] * v[6]).sqrt();
+            v[8] = (x[5] * x[2] + x[11] * x[8] + x[17] * x[14] + x[23] * x[20] + x[29] * x[26] +
+                    x[35] * x[32] + x[41] * x[38] - v[1] * v[5] - v[4] * v[6]) /
+                   v[7];
+            v[9] = (x[3] * x[0] + x[9] * x[6] + x[15] * x[12] + x[21] * x[18] + x[27] * x[24] +
+                    x[33] * x[30] + x[39] * x[36]) /
+                   v[0];
+            v[10] = (x[3] * x[1] + x[9] * x[7] + x[15] * x[13] + x[21] * x[19] + x[27] * x[25] +
+                     x[33] * x[31] + x[39] * x[37] - v[9] * v[2]) /
+                    v[3];
+            v[11] = (x[3] * x[2] + x[9] * x[8] + x[15] * x[14] + x[21] * x[20] + x[27] * x[26] +
+                     x[33] * x[32] + x[39] * x[38] - v[9] * v[5] - v[10] * v[6]) /
+                    v[7];
+            v[12] = (
+                0.0001 + x[3] * x[3] + x[9] * x[9] + x[15] * x[15] + x[21] * x[21] + x[27] * x[27] +
+                x[33] * x[33] + x[39] * x[39] - v[9] * v[9] - v[10] * v[10] - v[11] * v[11]).sqrt();
+            v[13] = (x[5] * x[3] + x[11] * x[9] + x[17] * x[15] + x[23] * x[21] + x[29] * x[27] +
+                     x[35] * x[33] + x[41] * x[39] - v[1] * v[9] - v[4] * v[10] - v[8] * v[11]) /
+                    v[12];
+            v[14] = (x[4] * x[0] + x[10] * x[6] + x[16] * x[12] + x[22] * x[18] + x[28] * x[24] +
+                     x[34] * x[30] + x[40] * x[36]) /
+                    v[0];
+            v[15] = (x[4] * x[1] + x[10] * x[7] + x[16] * x[13] + x[22] * x[19] + x[28] * x[25] +
+                     x[34] * x[31] + x[40] * x[37] - v[14] * v[2]) /
+                    v[3];
+            v[16] = (x[4] * x[2] + x[10] * x[8] + x[16] * x[14] + x[22] * x[20] + x[28] * x[26] +
+                     x[34] * x[32] + x[40] * x[38] - v[14] * v[5] - v[15] * v[6]) /
+                    v[7];
+            v[17] = (x[4] * x[3] + x[10] * x[9] + x[16] * x[15] + x[22] * x[21] + x[28] * x[27] +
+                     x[34] * x[33] + x[40] * x[39] - v[14] * v[9] - v[15] * v[10] - v[16] * v[11]) /
+                    v[12];
+            v[18] = (
+                0.0001 + x[4] * x[4] + x[10] * x[10] + x[16] * x[16] + x[22] * x[22] + x[28] * x[28] +
+                x[34] * x[34] + x[40] * x[40] - v[14] * v[14] - v[15] * v[15] - v[16] * v[16] -
+                v[17] * v[17]).sqrt();
+            v[19] =
+                (x[5] * x[4] + x[11] * x[10] + x[17] * x[16] + x[23] * x[22] + x[29] * x[28] + x[35] * x[34] +
+                 x[41] * x[40] - v[1] * v[14] - v[4] * v[15] - v[8] * v[16] - v[13] * v[17]) /
+                v[18];
+            v[20] = (
+                0.0001 + x[5] * x[5] + x[11] * x[11] + x[17] * x[17] + x[23] * x[23] + x[29] * x[29] +
+                x[35] * x[35] + x[41] * x[41] - v[1] * v[1] - v[4] * v[4] - v[8] * v[8] - v[13] * v[13] -
+                v[19] * v[19]).sqrt();
+            v[20] = (x[47] - v[1] * x[42] - v[4] * x[43] - v[8] * x[44] - v[13] * x[45] - v[19] * x[46] -
+                     v[20] * x[47]) /
+                    v[20];
+            v[18] = (x[46] - v[14] * x[42] - v[15] * x[43] - v[16] * x[44] - v[17] * x[45] - v[18] * x[46]) /
+                    v[18];
+            v[12] = (x[45] - v[9] * x[42] - v[10] * x[43] - v[11] * x[44] - v[12] * x[45]) / v[12];
+            v[7] = (x[44] - v[5] * x[42] - v[6] * x[43] - v[7] * x[44]) / v[7];
+            v[3] = (x[43] - v[2] * x[42] - v[3] * x[43]) / v[3];
+            v[0] = (x[42] - v[0] * x[42]) / v[0];
+            y[0] = x[5] * v[20] + x[4] * v[18] + x[3] * v[12] + x[2] * v[7] + x[1] * v[3] + x[0] * v[0];
+            y[1] = x[11] * v[20] + x[10] * v[18] + x[9] * v[12] + x[8] * v[7] + x[7] * v[3] + x[6] * v[0];
+            y[2] = x[17] * v[20] + x[16] * v[18] + x[15] * v[12] + x[14] * v[7] + x[13] * v[3] + x[12] * v[0];
+            y[3] = x[23] * v[20] + x[22] * v[18] + x[21] * v[12] + x[20] * v[7] + x[19] * v[3] + x[18] * v[0];
+            y[4] = x[29] * v[20] + x[28] * v[18] + x[27] * v[12] + x[26] * v[7] + x[25] * v[3] + x[24] * v[0];
+            y[5] = x[35] * v[20] + x[34] * v[18] + x[33] * v[12] + x[32] * v[7] + x[31] * v[3] + x[30] * v[0];
+            y[6] = x[41] * v[20] + x[40] * v[18] + x[39] * v[12] + x[38] * v[7] + x[37] * v[3] + x[36] * v[0];
+
+            return y;
+        }
+
+
 
         void integrateJointConfiguration(const ConfigurationBlock &q, ConfigurationBlock &q_new, const ConfigurationBlock &grad)
         {
             // q_new = q + grad * 0.5;
             for (auto i = 0U; i < Robot::dimension; i++)
-                q_new[i] = q[i] - grad[i] * 0.5;
+                q_new[i] = q[i] + grad[i];
             // std::cout << "q " << q << std::endl;
             // std::cout << "grad " << grad << std::endl;
             // std::cout << "q_new " << q_new << std::endl;
@@ -510,7 +608,8 @@ namespace vamp::planning
 
             if (update_q)
             {
-                auto grad = jacobian_solve_config(jac_proj_inp);
+                auto grad = jacobian_solve_configCholesky(jac_proj_inp);
+                // std::cout << "Grad : " << grad << std::endl;
                 integrateJointConfiguration(q, q_new, grad);
 
             }
@@ -531,9 +630,10 @@ namespace vamp::planning
             for (auto i = 0U; i < Robot::dimension; i++)
                 q_new[i] = q[i];
 
-            while ((project_iter < 1e6) and (not dist.test_all_less_equal(0.00001F)))
+            while ((project_iter < 1e3) and (not dist.test_all_less_equal(0.00001F)))
             {
                 dist = projectStepJT(q_new, q_new, true);
+                // std::cout << "Full error is : " << jac_proj_inp.err << std::endl;
                 project_iter += 1;
             }
 
@@ -544,7 +644,7 @@ namespace vamp::planning
 
             // Robot::jacobian_eefk(q_new, tsr_distance_inp.wTeqB, jac_proj_inp.J);
             // std::cout << "FK after proj : " <<  tsr_distance_inp.wTeqB << std::endl;
-            Robot::jacobian_eefk(q_new, tsr_distance_inp.wTeqB, jac_proj_inp.J);
+            // Robot::jacobian_eefk(q_new, tsr_distance_inp.wTeqB, jac_proj_inp.J);
             // std::cout << "FK after proj : " << tsr_distance_inp.wTeqB[12] <<", " << tsr_distance_inp.wTeqB[13] <<", " << tsr_distance_inp.wTeqB[14] << std::endl;
             // std::cout << "Full error is : " << jac_proj_inp.err << std::endl;
             // std::cout << "Projected config is : " << q_new << std::endl;

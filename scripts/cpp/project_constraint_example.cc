@@ -104,8 +104,10 @@ auto main(int, char **) -> int
     auto dist = task_constraint.distanceToConstraintAuto(block);
     std::cout << "From block : " << dist << std::endl;
 
+
+    Robot::ConfigurationArray goal2 = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
     for (auto i = 0U; i < Robot::dimension; ++i)
-        block[i] = Robot::Configuration(goal).broadcast(i) + 0.05;
+        block[i] = Robot::Configuration(goal2).broadcast(i) + 0.05;
     dist = task_constraint.distanceToConstraint(block);
     std::cout << "From block : " << dist << std::endl;
 
@@ -129,19 +131,19 @@ auto main(int, char **) -> int
     // std::cout << Robot::Configuration(last_projected) << std::endl;
 
 
-    Robot::Configuration vector = Robot::Configuration(std::array<float, 7>{-0.109852, -0.302075, 0.31963, -0.108644, -0.0344217, -0.0659725, -0.164862});
-    std::vector<Robot::Configuration> projected_vectors;
+    // Robot::Configuration vector = Robot::Configuration(std::array<float, 7>{-0.109852, -0.302075, 0.31963, -0.108644, -0.0344217, -0.0659725, -0.164862});
+    // std::vector<Robot::Configuration> projected_vectors;
 
-    auto goal_config = Robot::Configuration(start);
-    std::cout << "\n\n---> Going to project a vector " << std::endl;
-    auto valid = vamp::planning::project_constraint_vector<Robot, rake, Robot::resolution>(
-        goal_config,
-        vector,
-        0.53F,
-        projected_vectors,
-        task_constraint,
-        env_v
-    );
+    // auto goal_config = Robot::Configuration(start);
+    // std::cout << "\n\n---> Going to project a vector " << std::endl;
+    // auto valid = vamp::planning::project_constraint_vector<Robot, rake, Robot::resolution>(
+    //     goal_config,
+    //     vector,
+    //     0.53F,
+    //     projected_vectors,
+    //     task_constraint,
+    //     env_v
+    // );
     // auto valid = vamp::planning::validate_vector<Robot, rake, Robot::resolution>(
     //     goal_config,
     //     vector,
@@ -149,7 +151,7 @@ auto main(int, char **) -> int
     //     env_v
     // );
 
-    std::cout << "Are projects valid : " << valid << std::endl;
+    // std::cout << "Are projects valid : " << valid << std::endl;
     // std::cout << projected_vectors.back() << std::endl;
 
 
@@ -185,7 +187,7 @@ auto main(int, char **) -> int
         }
     }
 
-    std::cout << "Planner took " << result.nanoseconds << std::endl;
+    std::cout << "Planner took " << result.nanoseconds / 1e9 << std::endl;
 
 
 
