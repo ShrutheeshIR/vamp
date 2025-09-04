@@ -9,12 +9,98 @@
 #include <iostream>
 #include <vamp/vector/eigen.hh>
 // #include <vamp/vector/interface.hh>
+#include <chrono>
 
+using namespace std::chrono;
+using namespace std;
 
 
 
 namespace vamp::planning
 {
+
+    struct Profiler {
+        vector<double> step1_times;
+        vector<double> step2_times;
+        vector<double> step3_times;
+        vector<double> step4_times;
+        vector<double> step5_times;
+        vector<double> step6_times;
+        vector<double> step7_times;
+        vector<double> step8_times;
+        vector<double> step9_times;
+        vector<double> step10_times;
+        vector<double> step11_times;
+        vector<double> step12_times;
+        vector<double> step13_times;
+        vector<double> step14_times;
+        vector<double> step15_times;
+        vector<double> step16_times;
+
+        vector<double> setup_before_validate_times;
+        vector<double> validate_constraint_vector_times;
+        vector<double> insert_projected_to_tree_times;
+        vector<double> validate_extend_constraint_vector_times;
+        vector<double> insertt_extended_to_tree_times;
+        vector<double> full_extend_times;
+        vector<double> one_iteration_times;
+        vector<double> distance_function_times;
+        vector<double> copy_function_times;
+        vector<double> project_step_times;
+        vector<double> full_project_times;
+        vector<double> copy_old_to_new_times;
+        vector<double> q_dist_times;
+
+        void report(const string& stepName, const vector<double>& times) {
+            if (times.empty()) return;
+
+            double avg = accumulate(times.begin(), times.end(), 0.0) / times.size();
+
+            vector<double> sorted = times;
+            sort(sorted.begin(), sorted.end());
+            double median = (sorted.size() % 2 == 0) 
+                            ? (sorted[sorted.size()/2 - 1] + sorted[sorted.size()/2]) / 2.0
+                            : sorted[sorted.size()/2];
+
+            cout << stepName << ": "
+                << "avg = " << avg << " us, "
+                << "median = " << median << " us, " << "sample size = " << sorted.size() <<"\n";
+        }
+
+        void printReport() {
+            report("Clear Vec", step1_times);
+            report("Initialize blocks", step2_times);
+            report("Create block vec", step3_times);
+            report("compute n", step4_times);
+            report("project cons", step5_times);
+            report("fk check", step6_times);
+            report("push projected", step7_times);
+            report("return valid", step8_times);
+            report("new vector", step9_times);
+            report("Compute n and backstep", step10_times);
+            // report("loop these", step11_times);
+            report("Compute new block", step12_times);
+            report("Project inside", step13_times);
+            report("FK inside", step14_times);
+            report("Full loop", step15_times);
+            report("Setup before validate", setup_before_validate_times);
+            report("Validate vector ", validate_constraint_vector_times);
+            report("Insert vector to tree", insert_projected_to_tree_times);
+            report("Validate extension vector", validate_extend_constraint_vector_times);
+            report("Insert extension tree", insertt_extended_to_tree_times);
+            report("Full extent", full_extend_times);
+            report("One iteration", one_iteration_times);
+            report("Distance Fn", distance_function_times);
+            report("Copy fn", copy_function_times);
+            report("One project cholesky step", project_step_times);
+            report("Copy old to new", copy_old_to_new_times);
+            report("Compute q dist", q_dist_times);
+            report("Full project", full_project_times);
+
+        }
+    };
+    Profiler profiler;
+
     template <typename Robot>
     class RobotConstraint
     {
@@ -217,6 +303,8 @@ namespace vamp::planning
             };
             JacobianProjectInp jac_proj_inp;
 
+            ConfigurationBlock q_old;
+
         template <std::size_t dim>
         inline static auto assignBlock(std::array<float, dim> src, vamp::FloatVector<rake, dim> &dest)
         {
@@ -409,7 +497,7 @@ namespace vamp::planning
         }
 
 
-        auto projectStep(const ConfigurationBlock &q, ConfigurationBlock &q_new, bool update_q = true)
+        auto projectStep(const ConfigurationBlock &q, ConfigurationBlock &q_new,  bool update_q = true)
         {
             auto dist = distanceToConstraint(q);
             if (update_q)
@@ -422,25 +510,64 @@ namespace vamp::planning
 
 
 
-        bool project(const ConfigurationBlock &q, ConfigurationBlock &q_new)
+        bool project(const ConfigurationBlock &q, ConfigurationBlock &q_new, float max_q_dist = 5.0)
         {
             bool success = false;
+            auto t0 = high_resolution_clock::now();
             auto dist = distanceToConstraint(q);
+
+            auto t1 = high_resolution_clock::now();
+            profiler.distance_function_times.push_back(duration<double, micro>(t1 - t0).count());
 
             size_t project_iter = 0;
             for (auto i = 0U; i < Robot::dimension; i++)
+            {
                 q_new[i] = q[i];
+                q_old[i] = q[i];
+            }
+
+            auto t2 = high_resolution_clock::now();
+            profiler.copy_function_times.push_back(duration<double, micro>(t2 - t1).count());
 
             while ((project_iter < 1e3) and (not dist.test_all_less_equal(0.0001F)))
             {
-                dist = projectStep(q_new, q_new, true);
+                auto t3 = high_resolution_clock::now();
+                dist = projectStep(q_old, q_new, true);
+                auto t4 = high_resolution_clock::now();
+                profiler.project_step_times.push_back(duration<double, micro>(t4 - t3).count());
+
+                auto q_dist = (q_new[0] - q_old[0]) * (q_new[0] - q_old[0]);
+                for (auto i = 1U; i < Robot::dimension; i++)
+                    q_dist = q_dist + (q_new[i] - q_old[i]) * (q_new[i] - q_old[i]);
+                std::cout << q_dist << " ";
+                
+                auto t_dst = high_resolution_clock::now();
+                profiler.q_dist_times.push_back(duration<double, micro>(t_dst - t4).count());
+
+                if (q_dist.test_all_less_equal(0.0001F)) // if i make no forward progress
+                    break;
+
+                if (q_dist.test_any_greater_equal(4 * max_q_dist * max_q_dist)) // from triangle inequality
+                    break;
+
+
+
+
+                // for (auto i = 0U; i < Robot::dimension; i++)
+                //     q_old[i] = q_new[i];
+                q_old = q_new + 0.0;
+
+                auto t5 = high_resolution_clock::now();
+                profiler.copy_old_to_new_times.push_back(duration<double, micro>(t5 - t_dst).count());
                 project_iter += 1;
             }
 
+            auto t6 = high_resolution_clock::now();
+            profiler.full_project_times.push_back(duration<double, micro>(t6 - t2).count());
             if (dist.test_all_less_equal(0.0001F))
                 success = true;
 
-            // std::cout << "Num steps : " << project_iter << std::endl;
+            std::cout << "Num steps : " << project_iter << " and success : " << success << std::endl;
 
             // Robot::jacobian_eefk(q_new, tsr_distance_inp.wTeqB, jac_proj_inp.J);
             // std::cout << "FK after proj : " << tsr_distance_inp.wTeqB[12] <<", " << tsr_distance_inp.wTeqB[13] <<", " << tsr_distance_inp.wTeqB[14] << std::endl;

@@ -41,6 +41,8 @@ namespace vamp::planning
             TaskSpaceConstraint<Robot, rake> &constraint,
             typename RNG::Ptr rng) noexcept -> PlanningResult<Robot>
         {
+
+
             PlanningResult<Robot> result;
 
             NN<dimension> start_tree;
@@ -103,6 +105,7 @@ namespace vamp::planning
 
             while (iter++ < settings.max_iterations and free_index < settings.max_samples and not connected)
             {   
+                auto t0 = high_resolution_clock::now();
                 // if (iter % 1 == 0)
                     // std::cout << "Starting iteration : " << iter << ", " << free_index << ", " <<connected << " , " << settings.max_samples << std::endl;
                 float asize = tree_a->size();
@@ -142,16 +145,25 @@ namespace vamp::planning
                 bool reach = nearest_distance < settings.range;
                 auto extension_vector =
                     (reach) ? nearest_vector : nearest_vector * (settings.range / nearest_distance);
-                if (project_constraint_vector<Robot, rake, resolution>(
+
+                auto t1 = high_resolution_clock::now();
+
+                profiler.setup_before_validate_times.push_back(duration<double, micro>(t1 - t0).count());
+
+                bool successful_project = project_constraint_vector<Robot, rake, resolution>(
                         nearest_configuration,
                         extension_vector,
                         (reach) ? nearest_distance : settings.range,
                         projected_vector,
                         constraint,
                         environment
-                    ))
+                    );
+                auto tp = high_resolution_clock::now();
+                profiler.validate_constraint_vector_times.push_back(duration<double, micro>(tp - t1).count());
 
+                if (successful_project)
                 {
+                    auto t2 = high_resolution_clock::now();
 
                     float *new_configuration_index;
                     Configuration new_configuration;
@@ -177,6 +189,8 @@ namespace vamp::planning
                         free_index++;
 
                     }
+                    auto t3 = high_resolution_clock::now();
+                    profiler.insert_projected_to_tree_times.push_back(duration<double, micro>(t3 - t2).count());
 
 
                     auto prior = new_configuration;
@@ -187,6 +201,7 @@ namespace vamp::planning
                     auto counter = 0U;
                     while (not connected)
                     {   
+                        auto t4 = high_resolution_clock::now();
                         counter++;
                         if (counter > 3)
                             break;
@@ -206,14 +221,20 @@ namespace vamp::planning
                         auto other_extension_vector =
                             (other_reach) ? other_nearest_vector : other_nearest_vector * (settings.range / other_nearest_distance);
 
-                        if(not project_constraint_vector<Robot, rake, resolution>(
+
+                        auto tbp = high_resolution_clock::now();
+                        bool extension_successful_project = project_constraint_vector<Robot, rake, resolution>(
                             prior,
                             other_extension_vector,
                             (other_reach) ? other_nearest_distance : settings.range,
                             projected_vector,
                             constraint,
                             environment
-                            )
+                            );
+                        auto tap = high_resolution_clock::now();
+
+
+                        if(not extension_successful_project
                         )
                         {
                             break;
@@ -221,6 +242,7 @@ namespace vamp::planning
                         if (free_index >= settings.max_samples)
                             break;
 
+                        auto t5 = high_resolution_clock::now();
 
                         float *next_index;
                         Configuration next;
@@ -242,7 +264,11 @@ namespace vamp::planning
 
 
 
+                        auto t6 = high_resolution_clock::now();
 
+
+                        profiler.validate_extend_constraint_vector_times.push_back(duration<double, micro>(tap - tbp).count());
+                        profiler.insertt_extended_to_tree_times.push_back(duration<double, micro>(t6 - t5).count());
 
                         if (other_reached)  // connected
                         {
@@ -281,7 +307,11 @@ namespace vamp::planning
                         prior = next;
                         prior_index = next_index;
 
+
+
                     }
+                    auto t7 = high_resolution_clock::now();
+                    profiler.full_extend_times.push_back(duration<double, micro>(t7 - t3).count());
                 }
                 else if (settings.dynamic_domain)
                 {
@@ -296,6 +326,10 @@ namespace vamp::planning
                         // std::cout << "Resetting radius to " <<  radii[nearest_node.index] << std::endl;
                     }
                 }
+                auto t8 = high_resolution_clock::now();
+
+                profiler.one_iteration_times.push_back(duration<double, micro>(t8 - t0).count());
+
                 // else
                     // std::cout << "Extension failed ! Try another ! " << std::endl;
             }
@@ -306,6 +340,8 @@ namespace vamp::planning
             result.iterations = iter;
             result.size.emplace_back(start_tree.size());
             result.size.emplace_back(goal_tree.size());
+            profiler.printReport();
+
             return result;
         }
     };
