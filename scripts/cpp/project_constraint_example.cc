@@ -159,7 +159,7 @@ auto main(int, char **) -> int
 
     // Setup RRTC and plan
     vamp::planning::RRTCSettings rrtc_settings;
-    rrtc_settings.range = 1.0;
+    rrtc_settings.range = 0.5;
     std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     auto result =
         CRRTC::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);

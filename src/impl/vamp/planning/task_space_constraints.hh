@@ -216,6 +216,7 @@ namespace vamp::planning
 
             };
             JacobianProjectInp jac_proj_inp;
+            ConfigurationBlock q_old;
 
         template <std::size_t dim>
         inline static auto assignBlock(std::array<float, dim> src, vamp::FloatVector<rake, dim> &dest)
@@ -422,25 +423,40 @@ namespace vamp::planning
 
 
 
-        bool project(const ConfigurationBlock &q, ConfigurationBlock &q_new)
+        bool project(const ConfigurationBlock &q, ConfigurationBlock &q_new, float max_q_dist = 5.0)
         {
             bool success = false;
             auto dist = distanceToConstraint(q);
 
             size_t project_iter = 0;
             for (auto i = 0U; i < Robot::dimension; i++)
+            {
                 q_new[i] = q[i];
+                q_old[i] = q[i];
+            }
 
             while ((project_iter < 1e3) and (not dist.test_all_less_equal(0.0001F)))
             {
-                dist = projectStep(q_new, q_new, true);
+                dist = projectStep(q_old, q_new, true);
+                auto q_dist = (q_new[0] - q_old[0]) * (q_new[0] - q_old[0]);
+                for (auto i = 1U; i < Robot::dimension; i++)
+                    q_dist = q_dist + (q_new[i] - q_old[i]) * (q_new[i] - q_old[i]);
+
+                if (q_dist.test_all_less_equal(0.0001F)) // if i make no forward progress
+                    break;
+
+                if (q_dist.test_any_greater_equal(4 * max_q_dist * max_q_dist)) // from triangle inequality
+                    break;
+                // for (auto i = 0U; i < Robot::dimension; i++)
+                //     q_old[i] = q_new[i];
+                q_old = q_new + 0.0;
                 project_iter += 1;
             }
 
             if (dist.test_all_less_equal(0.0001F))
                 success = true;
 
-            // std::cout << "Num steps : " << project_iter << std::endl;
+            // std::cout << "Num steps : " << project_iter << " and success : " << success << std::endl;
 
             // Robot::jacobian_eefk(q_new, tsr_distance_inp.wTeqB, jac_proj_inp.J);
             // std::cout << "FK after proj : " << tsr_distance_inp.wTeqB[12] <<", " << tsr_distance_inp.wTeqB[13] <<", " << tsr_distance_inp.wTeqB[14] << std::endl;
