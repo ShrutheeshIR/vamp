@@ -89,8 +89,12 @@ auto main(int, char **) -> int
 
     // creating the 33 element arr
     std::array<float, 33>x;
+
+    float delta[10] = {-0.2, -0.1, 0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.5, 0.1};
+
+    for(auto del_ind = 0U; del_ind < 10; del_ind++){
     for (auto i=0U; i < 7; i++)
-        x[i] = goal[i];
+        x[i] = goal[i] + delta[del_ind];
 
     for (auto i=0U; i < 6; i++) {
         x[3 * 7 + i] = lower_bound[i];
@@ -119,6 +123,7 @@ auto main(int, char **) -> int
         std::cout << y[i] << " ";
 
     std::cout << std::endl;
+    }
 
 
     typename Robot::template ConfigurationBlock<rake> block;
