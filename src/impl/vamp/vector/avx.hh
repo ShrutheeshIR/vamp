@@ -687,7 +687,6 @@ namespace vamp
         inline static constexpr auto acos(VectorT x) noexcept -> VectorT
         {
 
-            const auto ps_sign_mask = constant_int(0x80000000);
             const auto ps_cephes_morebits = constant(6.123233995736765886130E-17);
 
             const auto ps_05 = constant(0.5); // 0.5

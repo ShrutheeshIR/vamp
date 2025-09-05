@@ -58,12 +58,12 @@ inline constexpr auto min(const DataT &x, const DataTB &y) -> DataT
     return x.min(y);
 }
 
-template <typename DataT, typename DataB>
-inline constexpr auto blend(const DataT &a, const DataT &b, const DataB &mask ) -> DataT
+template <typename DataA, typename DataB, typename DataC>
+inline constexpr auto blend(const DataA &a, const DataB &b, const DataC &mask ) -> DataA
 {
-    if constexpr (std::is_arithmetic_v<DataT>)
+    if constexpr (std::is_arithmetic_v<DataA>)
     {
-        return mask ? a:b;
+        return (mask >=0) ? a:b;
     }
     else
     {

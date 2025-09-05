@@ -114,6 +114,12 @@ auto main(int, char **) -> int
     // std::cout << y << std::endl;
 
 
+    Robot::tsr_function_ori_blend(x, y);
+    for (auto i = 0U; i < 48; i++)
+        std::cout << y[i] << " ";
+
+    std::cout << std::endl;
+
 
     typename Robot::template ConfigurationBlock<rake> block;
     // typename Robot::template ConfigurationBlock<rake> projected_block;
@@ -124,7 +130,7 @@ auto main(int, char **) -> int
     std::cout << block[0] << std::endl;
 
     Robot::ConfigurationArray sines = {-0.999, 0.9, 0.8, 0.5, 0.6, 0.7, 0.999};
-    std::cout << Robot::Configuration(sines).acos() << std::endl;
+    std::cout << Robot::Configuration(sines).asin() << std::endl;
 
 
     // // auto dist = task_constraint.distanceToConstraintAuto(block);
