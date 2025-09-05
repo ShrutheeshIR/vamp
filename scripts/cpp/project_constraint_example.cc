@@ -181,7 +181,7 @@ auto main(int, char **) -> int
                 soln[i] = array[i];
             }
 
-            auto fka = Robot::eefk(soln);
+            // auto fka = Robot::eefk(soln);
             // std::cout <<std::endl << fka.matrix() <<std::endl;
             std::cout << std::endl;
         }

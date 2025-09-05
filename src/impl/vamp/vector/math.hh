@@ -33,7 +33,16 @@ inline constexpr auto cos(const DataT &v) -> DataT
 template <typename DataT>
 inline constexpr auto sqrt(const DataT &v) -> DataT
 {
-    return v.sqrt();
+
+    if constexpr (std::is_arithmetic_v<DataT>)
+    {
+        return std::sqrt(v);
+    }
+    else
+    {
+        return v.sqrt();
+    }
+
 }
 
 
@@ -48,6 +57,20 @@ inline constexpr auto min(const DataT &x, const DataTB &y) -> DataT
 {
     return x.min(y);
 }
+
+template <typename DataT, typename DataB>
+inline constexpr auto blend(const DataT &a, const DataT &b, const DataB &mask ) -> DataT
+{
+    if constexpr (std::is_arithmetic_v<DataT>)
+    {
+        return mask ? a:b;
+    }
+    else
+    {
+        return a.blend(b, mask);
+    }
+}
+
 
 
 template <typename DataT>
