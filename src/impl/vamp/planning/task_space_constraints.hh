@@ -218,6 +218,43 @@ namespace vamp::planning
             JacobianProjectInp jac_proj_inp;
             ConfigurationBlock q_old;
 
+
+            struct ErrGradOut {
+                vamp::FloatVector<rake, 7> grad; // jacobian
+                vamp::FloatVector<rake, 6> err; // error vector
+
+                auto &operator[](size_t index) {
+                    if (index < 7)
+                        return grad[index];
+                    else if (index >= 7 && index < 13)
+                        return err[index - 7];
+                    else
+                        return grad[0];
+                }
+
+                const auto operator[](size_t index) const {
+                    if (index < 7)
+                        return grad[index];
+                    else if (index >= 7 && index < 13)
+                        return err[index - 7];
+                    else
+                        return grad[0];
+                }
+
+
+                ErrGradOut& operator=(vamp::FloatVector<rake, 6 + 7> y) {
+                    for(auto i=0U; i < 7; i++)
+                        grad[i] = y[i];
+                    for(auto i=0U; i < 6; i++)
+                        err[i] = y[i + 7];
+                    return *this;
+                }
+
+
+            };
+            ErrGradOut grad_err;
+
+
         template <std::size_t dim>
         inline static auto assignBlock(std::array<float, dim> src, vamp::FloatVector<rake, dim> &dest)
         {
@@ -279,6 +316,25 @@ namespace vamp::planning
                     ).abs();
             return d;
         }
+
+
+        const auto gradient_and_error(const ConfigurationBlock &q)
+        {
+            for (int i=0U; i < 7; i++)
+                tsr_function_inp.q[i] = q[i];
+
+            Robot::tsr_error_gradient(tsr_function_inp, grad_err);
+
+            auto d = (grad_err[0 + 7] * grad_err[0 + 7] +
+                      grad_err[1 + 7] * grad_err[1 + 7] +
+                      grad_err[2 + 7] * grad_err[2 + 7] + 
+                      grad_err[3 + 7] * grad_err[3 + 7] + 
+                      grad_err[4 + 7] * grad_err[4 + 7] + 
+                      grad_err[5 + 7] * grad_err[5 + 7]
+                    ).abs();
+            return d;
+        }
+
 
 
         auto jacobian_solve_config_jt(const JacobianProjectInp &x) noexcept
@@ -426,6 +482,14 @@ namespace vamp::planning
             return dist;
         }
 
+        auto projectStepDirect(const ConfigurationBlock &q, ConfigurationBlock &q_new, bool update_q = true)
+        {
+            auto dist = gradient_and_error(q);
+            if (update_q)
+                integrateJointConfiguration(q, q_new, grad_err.grad);
+            return dist;
+        }
+
 
 
         bool project(const ConfigurationBlock &q, ConfigurationBlock &q_new, float max_q_dist = 5.0)
@@ -442,7 +506,7 @@ namespace vamp::planning
 
             while ((project_iter < 1e3) and (not dist.test_all_less_equal(0.0001F)))
             {
-                dist = projectStep(q_old, q_new, true);
+                dist = projectStepDirect(q_old, q_new, true);
                 auto q_dist = (q_new[0] - q_old[0]) * (q_new[0] - q_old[0]);
                 for (auto i = 1U; i < Robot::dimension; i++)
                     q_dist = q_dist + (q_new[i] - q_old[i]) * (q_new[i] - q_old[i]);
