@@ -270,13 +270,6 @@ namespace vamp::planning
                 tsr_function_inp.q[i] = q[i];
 
             Robot::tsr_function_jac(tsr_function_inp, jac_proj_inp);
-
-            for(int i=0U; i < 6;i++)
-            {
-                jac_proj_inp[i + 42] = (jac_proj_inp[i + 42] - tsr_function_inp[ 21 + i]).min(0.F) 
-                                    + (jac_proj_inp[i + 42] - tsr_function_inp[ 27 + i]).max(0.F);
-            }
-
             auto d =(jac_proj_inp[0 + 42] * jac_proj_inp[0 + 42] +
                       jac_proj_inp[1 + 42] * jac_proj_inp[1 + 42] +
                       jac_proj_inp[2 + 42] * jac_proj_inp[2 + 42] + 
