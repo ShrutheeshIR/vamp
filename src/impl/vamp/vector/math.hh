@@ -73,6 +73,36 @@ inline constexpr auto blend(const DataA &a, const DataB &b, const DataC &mask ) 
     }
 }
 
+template <typename DataT>
+inline constexpr auto asin(const DataT &v) -> DataT
+{
+
+    if constexpr (std::is_arithmetic_v<DataT>)
+    {
+        return std::asin(v);
+    }
+    else
+    {
+        return v.asin();
+    }
+
+}
+
+template <typename DataT>
+inline constexpr auto acos(const DataT &v) -> DataT
+{
+
+    if constexpr (std::is_arithmetic_v<DataT>)
+    {
+        return std::acos(v);
+    }
+    else
+    {
+        return v.acos();
+    }
+
+}
+
 
 
 template <typename DataT>

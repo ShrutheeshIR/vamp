@@ -252,6 +252,18 @@ namespace vamp::planning
                 return distanceToConstraint(q);
             }
 
+        const auto print_robot_tsr_error(const ConfigurationBlock &q)
+        {
+            for (int i=0U; i < 7; i++)
+                tsr_function_inp.q[i] = q[i];
+            Robot::tsr_function_ori_blend_simd(tsr_function_inp, jac_proj_inp);
+            for(auto i=0U; i < 42; i++)
+                std::cout << jac_proj_inp.J[{i, 0}] << " ";
+            for(auto i=0U; i < 6; i++)
+                std::cout << jac_proj_inp.err[{i, 0}] << " ";
+            std::cout << std::endl;
+        }
+
         const auto distanceToConstraint(const ConfigurationBlock &q)
         {
             for (int i=0U; i < 7; i++)

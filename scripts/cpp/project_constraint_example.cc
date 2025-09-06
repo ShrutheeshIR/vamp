@@ -187,7 +187,7 @@ auto main(int, char **) -> int
         }
     }
 
-    std::cout << "Planner took " << std::setprecision(5) << result.nanoseconds / 1e9 << std::endl;
+    std::cout << "Planner took " << std::setprecision(5) << result.nanoseconds / 1e9 << "s and " << result.iterations << " steps" << std::endl;
 
 
 

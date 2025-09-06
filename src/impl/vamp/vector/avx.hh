@@ -411,7 +411,8 @@ namespace vamp
         template <unsigned int = 0>
         inline static constexpr auto sqrt(VectorT v) noexcept -> VectorT
         {
-            return _mm256_mul_ps(v, _mm256_rsqrt_ps(v));
+            // return _mm256_mul_ps(v, _mm256_rsqrt_ps(v));
+            return _mm256_sqrt_ps(v);
         }
 
         template <unsigned int = 0>

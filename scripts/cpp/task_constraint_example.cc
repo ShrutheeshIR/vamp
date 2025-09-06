@@ -90,40 +90,88 @@ auto main(int, char **) -> int
     // creating the 33 element arr
     std::array<float, 33>x;
 
-    float delta[10] = {-0.2, -0.1, 0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.5, 0.1};
+    // testing blend operation
+    // std::array<float, 8>
+    // float a[8] = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8};
+    // float b[8] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0};
+    // float mask[8] = {-0.1, -88.0, -0.002, 0.0, -0.0, 0.2, 0.5, 99};
 
-    for(auto del_ind = 0U; del_ind < 10; del_ind++){
-    for (auto i=0U; i < 7; i++)
-        x[i] = goal[i] + delta[del_ind];
+    // auto blend1 = blend(Robot::Configuration(a), Robot::Configuration(b), Robot::Configuration(mask));
+    // std::cout << blend1 << std::endl;
 
-    for (auto i=0U; i < 6; i++) {
-        x[3 * 7 + i] = lower_bound[i];
-        x[3 * 7 + 6 + i] = upper_bound[i];
-    }
-    for (auto i=0U; i < 7; i++) {
-        x[7 + i] = transform1[i];
-        x[7 + 7 + i] = transform2[i];
-    }
-    std::array<float, 48> y;
-    Robot::tsr_function(x, y);
-    for (auto i = 0U; i < 48; i++)
-        std::cout << y[i] << " ";
-    std::cout << std::endl;
+    // auto blend2 = blend(99.0, Robot::Configuration(b), Robot::Configuration(mask));
+    // std::cout << blend2 << std::endl;
 
-    Robot::tsr_function_ori(x, y);
-    for (auto i = 0U; i < 48; i++)
-        std::cout << y[i] << " ";
+    // auto blend3 = blend(Robot::Configuration(a), 30.0, Robot::Configuration(mask));
+    // std::cout << blend3 << std::endl;
 
-    std::cout << std::endl;
-    // std::cout << y << std::endl;
+    // auto blend4 = blend(99.0, 30.0, Robot::Configuration(mask));
+    // std::cout << blend4 << std::endl;
+
+    // for (auto i=0U; i < 8; i++)
+    //     std::cout << blend(a[i], b[i], mask[i]) << " ";
+    // std::cout << std::endl;
+
+    // for (auto i=0U; i < 8; i++)
+    //     std::cout << blend(99.0, b[i], mask[i]) << " ";
+    // std::cout << std::endl;
+
+    // for (auto i=0U; i < 8; i++)
+    //     std::cout << blend(a[i], 30.0, mask[i]) << " ";
+    // std::cout << std::endl;
+
+    // for (auto i=0U; i < 8; i++)
+    //     std::cout << blend(99.0, 30.0, mask[i]) << " ";
+    // std::cout << std::endl;
 
 
-    Robot::tsr_function_ori_blend(x, y);
-    for (auto i = 0U; i < 48; i++)
-        std::cout << y[i] << " ";
+    // float delta[10] = {-0.2, -0.1, 0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.5, 0.1};
 
-    std::cout << std::endl;
-    }
+    // for(auto del_ind = 0U; del_ind < 10; del_ind++){
+    // for (auto i=0U; i < 7; i++)
+    //     x[i] = goal[i] + delta[del_ind];
+
+    // for (auto i=0U; i < 6; i++) {
+    //     x[3 * 7 + i] = lower_bound[i];
+    //     x[3 * 7 + 6 + i] = upper_bound[i];
+    // }
+    // for (auto i=0U; i < 7; i++) {
+    //     x[7 + i] = transform1[i];
+    //     x[7 + 7 + i] = transform2[i];
+    // }
+    // std::array<float, 48> y;
+    // Robot::tsr_function(x, y);
+    // for (auto i = 0U; i < 48; i++)
+    //     std::cout << y[i] << " ";
+    // std::cout << std::endl;
+
+    // Robot::tsr_function_ori(x, y);
+    // for (auto i = 0U; i < 48; i++)
+    //     std::cout << y[i] << " ";
+
+    // std::cout << std::endl;
+    // // std::cout << y << std::endl;
+
+
+    // Robot::tsr_function_ori_blend(x, y);
+    // for (auto i = 0U; i < 48; i++)
+    //     std::cout << y[i] << " ";
+
+    // std::cout << std::endl;
+
+    // typename Robot::template ConfigurationBlock<rake> block;
+    // for (auto i = 0U; i < Robot::dimension; ++i)
+    //     block[i] = Robot::Configuration(goal).broadcast(i) + delta[del_ind];
+
+
+    // task_constraint.print_robot_tsr_error(block);
+
+
+    // }
+
+    vamp::FloatVector<8, 170> v;
+    auto val = v[10].acos();
+    std::cout << "Acos is " << val << std::endl;
 
 
     typename Robot::template ConfigurationBlock<rake> block;
@@ -135,7 +183,7 @@ auto main(int, char **) -> int
     std::cout << block[0] << std::endl;
 
     Robot::ConfigurationArray sines = {-0.999, 0.9, 0.8, 0.5, 0.6, 0.7, 0.999};
-    std::cout << Robot::Configuration(sines).asin() << std::endl;
+    std::cout << std::setprecision(10) << Robot::Configuration(sines).asin() << std::endl;
 
 
     // // auto dist = task_constraint.distanceToConstraintAuto(block);
