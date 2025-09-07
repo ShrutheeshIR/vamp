@@ -493,6 +493,10 @@ namespace vamp
         {
             return D(apply<S::template acos<0>>(d()->data));
         }
+        inline constexpr auto atan() const noexcept -> D
+        {
+            return D(apply<S::template atan<0>>(d()->data));
+        }
 
 
         template <typename OtherT, typename BoundsT>

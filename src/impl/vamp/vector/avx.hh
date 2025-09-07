@@ -716,6 +716,37 @@ namespace vamp
 
         }
 
+        template <unsigned int = 0>
+        inline static constexpr auto atan(VectorT x) noexcept -> VectorT
+        {
+
+            const auto ps_inf = constant(1.0E15); // 0.5
+            const auto ps_ninf = constant(-1.0E10); // 0.5
+            const auto ps_cephes_pi2 = constant(1.57079632679489661923); // pi/2
+            const auto ps_cephes_npi2 = constant(-1.57079632679489661923); // pi/2
+            const auto ps_1 = constant(1.0f); // 0.5
+
+
+            auto z = mul(x, x);
+            z = add(ps_1, z);
+            z = sqrt(z);
+            z = div(x, z);
+            z = asin(z);
+
+            auto gt_inf_mask = cmp_greater_than(x, ps_inf);
+            z = _mm256_andnot_ps(gt_inf_mask, z);
+            auto z2 = and_(gt_inf_mask, ps_cephes_pi2);
+            z = add(z, z2);
+
+            auto lt_ninf_mask = cmp_less_than(x, ps_ninf);
+            z = _mm256_andnot_ps(gt_inf_mask, z);
+            z2 = and_(lt_ninf_mask, ps_cephes_npi2);
+            z = add(z, z2);
+            
+            return z;
+
+        }
+
 
         // NOTE: Dummy parameter because otherwise we get constexpr errors with set1_ps...
         template <unsigned int = 0>

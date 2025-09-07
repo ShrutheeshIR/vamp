@@ -252,13 +252,60 @@ namespace vamp::planning
                 return distanceToConstraint(q);
             }
 
-        const auto print_robot_tsr_error(const ConfigurationBlock &q)
+
+        const auto print_robot_tsr_grad_error(const ConfigurationBlock &q)
+        {
+            for (int i=0U; i < 7; i++)
+                tsr_function_inp.q[i] = q[i];
+
+            vamp::FloatVector<rake, 34> grad_err_out;
+            Robot::tsr_function_gradient(tsr_function_inp, grad_err_out);
+
+            // for(int i=0U; i < 6;i++)
+            // {
+            //     jac_proj_inp[i + 42] = (jac_proj_inp[i + 42] - tsr_function_inp[ 21 + i]).min(0.F) 
+            //                         + (jac_proj_inp[i + 42] - tsr_function_inp[ 27 + i]).max(0.F);
+            // }
+
+            for(auto i=0U; i < 34; i++)
+                std::cout << grad_err_out[i] << " ";
+            std::cout << std::endl;
+        }
+
+            const auto print_robot_tsr_error(const ConfigurationBlock &q)
+        {
+            for (int i=0U; i < 7; i++)
+                tsr_function_inp.q[i] = q[i];
+            Robot::tsr_function_jac(tsr_function_inp, jac_proj_inp);
+
+            // for(int i=0U; i < 6;i++)
+            // {
+            //     jac_proj_inp[i + 42] = (jac_proj_inp[i + 42] - tsr_function_inp[ 21 + i]).min(0.F) 
+            //                         + (jac_proj_inp[i + 42] - tsr_function_inp[ 27 + i]).max(0.F);
+            // }
+
+            for(auto i=0U; i < 42; i++)
+                std::cout << jac_proj_inp.J[{i, 0}] << " ";
+            for(auto i=0U; i < 6; i++)
+                std::cout << jac_proj_inp.err[{i, 0}] << " ";
+            std::cout << std::endl;
+        }
+
+        const auto print_robot_tsr_error_ori(const ConfigurationBlock &q)
         {
             for (int i=0U; i < 7; i++)
                 tsr_function_inp.q[i] = q[i];
             Robot::tsr_function_ori_blend_simd(tsr_function_inp, jac_proj_inp);
-            for(auto i=0U; i < 42; i++)
-                std::cout << jac_proj_inp.J[{i, 0}] << " ";
+
+            // for(int i=0U; i < 6;i++)
+            // {
+            //     jac_proj_inp[i + 42] = (jac_proj_inp[i + 42] - tsr_function_inp[ 21 + i]).min(0.F) 
+            //                         + (jac_proj_inp[i + 42] - tsr_function_inp[ 27 + i]).max(0.F);
+            // }
+
+
+            // for(auto i=0U; i < 42; i++)
+            //     std::cout << jac_proj_inp.J[{i, 0}] << " ";
             for(auto i=0U; i < 6; i++)
                 std::cout << jac_proj_inp.err[{i, 0}] << " ";
             std::cout << std::endl;
@@ -271,11 +318,38 @@ namespace vamp::planning
 
             Robot::tsr_function_jac(tsr_function_inp, jac_proj_inp);
 
-            for(int i=0U; i < 6;i++)
-            {
-                jac_proj_inp[i + 42] = (jac_proj_inp[i + 42] - tsr_function_inp[ 21 + i]).min(0.F) 
-                                    + (jac_proj_inp[i + 42] - tsr_function_inp[ 27 + i]).max(0.F);
-            }
+            // for(int i=0U; i < 6;i++)
+            // {
+            //     jac_proj_inp[i + 42] = (jac_proj_inp[i + 42] - tsr_function_inp[ 21 + i]).min(0.F) 
+            //                         + (jac_proj_inp[i + 42] - tsr_function_inp[ 27 + i]).max(0.F);
+            // }
+
+            auto d =(jac_proj_inp[0 + 42] * jac_proj_inp[0 + 42] +
+                      jac_proj_inp[1 + 42] * jac_proj_inp[1 + 42] +
+                      jac_proj_inp[2 + 42] * jac_proj_inp[2 + 42] + 
+                      jac_proj_inp[3 + 42] * jac_proj_inp[3 + 42] + 
+                      jac_proj_inp[4 + 42] * jac_proj_inp[4 + 42] + 
+                      jac_proj_inp[5 + 42] * jac_proj_inp[5 + 42]
+                    ).abs();
+            return d;
+        }
+
+        const auto distanceToConstraintOri(const ConfigurationBlock &q)
+        {
+            for (int i=0U; i < 7; i++)
+                tsr_function_inp.q[i] = q[i];
+
+            Robot::tsr_function_ori_blend_simd(tsr_function_inp, jac_proj_inp);
+
+            // for(int i=0U; i < 6;i++)
+            // {
+            //     jac_proj_inp[i + 42] = (jac_proj_inp[i + 42] - tsr_function_inp[ 21 + i]).min(0.F) 
+            //                         + (jac_proj_inp[i + 42] - tsr_function_inp[ 27 + i]).max(0.F);
+            // }
+
+            for(auto i=0U; i < 6; i++)
+                std::cout << jac_proj_inp.err[{i, 0}] << " ";
+            
 
             auto d =(jac_proj_inp[0 + 42] * jac_proj_inp[0 + 42] +
                       jac_proj_inp[1 + 42] * jac_proj_inp[1 + 42] +
@@ -288,6 +362,7 @@ namespace vamp::planning
         }
 
 
+
         auto jacobian_solve_config_jt(const JacobianProjectInp &x) noexcept
         {
             /**
@@ -297,19 +372,34 @@ namespace vamp::planning
             @return grad
             */
             vamp::FloatVector<rake, 7> y;
-            y[0] = x[5] * x[47] + x[4] * x[46] + x[3] * x[45] + x[2] * x[44] + x[1] * x[43] + x[0] * x[42];
-            y[1] = x[11] * x[47] + x[10] * x[46] + x[9] * x[45] + x[8] * x[44] + x[7] * x[43] + x[6] * x[42];
+            // y[0] = x[5] * x[47] + x[4] * x[46] + x[3] * x[45] + x[2] * x[44] + x[1] * x[43] + x[0] * x[42];
+            // y[1] = x[11] * x[47] + x[10] * x[46] + x[9] * x[45] + x[8] * x[44] + x[7] * x[43] + x[6] * x[42];
+            // y[2] =
+            //     x[17] * x[47] + x[16] * x[46] + x[15] * x[45] + x[14] * x[44] + x[13] * x[43] + x[12] * x[42];
+            // y[3] =
+            //     x[23] * x[47] + x[22] * x[46] + x[21] * x[45] + x[20] * x[44] + x[19] * x[43] + x[18] * x[42];
+            // y[4] =
+            //     x[29] * x[47] + x[28] * x[46] + x[27] * x[45] + x[26] * x[44] + x[25] * x[43] + x[24] * x[42];
+            // y[5] =
+            //     x[35] * x[47] + x[34] * x[46] + x[33] * x[45] + x[32] * x[44] + x[31] * x[43] + x[30] * x[42];
+            // y[6] =
+            //     x[41] * x[47] + x[40] * x[46] + x[39] * x[45] + x[38] * x[44] + x[37] * x[43] + x[36] * x[42];
+            y[0] =
+                x[35] * x[47] + x[28] * x[46] + x[21] * x[45] + x[14] * x[44] + x[7] * x[43] + x[0] * x[42];
+            y[1] =
+                x[36] * x[47] + x[29] * x[46] + x[22] * x[45] + x[15] * x[44] + x[8] * x[43] + x[1] * x[42];
             y[2] =
-                x[17] * x[47] + x[16] * x[46] + x[15] * x[45] + x[14] * x[44] + x[13] * x[43] + x[12] * x[42];
+                x[37] * x[47] + x[30] * x[46] + x[23] * x[45] + x[16] * x[44] + x[9] * x[43] + x[2] * x[42];
             y[3] =
-                x[23] * x[47] + x[22] * x[46] + x[21] * x[45] + x[20] * x[44] + x[19] * x[43] + x[18] * x[42];
+                x[38] * x[47] + x[31] * x[46] + x[24] * x[45] + x[17] * x[44] + x[10] * x[43] + x[3] * x[42];
             y[4] =
-                x[29] * x[47] + x[28] * x[46] + x[27] * x[45] + x[26] * x[44] + x[25] * x[43] + x[24] * x[42];
+                x[39] * x[47] + x[32] * x[46] + x[25] * x[45] + x[18] * x[44] + x[11] * x[43] + x[4] * x[42];
             y[5] =
-                x[35] * x[47] + x[34] * x[46] + x[33] * x[45] + x[32] * x[44] + x[31] * x[43] + x[30] * x[42];
+                x[40] * x[47] + x[33] * x[46] + x[26] * x[45] + x[19] * x[44] + x[12] * x[43] + x[5] * x[42];
             y[6] =
-                x[41] * x[47] + x[40] * x[46] + x[39] * x[45] + x[38] * x[44] + x[37] * x[43] + x[36] * x[42];
-            
+                x[41] * x[47] + x[34] * x[46] + x[27] * x[45] + x[20] * x[44] + x[13] * x[43] + x[6] * x[42];
+
+
             return y;
         }
 
@@ -407,6 +497,92 @@ namespace vamp::planning
             y[5] = x[35] * v[20] + x[34] * v[18] + x[33] * v[12] + x[32] * v[7] + x[31] * v[3] + x[30] * v[0];
             y[6] = x[41] * v[20] + x[40] * v[18] + x[39] * v[12] + x[38] * v[7] + x[37] * v[3] + x[36] * v[0];
 
+
+            // v[0] = (
+            //     0.0001 + x[0] * x[0] + x[1] * x[1] + x[2] * x[2] + x[3] * x[3] + x[4] * x[4] + x[5] * x[5] +
+            //     x[6] * x[6]).sqrt();
+            // v[1] = (x[35] * x[0] + x[36] * x[1] + x[37] * x[2] + x[38] * x[3] + x[39] * x[4] + x[40] * x[5] +
+            //         x[41] * x[6]) /
+            //        v[0];
+            // v[2] = (x[7] * x[0] + x[8] * x[1] + x[9] * x[2] + x[10] * x[3] + x[11] * x[4] + x[12] * x[5] +
+            //         x[13] * x[6]) /
+            //        v[0];
+            // v[3] = (
+            //     0.0001 + x[7] * x[7] + x[8] * x[8] + x[9] * x[9] + x[10] * x[10] + x[11] * x[11] +
+            //     x[12] * x[12] + x[13] * x[13] - v[2] * v[2]).sqrt();
+            // v[4] = (x[35] * x[7] + x[36] * x[8] + x[37] * x[9] + x[38] * x[10] + x[39] * x[11] +
+            //         x[40] * x[12] + x[41] * x[13] - v[1] * v[2]) /
+            //        v[3];
+            // v[5] = (x[14] * x[0] + x[15] * x[1] + x[16] * x[2] + x[17] * x[3] + x[18] * x[4] + x[19] * x[5] +
+            //         x[20] * x[6]) /
+            //        v[0];
+            // v[6] = (x[14] * x[7] + x[15] * x[8] + x[16] * x[9] + x[17] * x[10] + x[18] * x[11] +
+            //         x[19] * x[12] + x[20] * x[13] - v[5] * v[2]) /
+            //        v[3];
+            // v[7] = (
+            //     0.0001 + x[14] * x[14] + x[15] * x[15] + x[16] * x[16] + x[17] * x[17] + x[18] * x[18] +
+            //     x[19] * x[19] + x[20] * x[20] - v[5] * v[5] - v[6] * v[6]).sqrt();
+            // v[8] = (x[35] * x[14] + x[36] * x[15] + x[37] * x[16] + x[38] * x[17] + x[39] * x[18] +
+            //         x[40] * x[19] + x[41] * x[20] - v[1] * v[5] - v[4] * v[6]) /
+            //        v[7];
+            // v[9] = (x[21] * x[0] + x[22] * x[1] + x[23] * x[2] + x[24] * x[3] + x[25] * x[4] + x[26] * x[5] +
+            //         x[27] * x[6]) /
+            //        v[0];
+            // v[10] = (x[21] * x[7] + x[22] * x[8] + x[23] * x[9] + x[24] * x[10] + x[25] * x[11] +
+            //          x[26] * x[12] + x[27] * x[13] - v[9] * v[2]) /
+            //         v[3];
+            // v[11] = (x[21] * x[14] + x[22] * x[15] + x[23] * x[16] + x[24] * x[17] + x[25] * x[18] +
+            //          x[26] * x[19] + x[27] * x[20] - v[9] * v[5] - v[10] * v[6]) /
+            //         v[7];
+            // v[12] = (
+            //     0.0001 + x[21] * x[21] + x[22] * x[22] + x[23] * x[23] + x[24] * x[24] + x[25] * x[25] +
+            //     x[26] * x[26] + x[27] * x[27] - v[9] * v[9] - v[10] * v[10] - v[11] * v[11]).sqrt();
+            // v[13] = (x[35] * x[21] + x[36] * x[22] + x[37] * x[23] + x[38] * x[24] + x[39] * x[25] +
+            //          x[40] * x[26] + x[41] * x[27] - v[1] * v[9] - v[4] * v[10] - v[8] * v[11]) /
+            //         v[12];
+            // v[14] = (x[28] * x[0] + x[29] * x[1] + x[30] * x[2] + x[31] * x[3] + x[32] * x[4] + x[33] * x[5] +
+            //          x[34] * x[6]) /
+            //         v[0];
+            // v[15] = (x[28] * x[7] + x[29] * x[8] + x[30] * x[9] + x[31] * x[10] + x[32] * x[11] +
+            //          x[33] * x[12] + x[34] * x[13] - v[14] * v[2]) /
+            //         v[3];
+            // v[16] = (x[28] * x[14] + x[29] * x[15] + x[30] * x[16] + x[31] * x[17] + x[32] * x[18] +
+            //          x[33] * x[19] + x[34] * x[20] - v[14] * v[5] - v[15] * v[6]) /
+            //         v[7];
+            // v[17] = (x[28] * x[21] + x[29] * x[22] + x[30] * x[23] + x[31] * x[24] + x[32] * x[25] +
+            //          x[33] * x[26] + x[34] * x[27] - v[14] * v[9] - v[15] * v[10] - v[16] * v[11]) /
+            //         v[12];
+            // v[18] = (
+            //     0.0001 + x[28] * x[28] + x[29] * x[29] + x[30] * x[30] + x[31] * x[31] + x[32] * x[32] +
+            //     x[33] * x[33] + x[34] * x[34] - v[14] * v[14] - v[15] * v[15] - v[16] * v[16] -
+            //     v[17] * v[17]).sqrt();
+            // v[19] =
+            //     (x[35] * x[28] + x[36] * x[29] + x[37] * x[30] + x[38] * x[31] + x[39] * x[32] +
+            //      x[40] * x[33] + x[41] * x[34] - v[1] * v[14] - v[4] * v[15] - v[8] * v[16] - v[13] * v[17]) /
+            //     v[18];
+            // v[20] = (
+            //     0.0001 + x[35] * x[35] + x[36] * x[36] + x[37] * x[37] + x[38] * x[38] + x[39] * x[39] +
+            //     x[40] * x[40] + x[41] * x[41] - v[1] * v[1] - v[4] * v[4] - v[8] * v[8] - v[13] * v[13] -
+            //     v[19] * v[19]).sqrt();
+            // v[20] = (x[47] - v[1] * x[42] - v[4] * x[43] - v[8] * x[44] - v[13] * x[45] - v[19] * x[46] -
+            //          v[20] * x[47]) /
+            //         v[20];
+            // v[18] = (x[46] - v[14] * x[42] - v[15] * x[43] - v[16] * x[44] - v[17] * x[45] - v[18] * x[46]) /
+            //         v[18];
+            // v[12] = (x[45] - v[9] * x[42] - v[10] * x[43] - v[11] * x[44] - v[12] * x[45]) / v[12];
+            // v[7] = (x[44] - v[5] * x[42] - v[6] * x[43] - v[7] * x[44]) / v[7];
+            // v[3] = (x[43] - v[2] * x[42] - v[3] * x[43]) / v[3];
+            // v[0] = (x[42] - v[0] * x[42]) / v[0];
+            // y[0] = x[35] * v[20] + x[28] * v[18] + x[21] * v[12] + x[14] * v[7] + x[7] * v[3] + x[0] * v[0];
+            // y[1] = x[36] * v[20] + x[29] * v[18] + x[22] * v[12] + x[15] * v[7] + x[8] * v[3] + x[1] * v[0];
+            // y[2] = x[37] * v[20] + x[30] * v[18] + x[23] * v[12] + x[16] * v[7] + x[9] * v[3] + x[2] * v[0];
+            // y[3] = x[38] * v[20] + x[31] * v[18] + x[24] * v[12] + x[17] * v[7] + x[10] * v[3] + x[3] * v[0];
+            // y[4] = x[39] * v[20] + x[32] * v[18] + x[25] * v[12] + x[18] * v[7] + x[11] * v[3] + x[4] * v[0];
+            // y[5] = x[40] * v[20] + x[33] * v[18] + x[26] * v[12] + x[19] * v[7] + x[12] * v[3] + x[5] * v[0];
+            // y[6] = x[41] * v[20] + x[34] * v[18] + x[27] * v[12] + x[20] * v[7] + x[13] * v[3] + x[6] * v[0];
+
+
+
             return y;
         }
 
@@ -415,7 +591,16 @@ namespace vamp::planning
         void integrateJointConfiguration(const ConfigurationBlock &q, ConfigurationBlock &q_new, const ConfigurationBlock &grad)
         {
             for (auto i = 0U; i < Robot::dimension; i++)
-                q_new[i] = q[i] + grad[i];
+                q_new[i] = q[i] + 1.0 * grad[i];
+            Robot::descale_configuration_block(q_new);
+            q_new = q_new.clamp(0.F, 1.F);
+            Robot::scale_configuration_block(q_new);
+        }
+
+        void integrateJointConfigurationJt(const ConfigurationBlock &q, ConfigurationBlock &q_new, const ConfigurationBlock &grad)
+        {
+            for (auto i = 0U; i < Robot::dimension; i++)
+                q_new[i] = q[i] + 0.75 * grad[i];
             Robot::descale_configuration_block(q_new);
             q_new = q_new.clamp(0.F, 1.F);
             Robot::scale_configuration_block(q_new);
@@ -425,17 +610,46 @@ namespace vamp::planning
         auto projectStep(const ConfigurationBlock &q, ConfigurationBlock &q_new, bool update_q = true)
         {
             auto dist = distanceToConstraint(q);
+            // std::cout << "dist base " << dist << std::endl;
             if (update_q)
             {
                 auto grad = jacobian_solve_config_cholesky(jac_proj_inp);
+                // std::cout << "grad base " << grad << std::endl;
                 integrateJointConfiguration(q, q_new, grad);
             }
             return dist;
         }
 
+        auto projectStepJt(const ConfigurationBlock &q, ConfigurationBlock &q_new, bool update_q = true)
+        {
+            auto dist = distanceToConstraint(q);
+            // std::cout << "dist base " << dist << std::endl;
+            if (update_q)
+            {
+                auto grad = jacobian_solve_config_jt(jac_proj_inp);
+                // std::cout << "grad base " << grad << std::endl;
+                integrateJointConfigurationJt(q, q_new, grad);
+            }
+            return dist;
+        }
 
 
-        bool project(const ConfigurationBlock &q, ConfigurationBlock &q_new, float max_q_dist = 5.0)
+        auto projectStepOri(const ConfigurationBlock &q, ConfigurationBlock &q_new, bool update_q = true)
+        {
+            auto dist = distanceToConstraintOri(q);
+            // std::cout << "dist ori " << dist << std::endl;
+            if (update_q)
+            {
+                auto grad = jacobian_solve_config_jt(jac_proj_inp);
+                std::cout << "grad ori " << grad << std::endl;
+                integrateJointConfigurationJt(q, q_new, grad);
+                // std::cout << q_new << std::endl;
+            }
+            return dist;
+        }
+
+
+        bool projectJt(const ConfigurationBlock &q, ConfigurationBlock &q_new, float max_q_dist = 5.0, bool use_ori = false)
         {
             bool success = false;
             auto dist = distanceToConstraint(q);
@@ -447,14 +661,68 @@ namespace vamp::planning
                 q_old[i] = q[i];
             }
 
-            while ((project_iter < 1e3) and (not dist.test_all_less_equal(0.0001F)))
+            while ((project_iter < 1e4) and (not dist.test_all_less_equal(0.0001F)))
             {
-                dist = projectStep(q_old, q_new, true);
+                // if (use_ori)
+                dist = projectStepJt(q_old, q_new, true);
+                // else
+                // dist = projectStep(q_old, q_new, true);
                 auto q_dist = (q_new[0] - q_old[0]) * (q_new[0] - q_old[0]);
                 for (auto i = 1U; i < Robot::dimension; i++)
                     q_dist = q_dist + (q_new[i] - q_old[i]) * (q_new[i] - q_old[i]);
 
-                if (q_dist.test_all_less_equal(0.0001F)) // if i make no forward progress
+                if (q_dist.test_all_less_equal(0.000001F)) // if i make no forward progress
+                    break;
+
+                if (q_dist.test_any_greater_equal(4 * max_q_dist * max_q_dist)) // from triangle inequality
+                    break;
+                // for (auto i = 0U; i < Robot::dimension; i++)
+                //     q_old[i] = q_new[i];
+                q_old = q_new + 0.0;
+                project_iter += 1;
+            }
+
+            if (dist.test_all_less_equal(0.0001F))
+                success = true;
+
+            std::cout << "Num steps : " << project_iter << " and success : " << success << std::endl;
+
+            // Robot::jacobian_eefk(q_new, tsr_distance_inp.wTeqB, jac_proj_inp.J);
+            // std::cout << "FK after proj : " << tsr_distance_inp.wTeqB[12] <<", " << tsr_distance_inp.wTeqB[13] <<", " << tsr_distance_inp.wTeqB[14] << std::endl;
+            std::cout << "Full error is : " << jac_proj_inp.err << std::endl;
+            std::cout << "Projected config is : " << q_new << std::endl;
+            std::cout << "Initial config is : " << q << std::endl;
+
+            std::cout << "dist is : " << dist << std::endl;
+            std::cout << "success is : " << success << std::endl;
+
+            return success;
+                
+        }
+
+        bool project(const ConfigurationBlock &q, ConfigurationBlock &q_new, float max_q_dist = 5.0, bool use_ori = false)
+        {
+            bool success = false;
+            auto dist = distanceToConstraintOri(q);
+
+            size_t project_iter = 0;
+            for (auto i = 0U; i < Robot::dimension; i++)
+            {
+                q_new[i] = q[i];
+                q_old[i] = q[i];
+            }
+
+            while ((project_iter < 10) and (not dist.test_all_less_equal(0.0001F)))
+            {
+                // if (use_ori)
+                dist = projectStepOri(q_old, q_new, true);
+                // else
+                // dist = projectStep(q_old, q_new, true);
+                auto q_dist = (q_new[0] - q_old[0]) * (q_new[0] - q_old[0]);
+                for (auto i = 1U; i < Robot::dimension; i++)
+                    q_dist = q_dist + (q_new[i] - q_old[i]) * (q_new[i] - q_old[i]);
+
+                if (q_dist.test_all_less_equal(0.00001F)) // if i make no forward progress
                     break;
 
                 if (q_dist.test_any_greater_equal(4 * max_q_dist * max_q_dist)) // from triangle inequality

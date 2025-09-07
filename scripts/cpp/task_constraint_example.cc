@@ -20,27 +20,30 @@ using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 // using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution>;
 
 // Start and goal configurations
-static constexpr Robot::ConfigurationArray start = {0., -0.785, 0., -2.356, 0., 1.571, 0.785};
-static constexpr Robot::ConfigurationArray goal = {2.35, 1., 0., -0.8, 0, 2.5, 0.785};
-static constexpr Robot::ConfigurationArray goal2 = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
+// static constexpr Robot::ConfigurationArray start = {0., -0.785, 0., -2.356, 0., 1.571, 0.785};
+// static constexpr Robot::ConfigurationArray goal = {2.35, 1., 0., -0.8, 0, 2.5, 0.785};
+// static constexpr Robot::ConfigurationArray goal2 = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
+
+static constexpr Robot::ConfigurationArray goal = {0.81,1.57,0.0,0.0,0.0,1.57,1.64};
+static constexpr Robot::ConfigurationArray start = {-0.81,1.57,0.0,0.0,0.0,1.57,0.0};
 
 
 // Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
 static const std::vector<std::array<float, 3>> problem = {
-    {0.55, 0, 0.25},
-    {0.35, 0.35, 0.25},
-    {0, 0.55, 0.25},
-    {-0.55, 0, 0.25},
-    {-0.35, -0.35, 0.25},
-    {0, -0.55, 0.25},
-    {0.35, -0.35, 0.25},
-    {0.35, 0.35, 0.8},
-    {0, 0.55, 0.8},
-    {-0.35, 0.35, 0.8},
-    {-0.55, 0, 0.8},
-    {-0.35, -0.35, 0.8},
-    {0, -0.55, 0.8},
-    {0.35, -0.35, 0.8},
+    // {0.55, 0, 0.25},
+    // {0.35, 0.35, 0.25},
+    // {0, 0.55, 0.25},
+    // {-0.55, 0, 0.25},
+    // {-0.35, -0.35, 0.25},
+    // {0, -0.55, 0.25},
+    // {0.35, -0.35, 0.25},
+    // {0.35, 0.35, 0.8},
+    // {0, 0.55, 0.8},
+    // {-0.35, 0.35, 0.8},
+    // {-0.55, 0, 0.8},
+    // {-0.35, -0.35, 0.8},
+    // {0, -0.55, 0.8},
+    // {0.35, -0.35, 0.8},
 };
 // Radius for obstacle spheres
 static constexpr float radius = 0.2;
@@ -62,16 +65,16 @@ auto main(int, char **) -> int
 
 
     std::array<float, 6> lower_bound = {
-        -0.01, -10.01, -10.03, -3.14, -3.14, -3.14
+        -0.01, -10.01, -0.03, -0.05, -0.05, -3.14
     };
     std::array<float, 6> upper_bound = {
-        0.03, 10.01, 10.03, 3.14, 3.14, 3.14
+        0.03, 10.01, 0.03, 0.05, 0.05, 3.14
     };
 
 
     Eigen::Matrix<float, 4, 4> T;
 
-    T <<   1,0,0,   0.48284483,   0,1,0,     -0.6341026,   0,0,1,    0.34187168,          0,           0,           0,           1;
+    T <<   1,0,0,   0.543325,   0,-1,0,      0.570738,   0,0,-1,    0.121557,          0,           0,           0,           1;
 
 
     const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
@@ -125,27 +128,34 @@ auto main(int, char **) -> int
     // std::cout << std::endl;
 
 
-    // float delta[10] = {-0.2, -0.1, 0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.5, 0.1};
+    float delta[10] = {-0.5, -0.1, 0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.5, 0.1};
 
-    // for(auto del_ind = 0U; del_ind < 10; del_ind++){
-    // for (auto i=0U; i < 7; i++)
-    //     x[i] = goal[i] + delta[del_ind];
+    for(auto del_ind = 0U; del_ind < 1; del_ind++){
+    for (auto i=0U; i < 7; i++)
+        x[i] = goal[i] + delta[del_ind];
 
-    // for (auto i=0U; i < 6; i++) {
-    //     x[3 * 7 + i] = lower_bound[i];
-    //     x[3 * 7 + 6 + i] = upper_bound[i];
-    // }
-    // for (auto i=0U; i < 7; i++) {
-    //     x[7 + i] = transform1[i];
-    //     x[7 + 7 + i] = transform2[i];
-    // }
-    // std::array<float, 48> y;
-    // Robot::tsr_function(x, y);
-    // for (auto i = 0U; i < 48; i++)
-    //     std::cout << y[i] << " ";
-    // std::cout << std::endl;
+    for (auto i=0U; i < 6; i++) {
+        x[3 * 7 + i] = lower_bound[i];
+        x[3 * 7 + 6 + i] = upper_bound[i];
+    }
+    for (auto i=0U; i < 7; i++) {
+        x[7 + i] = transform1[i];
+        x[7 + 7 + i] = transform2[i];
+    }
+    std::array<float, 48> y;
+    // Robot::tsr_function_jac(x, y);
+
+    Robot::tsr_function(x, y);
+    std::cout << "No ori : ";
+    for (auto i = 0U; i < 48; i++){
+        if (i%7 == 0)
+            std::cout << ", ";
+        std::cout << y[i] << " ";
+    }
+    std::cout << std::endl;
 
     // Robot::tsr_function_ori(x, y);
+    // std::cout << "W  ori : ";
     // for (auto i = 0U; i < 48; i++)
     //     std::cout << y[i] << " ";
 
@@ -153,21 +163,62 @@ auto main(int, char **) -> int
     // // std::cout << y << std::endl;
 
 
-    // Robot::tsr_function_ori_blend(x, y);
-    // for (auto i = 0U; i < 48; i++)
-    //     std::cout << y[i] << " ";
+    // std::cout << "Wi ori : ";
+    Robot::tsr_function_ori_blend(x, y);
+    for (auto i = 0U; i < 48; i++){
+        if (i%7 == 0)
+            std::cout << ", ";
+        std::cout << y[i] << " ";
+    }
 
-    // std::cout << std::endl;
+    std::cout << std::endl;
 
-    // typename Robot::template ConfigurationBlock<rake> block;
-    // for (auto i = 0U; i < Robot::dimension; ++i)
-    //     block[i] = Robot::Configuration(goal).broadcast(i) + delta[del_ind];
+    typename Robot::template ConfigurationBlock<rake> block;
+    for (auto i = 0U; i < Robot::dimension; ++i)
+        block[i] = Robot::Configuration(goal).broadcast(i) + delta[del_ind];
+    
+    // vamp::FloatVector<rake, 16>fk;
+    // vamp::FloatVector<rake, 42>J;
+
+    // Robot::jacobian_eefk(block, fk, J);
+    // std::cout << fk << std::endl;
 
 
     // task_constraint.print_robot_tsr_error(block);
+    // task_constraint.print_robot_tsr_grad_error(block);
+    task_constraint.print_robot_tsr_error_ori(block);
 
 
-    // }
+    // auto d = task_constraint.distanceToConstraint(block);
+    // std::cout << d << std::endl;
+    // d = task_constraint.distanceToConstraintOri(block);
+    // std::cout << d << std::endl;
+
+
+    // Robot::jacobian_eefk(block, tsr_distance_inp.wTeqB, jac_proj_inp.J);
+    // std::cout << "FK after proj : " << tsr_distance_inp.wTeqB[12] <<", " << tsr_distance_inp.wTeqB[13] <<", " << tsr_distance_inp.wTeqB[14] << std::endl;
+
+
+    typename Robot::template ConfigurationBlock<rake> proj_block;
+    for (auto i = 0U; i < Robot::dimension; ++i)
+        block[i] = Robot::Configuration(goal).broadcast(i) + delta[del_ind];
+
+    // auto proj = task_constraint.projectJt(block, proj_block);
+    // std::cout << "Nri : " << proj << proj_block << std::endl;
+    // Robot::jacobian_eefk(proj_block, fk, J);
+    // std::cout << fk << std::endl;
+
+
+
+    // for (auto i = 0U; i < Robot::dimension; ++i)
+    //     block[i] = Robot::Configuration(goal).broadcast(i) + delta[del_ind];
+    auto proj = task_constraint.projectJt(block, proj_block);
+    // std::cout << "Ori : " << proj << proj_block << std::endl;
+    // Robot::jacobian_eefk(proj_block, fk, J);
+    // std::cout << fk << std::endl;
+
+
+    }
 
     vamp::FloatVector<8, 170> v;
     auto val = v[10].acos();
