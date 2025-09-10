@@ -23,11 +23,12 @@ using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution>;
 // Start and goal configurations
 // static constexpr Robot::ConfigurationArray start = {0., -0.785, 0., -2.356, 0., 1.571, 0.785};
 // static constexpr Robot::ConfigurationArray goal = {2.35, 1., 0., -0.8, 0, 2.5, 0.785};
-static constexpr Robot::ConfigurationArray goal = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
-static constexpr Robot::ConfigurationArray start = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
+// static constexpr Robot::ConfigurationArray goal = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
+// static constexpr Robot::ConfigurationArray start = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
 
-// static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
-// static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
+static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
+static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
+
 
 
 // static constexpr Robot::ConfigurationArray goal = {-0.839708,  0.496555, -0.630832, -0.573204,  0.232247,  1.8259,   -0.467584};
@@ -72,10 +73,10 @@ auto main(int, char **) -> int
 
 
     std::array<float, 6> lower_bound = {
-        -0.01, -10.01, -10.03, -3.14, -3.14, -3.14
+        -0.01, -10.01, -0.03, -0.15, -0.15, -3.14
     };
     std::array<float, 6> upper_bound = {
-        0.03, 10.01, 10.03, 3.14, 3.14, 3.14
+        0.03, 10.01, 0.03, 0.15, 0.15, 3.14
     };
 
 
@@ -84,7 +85,8 @@ auto main(int, char **) -> int
     // T << 1,  0.000398119,  7.35017e-08,      0.30702,  0.000398119,           -1, -6.92765e-12, -5.94873e-12,  7.35017e-08,  3.61875e-11,           -1,      0.48527,            0,            0,            0,            1;
     // T <<  0.99086916, -0.13428134,  0.01211568,  0.48284483, -0.13408315, -0.99084246, -0.01591116, -0.6341026,  0.0141413,   0.01414137, -0.9998001,   0.34187168,  0.,          0.,          0.,          1.;
 
-    T <<   1,0,0,   0.48284483,   0,1,0,     -0.6341026,   0,0,1,    0.34187168,          0,           0,           0,           1;
+    // T <<   1,0,0,   0.48284483,   0,1,0,     -0.6341026,   0,0,1,    0.34187168,          0,           0,           0,           1;
+    T << 1,0,0,   0.543325,   0,-1,0,      0.570738,   0,0,-1,    0.121557,          0,           0,           0,           1;
 
     // T <<   -0.537748,    0.711259,     -0.4527,   0.48284483,   0.543885,     0.70293,    0.458344,     -0.6341026,   0.644218, 0.000256485,   -0.764842,    0.34187168,          0,           0,           0,           1;
     // T << 1,  0.000398163,  4.62412e-17, 5.0781602e-01, 0.000398163, -1, -6.92765e-12, 6.1428678e-01, -2.7121e-15,  6.92765e-12, -1, 3.4187165e-01, 0.0, 0.0, 0.0, 1;
@@ -159,7 +161,7 @@ auto main(int, char **) -> int
 
     // Setup RRTC and plan
     vamp::planning::RRTCSettings rrtc_settings;
-    rrtc_settings.range = 0.5;
+    rrtc_settings.range = 0.35;
     std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     auto result =
         CRRTC::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);

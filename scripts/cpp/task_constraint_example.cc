@@ -71,7 +71,7 @@ auto main(int, char **) -> int
 
     Eigen::Matrix<float, 4, 4> T;
 
-    T <<   1,0,0,   0.48284483,   0,1,0,     -0.6341026,   0,0,1,    0.34187168,          0,           0,           0,           1;
+    T <<   1,0,0, 0.543325, 0,-0.009, -0.999, 0.570738, 0, 0.999, -0.009, 0.121557, 0, 0, 0, 1;
 
 
     const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
@@ -125,9 +125,9 @@ auto main(int, char **) -> int
     // std::cout << std::endl;
 
 
-    // float delta[10] = {-0.2, -0.1, 0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.5, 0.1};
+    float delta[10] = {-0.2, -0.1, 0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.5, 0.1};
 
-    // for(auto del_ind = 0U; del_ind < 10; del_ind++){
+    for(auto del_ind = 0U; del_ind < 1; del_ind++){
     // for (auto i=0U; i < 7; i++)
     //     x[i] = goal[i] + delta[del_ind];
 
@@ -159,15 +159,15 @@ auto main(int, char **) -> int
 
     // std::cout << std::endl;
 
-    // typename Robot::template ConfigurationBlock<rake> block;
-    // for (auto i = 0U; i < Robot::dimension; ++i)
-    //     block[i] = Robot::Configuration(goal).broadcast(i) + delta[del_ind];
+    typename Robot::template ConfigurationBlock<rake> block;
+    for (auto i = 0U; i < Robot::dimension; ++i)
+        block[i] = Robot::Configuration(goal).broadcast(i) + delta[del_ind];
 
 
-    // task_constraint.print_robot_tsr_error(block);
+    task_constraint.print_robot_tsr_error(block);
 
 
-    // }
+    }
 
     vamp::FloatVector<8, 170> v;
     auto val = v[10].acos();
@@ -190,11 +190,13 @@ auto main(int, char **) -> int
     // // std::cout << "From block : " << dist << std::endl;
 
 
-    // Robot::ConfigurationArray goal2 = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
-    // for (auto i = 0U; i < Robot::dimension; ++i)
-    //     block[i] = Robot::Configuration(goal2).broadcast(i) + 0.05;
-    // auto dist = task_constraint.distanceToConstraint(block);
-    // std::cout << "From block : " << dist << std::endl;
+    Robot::ConfigurationArray goal2 = {0.81,1.57,0.0,0.0,0.0,1.57,1.64};
+    for (auto i = 0U; i < Robot::dimension; ++i)
+        block[i] = Robot::Configuration(goal2).broadcast(i) - 0.25;
+    auto dist = task_constraint.distanceToConstraint(block);
+    std::cout << "From block : " << dist << std::endl;
+    task_constraint.print_robot_tsr_error(block);
+
 
 
 
