@@ -203,8 +203,8 @@ namespace vamp::planning
                     {   
                         auto t4 = high_resolution_clock::now();
                         counter++;
-                        if (counter > 3)
-                            break;
+                        // if (counter > 3)
+                        //     break;
                         // Extend to goal tree
                         const auto other_nearest =
                             tree_b->nearest(NNFloatArray<dimension>{prior_index});
