@@ -342,7 +342,7 @@ namespace vamp::planning
             ErrGradOut grad_err;
 
 
-            ConfigurationBlock q_old;
+            // ConfigurationBlock q_old;
 
         template <std::size_t dim>
         inline static auto assignBlock(std::array<float, dim> src, vamp::FloatVector<rake, dim> &dest)
