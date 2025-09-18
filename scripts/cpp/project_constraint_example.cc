@@ -13,6 +13,7 @@
 // #include <vamp/planning/simplify.hh>
 #include <vamp/robots/panda.hh>
 #include <vamp/random/halton.hh>
+#include <fstream>
 
 using Robot = vamp::robots::Panda;
 static constexpr const std::size_t rake = vamp::FloatVectorWidth;
@@ -35,18 +36,21 @@ static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73
 
 // Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
 static const std::vector<std::array<float, 3>> problem = {
-    // {0.55, 0, 0.25},
-    // {0.55, 0, 0.50},
-    // {0.35, 0.35, 0.25},
+    {0.55, 0, 0.25},
+    {0.55, 0, 0.50},
+    {0.55, 0, 0.60},
+    {0.65, 0, 0.50},
+    {0.75, 0, 0.50},
+    {0.35, 0.35, 0.25},
     {0, 0.55, 0.25},
     {-0.55, 0, 0.25},
     {-0.35, -0.35, 0.25},
-    // {0, -0.55, 0.25},
-    // {0.35, -0.35, 0.25},
-    // {0.35, 0.35, 0.8},
-    // {0, 0.55, 0.8},
-    // {-0.35, 0.35, 0.8},
-    // {-0.55, 0, 0.8},
+    {0, -0.55, 0.25},
+    {0.35, -0.35, 0.25},
+    {0.35, 0.35, 0.8},
+    {0, 0.55, 0.8},
+    {-0.35, 0.35, 0.8},
+    {-0.55, 0, 0.8},
     {-0.35, -0.35, 0.8},
     {0, -0.55, 0.8},
     {0.35, -0.35, 0.8},
@@ -61,8 +65,10 @@ auto main(int, char **) -> int
 
     // Build sphere cage environment
     EnvironmentInput environment;
+    std::ofstream outfile_sph("spheres.txt");
     for (const auto &sphere : problem)
     {
+        outfile_sph << sphere[0] << "," << sphere[1] << "," << sphere[2] << "," << radius << "\n";
         environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
     }
 
@@ -73,10 +79,10 @@ auto main(int, char **) -> int
 
 
     std::array<float, 6> lower_bound = {
-        -0.01, -10.01, -0.03, -0.1, -0.1, -3.14
+        -10.01, -10.01, -10.03, -0.1, -0.1, -3.14
     };
     std::array<float, 6> upper_bound = {
-        0.03, 10.01, 0.03, 0.1, 0.1, 3.14
+        10.03, 10.01, 10.03, 0.1, 0.1, 3.14
     };
 
 
@@ -161,7 +167,7 @@ auto main(int, char **) -> int
 
     // Setup RRTC and plan
     vamp::planning::RRTCSettings rrtc_settings;
-    rrtc_settings.range = 0.35;
+    rrtc_settings.range = 0.5;
     std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     auto result =
         CRRTC::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
@@ -171,25 +177,34 @@ auto main(int, char **) -> int
     if (result.path.size() > 0)
     {
 
+        std::ofstream outfile("trajectory.txt");
+
+
         // Output configurations of simplified path
         std::cout << std::fixed << std::setprecision(3);
         for (const auto &config : result.path)
         {
             const auto &array = config.to_array();
             Robot::ConfigurationArray soln;
+            bool first = true;
             for (auto i = 0U; i < Robot::dimension; ++i)
             {
                 std::cout << array[i] << ", ";
                 soln[i] = array[i];
+
+                if (!first) outfile << ",";
+                outfile << array[i];
+                first = false;
             }
 
             // auto fka = Robot::eefk(soln);
             // std::cout <<std::endl << fka.matrix() <<std::endl;
             std::cout << std::endl;
+            outfile << "\n";
         }
     }
 
-    std::cout << "Planner took " << std::setprecision(5) << result.nanoseconds / 1e9 << "s and " << result.iterations << " steps" << std::endl;
+    std::cout << "Planner took " << std::setprecision(5) << result.nanoseconds / 1e6 << "ms and " << result.iterations << " steps" << std::endl;
 
 
 

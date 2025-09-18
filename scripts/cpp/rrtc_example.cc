@@ -11,6 +11,7 @@
 #include <vamp/planning/simplify.hh>
 #include <vamp/robots/panda.hh>
 #include <vamp/random/halton.hh>
+#include <fstream>
 
 using Robot = vamp::robots::Panda;
 static constexpr const std::size_t rake = vamp::FloatVectorWidth;
@@ -29,6 +30,10 @@ static constexpr Robot::ConfigurationArray start = {-0.92,1.05,0.0,-0.66,0.0,1.7
 // Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
 static const std::vector<std::array<float, 3>> problem = {
     {0.55, 0, 0.25},
+    {0.55, 0, 0.50},
+    {0.65, 0, 0.50},
+    {0.55, 0, 0.60},
+    {0.75, 0, 0.50},
     {0.35, 0.35, 0.25},
     {0, 0.55, 0.25},
     {-0.55, 0, 0.25},
@@ -87,6 +92,7 @@ auto main(int, char **) -> int
     // If successful
     if (result.path.size() > 0)
     {
+        std::ofstream outfile("trajectory.txt");
         // Simplify path with default settings
         vamp::planning::SimplifySettings simplify_settings;
         auto simplify_result = vamp::planning::simplify<Robot, rake, Robot::resolution>(
@@ -94,24 +100,32 @@ auto main(int, char **) -> int
 
         // Output configurations of simplified path
         std::cout << std::fixed << std::setprecision(3);
-        for (const auto &config : simplify_result.path)
+        for (const auto &config : result.path)
         {
             const auto &array = config.to_array();
             Robot::ConfigurationArray soln;
+            bool first = true;
             for (auto i = 0U; i < Robot::dimension; ++i)
             {
                 std::cout << array[i] << ", ";
                 soln[i] = array[i];
+
+                if (!first) outfile << ",";
+                outfile << array[i];
+                first = false;
+
             }
 
             auto fka = Robot::eefk(soln);
             // std::cout <<std::endl << fka.matrix() <<std::endl;
 
             std::cout << std::endl;
+            outfile << "\n";
         }
     }
     else
         std::cout << "Failed" << std::endl;
+    std::cout << "Planner took " << std::setprecision(5) << result.nanoseconds / 1e6 << "ms and " << result.iterations << " steps" << std::endl;
 
     return 0;
 }
