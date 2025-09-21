@@ -36,11 +36,11 @@ static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73
 
 // Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
 static const std::vector<std::array<float, 3>> problem = {
-    {0.55, 0, 0.25},
+    // {0.55, 0, 0.25},
     {0.55, 0, 0.50},
-    {0.55, 0, 0.60},
-    {0.65, 0, 0.50},
-    {0.75, 0, 0.50},
+    // {0.55, 0, 0.60},
+    // {0.65, 0, 0.50},
+    // {0.75, 0, 0.50},
     {0.35, 0.35, 0.25},
     {0, 0.55, 0.25},
     {-0.55, 0, 0.25},
@@ -79,10 +79,10 @@ auto main(int, char **) -> int
 
 
     std::array<float, 6> lower_bound = {
-        -10.01, -10.01, -10.03, -0.1, -0.1, -3.14
+        -0.01, -10.01, -10.03, -0.1, -0.1, -3.14
     };
     std::array<float, 6> upper_bound = {
-        10.03, 10.01, 10.03, 0.1, 0.1, 3.14
+        0.03, 10.01, 10.03, 0.1, 0.1, 3.14
     };
 
 

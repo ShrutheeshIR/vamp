@@ -62,10 +62,10 @@ auto main(int, char **) -> int
 
 
     std::array<float, 6> lower_bound = {
-        -0.01, -10.01, -10.03, -3.14, -3.14, -3.14
+        -0.01, -10.01, -10.03, -0.14, -0.14, -3.14
     };
     std::array<float, 6> upper_bound = {
-        0.03, 10.01, 10.03, 3.14, 3.14, 3.14
+        0.03, 10.01, 10.03, 0.14, 0.14, 3.14
     };
 
 
@@ -86,6 +86,15 @@ auto main(int, char **) -> int
     Eigen::Quaternion<float> q2(target_pose.linear());
     std::array<float, 7> transform2 = {q2.w(), q2.x(), q2.y(), q2.z(), target_pose.translation().x(), target_pose.translation().y(), target_pose.translation().z()};
 
+    // print transform 1 and 2
+    std::cout << "Transform 1 : ";
+    for (auto i=0U; i < 7; i++)
+        std::cout << transform1[i] << " ";
+    std::cout << std::endl;
+    std::cout << "Transform 2 : ";
+    for (auto i=0U; i < 7; i++)
+        std::cout << transform2[i] << " ";
+    std::cout << std::endl;
 
     // creating the 33 element arr
     std::array<float, 33>x;
@@ -190,11 +199,12 @@ auto main(int, char **) -> int
     // // std::cout << "From block : " << dist << std::endl;
 
 
-    Robot::ConfigurationArray goal2 = {0.81,1.57,0.0,0.0,0.0,1.57,1.64};
+    Robot::ConfigurationArray goal2 = {0.56,1.20,0.0,0.0,0.0,1.57,1.64};
     for (auto i = 0U; i < Robot::dimension; ++i)
-        block[i] = Robot::Configuration(goal2).broadcast(i) - 0.25;
+        block[i] = Robot::Configuration(goal2).broadcast(i);
     auto dist = task_constraint.distanceToConstraint(block);
     std::cout << "From block : " << dist << std::endl;
+    task_constraint.gradient_and_error(block);
     task_constraint.print_robot_tsr_error(block);
 
 
