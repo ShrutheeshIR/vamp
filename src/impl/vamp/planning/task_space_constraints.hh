@@ -643,7 +643,7 @@ namespace vamp::planning
 
             while ((project_iter < 100) and (not dist.test_all_less_equal(0.0001F)))
             {
-                dist = projectStep(q_old, q_new, true);
+                dist = projectStepDirect(q_old, q_new, true);
                 auto q_dist = (q_new[0] - q_old[0]) * (q_new[0] - q_old[0]);
                 for (auto i = 1U; i < Robot::dimension; i++)
                     q_dist = q_dist + (q_new[i] - q_old[i]) * (q_new[i] - q_old[i]);
@@ -684,6 +684,11 @@ namespace vamp::planning
 // 1. Make it robot agnostic by templatizing on robot type
 // 2. Try out 50.0 and 20.0 for pos and ori constraints to check for faster convergence
 // 3. Benchmark Jt, Direct and projectStep on a bunch of examples
-// 4. Tune multiple knobs -- steps of projection, max step size, dist threshold, method, cbirrt connect
+// 4. Tune multiple knobs -- steps of projection, max step size, dist threshold, method, cbirrt connect, triangle ineqs -- hyperplan smac3
 // 5. Clean up cbirrt connect
 // 6. cbirrt connect step fix
+// 7. try out ldlt() instead of cholesky
+
+// TODO (siyer)
+// 1. Tasks - maze, door etc
+// 2. Bimanual -- think about in-hand-pose
