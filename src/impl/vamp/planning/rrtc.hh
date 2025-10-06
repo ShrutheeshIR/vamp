@@ -97,6 +97,7 @@ namespace vamp::planning
 
             while (iter++ < settings.max_iterations and free_index < settings.max_samples)
             {
+                auto t0 = high_resolution_clock::now();
                 float asize = tree_a->size();
                 float bsize = tree_b->size();
                 float ratio = std::abs(asize - bsize) / asize;
@@ -132,13 +133,18 @@ namespace vamp::planning
                 bool reach = nearest_distance < settings.range;
                 auto extension_vector =
                     (reach) ? nearest_vector : nearest_vector * (settings.range / nearest_distance);
-
-                if (validate_vector<Robot, rake, resolution>(
+                auto t1 = high_resolution_clock::now();
+                profiler.setup_before_validate_times.push_back(duration<double, micro>(t1 - t0).count());
+                bool successful_path = validate_vector<Robot, rake, resolution>(
                         nearest_configuration,
                         extension_vector,
                         (reach) ? nearest_distance : settings.range,
-                        environment))
+                        environment);
+                auto tp = high_resolution_clock::now();
+                profiler.validate_constraint_vector_times.push_back(duration<double, micro>(tp - t1).count());
+                if (successful_path)
                 {
+                    auto t2 = high_resolution_clock::now();
                     float *new_configuration_index = buffer_index(free_index);
                     auto new_configuration = nearest_configuration + extension_vector;
                     new_configuration.to_array(new_configuration_index);
@@ -153,7 +159,8 @@ namespace vamp::planning
                     {
                         radii[nearest_node.index] *= (1 + settings.alpha);
                     }
-
+                    auto t3 = high_resolution_clock::now();
+                    profiler.insert_projected_to_tree_times.push_back(duration<double, micro>(t3 - t2).count());
                     // Extend to goal tree
                     const auto other_nearest =
                         tree_b->nearest(NNFloatArray<dimension>{new_configuration_index});
@@ -169,15 +176,22 @@ namespace vamp::planning
                     const std::size_t n_extensions = std::ceil(other_nearest_distance / settings.range);
                     const float increment_length = other_nearest_distance / static_cast<float>(n_extensions);
                     auto increment = other_nearest_vector * (1.0F / static_cast<float>(n_extensions));
-
+                    
                     std::size_t i_extension = 0;
                     auto prior = new_configuration;
                     for (; i_extension < n_extensions and
-                           validate_vector<Robot, rake, resolution>(
-                               prior, increment, increment_length, environment) and
                            free_index < settings.max_samples;
                          ++i_extension)
                     {
+                        //To be able to benchmark how long it takes to run validate_vector
+                        // Broke off validate_vector away from for loop condition
+                        auto tbp = high_resolution_clock::now();
+                        if (!validate_vector<Robot, rake, resolution>(
+                               prior, increment, increment_length, environment)) {
+                                break;
+                               }
+                        auto tap = high_resolution_clock::now();
+                        auto t5 = high_resolution_clock::now();
                         auto next = prior + increment;
                         float *next_index = buffer_index(free_index);
                         next.to_array(next_index);
@@ -188,6 +202,9 @@ namespace vamp::planning
                         free_index++;
 
                         prior = next;
+                        auto t6 = high_resolution_clock::now();
+                        profiler.validate_extend_constraint_vector_times.push_back(duration<double, micro>(tap - tbp).count());
+                        profiler.insertt_extended_to_tree_times.push_back(duration<double, micro>(t6 - t5).count());
                     }
 
                     if (i_extension == n_extensions)  // connected
@@ -222,6 +239,8 @@ namespace vamp::planning
 
                         break;
                     }
+                    auto t7 = high_resolution_clock::now();
+                    profiler.full_extend_times.push_back(duration<double, micro>(t7 - t3).count());
                 }
                 else if (settings.dynamic_domain)
                 {
@@ -235,12 +254,16 @@ namespace vamp::planning
                             std::max(radii[nearest_node.index] * (1.F - settings.alpha), settings.min_radius);
                     }
                 }
+                auto t8 = high_resolution_clock::now();
+
+                profiler.one_iteration_times.push_back(duration<double, micro>(t8 - t0).count());
             }
 
             result.nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
             result.iterations = iter;
             result.size.emplace_back(start_tree.size());
             result.size.emplace_back(goal_tree.size());
+            profiler.printReport();
             return result;
         }
     };
