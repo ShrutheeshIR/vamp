@@ -226,7 +226,9 @@ namespace vamp::planning
     {
         using Configuration = typename Robot::Configuration;
         using ConfigurationArray = typename Robot::ConfigurationArray;
-        using ConfigurationBlock = typename Robot::ConfigurationBlock<rake>;
+        //using ConfigurationBlock = typename Robot::ConfigurationBlock<rake>;
+        using ConfigurationBlock = typename Robot::template ConfigurationBlock<rake>;
+
 
         protected:
 
