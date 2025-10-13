@@ -643,7 +643,7 @@ namespace vamp::planning
 
             while ((project_iter < 100) and (not dist.test_all_less_equal(0.0001F)))
             {
-                dist = projectStepDirect(q_old, q_new, true);
+                dist = projectStepJt(q_old, q_new, true);
                 auto q_dist = (q_new[0] - q_old[0]) * (q_new[0] - q_old[0]);
                 for (auto i = 1U; i < Robot::dimension; i++)
                     q_dist = q_dist + (q_new[i] - q_old[i]) * (q_new[i] - q_old[i]);

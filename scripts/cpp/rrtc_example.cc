@@ -20,11 +20,11 @@ using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 using RRTC = vamp::planning::RRTC<Robot, rake, Robot::resolution>;
 
 // Start and goal configurations
-// static constexpr Robot::ConfigurationArray start = {0., -0.785, 0., -2.356, 0., 1.571, 0.785};
-// static constexpr Robot::ConfigurationArray goal = {2.35, 1., 0., -0.8, 0, 2.5, 0.785};
+static constexpr Robot::ConfigurationArray start = {-0.75,0.21,-0.05,-2.29,-0.32,2.44,1.64};
+static constexpr Robot::ConfigurationArray goal = {1.31,0.65,-0.05,-1.58,-0.32,2.37,-1.03};
 // static constexpr Robot::ConfigurationArray goal = {-0.92, 1.05, 0, -0.66, 0, 1.73, 0};
-static constexpr Robot::ConfigurationArray goal = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
-static constexpr Robot::ConfigurationArray start = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
+// static constexpr Robot::ConfigurationArray goal = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
+// static constexpr Robot::ConfigurationArray start = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
 
 
 // Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
@@ -56,10 +56,37 @@ auto main(int, char **) -> int
 {
     // Build sphere cage environment
     EnvironmentInput environment;
-    for (const auto &sphere : problem)
-    {
-        environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
+
+    std::ifstream infile("/src/myfork/vamp/environments/cuboids/maze_cuboids.txt");
+    if (!infile.is_open()) {
+        std::cerr << "Failed to open file!" << std::endl;
+        return 1;
     }
+
+    std::string line;
+    while (std::getline(infile, line)) {
+        std::istringstream iss(line);
+        char delim;
+        float x, y, z, dx, dy, dz;
+
+        if (!(iss >> x >> delim >> y >> delim >> z >> delim >> dx >> delim >> dy >> delim >> dz)) {
+            std::cerr << "Error reading line: " << line << std::endl;
+            continue;
+        }
+        std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
+        environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x + 0.1, y + 1.0, z + 0.1}, {0.0, 0.0, 0.0}, {dx, dy, dz}));
+    }        
+    infile.close();
+
+
+
+
+    // for (const auto &sphere : problem)
+    // {
+    //     environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
+    // }
+    // for (const auto &sphere : problem)
+    // environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({1.22, 0.22, 0.01}, {0.0, 0.0, 0.0}, {0.61, 0.14, 0.06}));
 
     environment.sort();
     auto env_v = EnvironmentVector(environment);

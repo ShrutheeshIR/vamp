@@ -51,7 +51,7 @@ namespace vamp::planning
                                                  Robot::template fkcc<rake>(environment, initial_projected_block);
 
         typename Robot::ConfigurationArray last_projected;
-        for (auto i = rake-1; i < rake; i++)
+        for (auto i = 0; i < rake; i++)
         {
             for (auto j = 0U; j < Robot::dimension; j++)
             {

@@ -188,8 +188,8 @@ namespace vamp::planning
                     while (not connected)
                     {   
                         counter++;
-                        if (counter > 2)
-                            break;
+                        // if (counter > 2)
+                        //     break;
                         // Extend to goal tree
                         const auto other_nearest =
                             tree_b->nearest(NNFloatArray<dimension>{prior_index});
@@ -300,7 +300,7 @@ namespace vamp::planning
                     // std::cout << "Extension failed ! Try another ! " << std::endl;
             }
 
-            // std::cout << "Terminated with  : " << iter << ", " << free_index << ", " <<connected << " , " << settings.max_samples << std::endl;
+            std::cout << "Terminated with  : " << iter << ", " << free_index << ", " <<connected << " , " << settings.max_samples << ", " << tree_a->size() << ", " << tree_b->size() << std::endl;
 
             result.nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
             result.iterations = iter;

@@ -27,8 +27,13 @@ using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution>;
 // static constexpr Robot::ConfigurationArray goal = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
 // static constexpr Robot::ConfigurationArray start = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
 
-static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
-static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
+
+// static constexpr Robot::ConfigurationArray start = {0.99,1.43,-0.05,-0.28,0.33,1.98,1.42};
+static constexpr Robot::ConfigurationArray start = {-0.75,0.21,-0.05,-2.29,-0.32,2.44,1.64};
+static constexpr Robot::ConfigurationArray goal = {1.31,0.67,-0.05,-1.58,-0.32,2.3,-0.81};
+
+// static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
+// static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
 
 
 
@@ -65,12 +70,35 @@ auto main(int, char **) -> int
 
     // Build sphere cage environment
     EnvironmentInput environment;
-    std::ofstream outfile_sph("spheres.txt");
-    for (const auto &sphere : problem)
-    {
-        outfile_sph << sphere[0] << "," << sphere[1] << "," << sphere[2] << "," << radius << "\n";
-        environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
+    // std::ofstream outfile_sph("spheres.txt");
+    // for (const auto &sphere : problem)
+    // {
+    //     outfile_sph << sphere[0] << "," << sphere[1] << "," << sphere[2] << "," << radius << "\n";
+    //     environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
+    // }
+
+    std::ifstream infile("/src/myfork/vamp/environments/cuboids/maze_cuboids.txt");
+    if (!infile.is_open()) {
+        std::cerr << "Failed to open file!" << std::endl;
+        return 1;
     }
+
+    std::string line;
+    while (std::getline(infile, line)) {
+        std::istringstream iss(line);
+        char delim;
+        float x, y, z, dx, dy, dz;
+
+        if (!(iss >> x >> delim >> y >> delim >> z >> delim >> dx >> delim >> dy >> delim >> dz)) {
+            std::cerr << "Error reading line: " << line << std::endl;
+            continue;
+        }
+        std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
+        environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x + 0.1, y + 1.0, z + 0.1}, {0.0, 0.0, 0.0}, {dx, dy, dz}));
+    }        
+    infile.close();
+
+
 
     environment.sort();
     auto env_v = EnvironmentVector(environment);
@@ -79,10 +107,10 @@ auto main(int, char **) -> int
 
 
     std::array<float, 6> lower_bound = {
-        -0.01, -10.01, -0.03, -0.1, -0.1, -3.14
+        -10.01, -10.01, -0.02, -10.1, -10.1, -3.14
     };
     std::array<float, 6> upper_bound = {
-        0.03, 10.01, 0.03, 0.1, 0.1, 3.14
+        10.03, 10.01, 0.02, 10.1, 10.1, 3.14
     };
 
 
@@ -92,7 +120,7 @@ auto main(int, char **) -> int
     // T <<  0.99086916, -0.13428134,  0.01211568,  0.48284483, -0.13408315, -0.99084246, -0.01591116, -0.6341026,  0.0141413,   0.01414137, -0.9998001,   0.34187168,  0.,          0.,          0.,          1.;
 
     // T <<   1,0,0,   0.48284483,   0,1,0,     -0.6341026,   0,0,1,    0.34187168,          0,           0,           0,           1;
-    T << 1,0,0,   0.543325,   0,-1,0,      0.570738,   0,0,-1,    0.121557,          0,           0,           0,           1;
+    T << 1,0,0,   0.246,   0,1,0,      0.670,   0,0,1,    0.151 ,          0,           0,           0,           1;
 
     // T <<   -0.537748,    0.711259,     -0.4527,   0.48284483,   0.543885,     0.70293,    0.458344,     -0.6341026,   0.644218, 0.000256485,   -0.764842,    0.34187168,          0,           0,           0,           1;
     // T << 1,  0.000398163,  4.62412e-17, 5.0781602e-01, 0.000398163, -1, -6.92765e-12, 6.1428678e-01, -2.7121e-15,  6.92765e-12, -1, 3.4187165e-01, 0.0, 0.0, 0.0, 1;
@@ -189,7 +217,7 @@ auto main(int, char **) -> int
             bool first = true;
             for (auto i = 0U; i < Robot::dimension; ++i)
             {
-                std::cout << array[i] << ", ";
+                // std::cout << array[i] << ", ";
                 soln[i] = array[i];
 
                 if (!first) outfile << ",";
@@ -199,7 +227,7 @@ auto main(int, char **) -> int
 
             // auto fka = Robot::eefk(soln);
             // std::cout <<std::endl << fka.matrix() <<std::endl;
-            std::cout << std::endl;
+            // std::cout << std::endl;
             outfile << "\n";
         }
     }
