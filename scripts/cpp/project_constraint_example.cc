@@ -11,35 +11,18 @@
 #include <vamp/planning/validate_constraint.hh>
 
 // #include <vamp/planning/simplify.hh>
-#include <vamp/robots/panda.hh>
+#include <vamp/robots/bimanual_panda.hh>
 #include <vamp/random/halton.hh>
 #include <fstream>
 
-using Robot = vamp::robots::Panda;
+using Robot = vamp::robots::BimanualPanda;
 static constexpr const std::size_t rake = vamp::FloatVectorWidth;
 using EnvironmentInput = vamp::collision::Environment<float>;
 using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution>;
 
-// Start and goal configurations
-// static constexpr Robot::ConfigurationArray start = {0., -0.785, 0., -2.356, 0., 1.571, 0.785};
-// static constexpr Robot::ConfigurationArray goal = {2.35, 1., 0., -0.8, 0, 2.5, 0.785};
-// static constexpr Robot::ConfigurationArray goal = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
-// static constexpr Robot::ConfigurationArray start = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
-
-
-// static constexpr Robot::ConfigurationArray start = {0.99,1.43,-0.05,-0.28,0.33,1.98,1.42};
-static constexpr Robot::ConfigurationArray start = {-0.75,0.21,-0.05,-2.29,-0.32,2.44,1.64};
-static constexpr Robot::ConfigurationArray goal = {1.31,0.67,-0.05,-1.58,-0.32,2.3,-0.81};
-
-// static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
-// static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
-
-
-
-// static constexpr Robot::ConfigurationArray goal = {-0.839708,  0.496555, -0.630832, -0.573204,  0.232247,  1.8259,   -0.467584};
-
-// Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
+static constexpr Robot::ConfigurationArray start = {0.930205, 0.966287, 0.194365, -1.51657, -0.6965, 3.8223, -0.959755, 1.14244, 0.93196, -0.00581666, -1.49359, -0.609867, 0.687591, -0.73099};
+static constexpr Robot::ConfigurationArray goal = {-0.67113, 1.66257, 0.0235852, -1.51145, 1.2212, 1.35781, -0.16863, -0.375588, 1.3998, -0.174771, -1.43568, -1.51361, 1.9924, 1.39243};
 static const std::vector<std::array<float, 3>> problem = {
     // {0.55, 0, 0.25},
     // {0.55, 0, 0.50},
@@ -70,33 +53,34 @@ auto main(int, char **) -> int
 
     // Build sphere cage environment
     EnvironmentInput environment;
-    // std::ofstream outfile_sph("spheres.txt");
-    // for (const auto &sphere : problem)
-    // {
-    //     outfile_sph << sphere[0] << "," << sphere[1] << "," << sphere[2] << "," << radius << "\n";
-    //     environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
+    std::ofstream outfile_sph("spheres.txt");
+    for (const auto &sphere : problem)
+    {
+        outfile_sph << sphere[0] << "," << sphere[1] << "," << sphere[2] << "," << radius << "\n";
+        environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
+    }
+    outfile_sph.close();
+
+    // std::ifstream infile("/src/myfork/vamp/environments/cuboids/maze_cuboids.txt");
+    // if (!infile.is_open()) {
+    //     std::cerr << "Failed to open file!" << std::endl;
+    //     return 1;
     // }
 
-    std::ifstream infile("/src/myfork/vamp/environments/cuboids/maze_cuboids.txt");
-    if (!infile.is_open()) {
-        std::cerr << "Failed to open file!" << std::endl;
-        return 1;
-    }
+    // std::string line;
+    // while (std::getline(infile, line)) {
+    //     std::istringstream iss(line);
+    //     char delim;
+    //     float x, y, z, dx, dy, dz;
 
-    std::string line;
-    while (std::getline(infile, line)) {
-        std::istringstream iss(line);
-        char delim;
-        float x, y, z, dx, dy, dz;
-
-        if (!(iss >> x >> delim >> y >> delim >> z >> delim >> dx >> delim >> dy >> delim >> dz)) {
-            std::cerr << "Error reading line: " << line << std::endl;
-            continue;
-        }
-        std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
-        environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x + 0.1, y + 1.0, z + 0.1}, {0.0, 0.0, 0.0}, {dx, dy, dz}));
-    }        
-    infile.close();
+    //     if (!(iss >> x >> delim >> y >> delim >> z >> delim >> dx >> delim >> dy >> delim >> dz)) {
+    //         std::cerr << "Error reading line: " << line << std::endl;
+    //         continue;
+    //     }
+    //     std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
+    //     environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x + 0.1, y + 1.0, z + 0.1}, {0.0, 0.0, 0.0}, {dx, dy, dz}));
+    // }        
+    // infile.close();
 
 
 
@@ -107,64 +91,50 @@ auto main(int, char **) -> int
 
 
     std::array<float, 6> lower_bound = {
-        -10.01, -10.01, -0.02, -10.1, -10.1, -3.14
+        -0.01, -0.01, -0.03, -0.014, -0.014, -0.014
     };
     std::array<float, 6> upper_bound = {
-        10.03, 10.01, 0.02, 10.1, 10.1, 3.14
+        0.03, 0.01, 0.03, 0.014, 0.014, 0.014
     };
 
 
-    // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
     Eigen::Matrix<float, 4, 4> T;
-    // T << 1,  0.000398119,  7.35017e-08,      0.30702,  0.000398119,           -1, -6.92765e-12, -5.94873e-12,  7.35017e-08,  3.61875e-11,           -1,      0.48527,            0,            0,            0,            1;
-    // T <<  0.99086916, -0.13428134,  0.01211568,  0.48284483, -0.13408315, -0.99084246, -0.01591116, -0.6341026,  0.0141413,   0.01414137, -0.9998001,   0.34187168,  0.,          0.,          0.,          1.;
+    T << 1.0, 0.0, 0.0, 0.0,  0.0, -1.0, 0.0, 0.0, 0.0,  0.0, -1.0, 0.15, 0.0, 0.0, 0.0, 1;
 
-    // T <<   1,0,0,   0.48284483,   0,1,0,     -0.6341026,   0,0,1,    0.34187168,          0,           0,           0,           1;
-    T << 1,0,0,   0.246,   0,1,0,      0.670,   0,0,1,    0.151 ,          0,           0,           0,           1;
 
-    // T <<   -0.537748,    0.711259,     -0.4527,   0.48284483,   0.543885,     0.70293,    0.458344,     -0.6341026,   0.644218, 0.000256485,   -0.764842,    0.34187168,          0,           0,           0,           1;
-    // T << 1,  0.000398163,  4.62412e-17, 5.0781602e-01, 0.000398163, -1, -6.92765e-12, 6.1428678e-01, -2.7121e-15,  6.92765e-12, -1, 3.4187165e-01, 0.0, 0.0, 0.0, 1;
     const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
-    std::cout << "Target pose is : " << target_pose.translation().transpose() << std::endl;
-    const auto in_hand_pose = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
-    vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(in_hand_pose, target_pose, std::make_pair(lower_bound, upper_bound));
+    vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(target_pose, std::make_pair(lower_bound, upper_bound));
 
 
     typename Robot::template ConfigurationBlock<rake> block;
     typename Robot::template ConfigurationBlock<rake> projected_block;
 
     for (auto i = 0U; i < Robot::dimension; ++i)
-        block[i] = Robot::Configuration(goal).broadcast(i) + 0.05;
+        block[i] = Robot::Configuration(start).broadcast(i) + 0.05;
 
 
     // auto dist = task_constraint.distanceToConstraintAuto(block);
     // std::cout << "From block : " << dist << std::endl;
 
 
-    Robot::ConfigurationArray goal2 = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
+    Robot::ConfigurationArray goal2 = {0.61,0.985695,0.061017,-1.46231,-0.641869,3.8223,-0.863943,1.09,0.927539,-0.0600018,-1.52787,-0.385771,0.668267,-0.642295};
     for (auto i = 0U; i < Robot::dimension; ++i)
-        block[i] = Robot::Configuration(goal2).broadcast(i) + 0.05;
-    auto dist = task_constraint.distanceToConstraint(block);
+        block[i] = Robot::Configuration(goal2).broadcast(i) + 0.0;
+    task_constraint.print_robot_tsr_error(block);
     // std::cout << "From block : " << dist << std::endl;
 
-
-
-    // const Eigen::Vector<float, 6> distance_vec = task_constraint.distanceToConstraint(goal);
-    // std::cout << "From single : "<< distance_vec << std::endl;
+    // auto d = task_constraint.projectStepJt(block, projected_block);
 
 
     bool success = task_constraint.project(block, projected_block);
     std::cout << success << std::endl;
-    // std::cout << block << std::endl;
-    // std::cout << projected_block << std::endl;
-    // std::cout << " printed config " << std::endl;
 
-    // typename Robot::template ConfigurationArray last_projected;
-    // for (auto i = 0U; i < Robot::dimension; ++i) {  
-    //     last_projected[i] = projected_block[{i, rake-1}];  
-    // }
+    typename Robot::template ConfigurationArray last_projected;
+    for (auto i = 0U; i < Robot::dimension; ++i) {  
+        last_projected[i] = projected_block[{i, rake-1}];  
+    }
 
-    // std::cout << Robot::Configuration(last_projected) << std::endl;
+    std::cout << Robot::Configuration(last_projected) << std::endl;
 
 
     // Robot::Configuration vector = Robot::Configuration(std::array<float, 7>{-0.109852, -0.302075, 0.31963, -0.108644, -0.0344217, -0.0659725, -0.164862});
@@ -196,6 +166,7 @@ auto main(int, char **) -> int
     // Setup RRTC and plan
     vamp::planning::RRTCSettings rrtc_settings;
     rrtc_settings.range = 0.5;
+    rrtc_settings.max_iterations = 100000;
     std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     auto result =
         CRRTC::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);

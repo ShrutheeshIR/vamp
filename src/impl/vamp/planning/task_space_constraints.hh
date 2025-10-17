@@ -26,111 +26,6 @@ namespace vamp::planning
             const double tolerance = 1e-2;
             const size_t max_project_iters = 10;
 
-        // public:
-        //     void integrateJointConfiguration(const ConfigurationArray &q, ConfigurationArray &q_new, const Eigen::Matrix<float, Eigen::Dynamic, 1> &update_vector)
-        //     {
-        //         for (size_t i = 0; i < q.size(); i ++)
-        //             // need to adjust joint limits
-        //             q_new[i] = q[i] + update_vector(i);
-        //     }
-
-        //     double projectStepOld(const ConfigurationArray &q, ConfigurationArray &q_new, bool update_q = true)
-        //     {
-        //         Eigen::Matrix<float, 6, Eigen::Dynamic> J;
-        //         Eigen::Transform<float, 3, Eigen::Isometry> eef_pose;
-
-        //         Robot::jacobian_eefk(q, J, eef_pose); // can be parallel from distance
-        //         const Eigen::Vector<float, 6> distance = distanceToConstraintEEF(eef_pose);
-
-        //         if (update_q)
-        //         {
-        //             // need to convert jacobian into ref frame
-        //             const Eigen::Matrix<float, Eigen::Dynamic, 1> update = -J.transpose() * (J * J.transpose() + 1e-6 * Eigen::Matrix<float, 6, 6>::Identity()).ldlt().solve(distance);
-        //             integrateJointConfiguration(q, q_new, update);
-        //         }
-        //         return distance.squaredNorm();
-
-        //     }
-
-
-        //     double projectStepJT(const ConfigurationArray &q, ConfigurationArray &q_new, bool update_q = true)
-        //     {
-        //         Eigen::Matrix<float, 6, Eigen::Dynamic> J;
-        //         Eigen::Transform<float, 3, Eigen::Isometry> eef_pose;
-
-        //         Robot::jacobian_eefk(q, J, eef_pose); // can be parallel from distance
-        //         const Eigen::Vector<float, 6> distance = distanceToConstraintEEF(eef_pose);
-
-        //         if (update_q)
-        //         {
-        //             // need to convert jacobian into ref frame
-        //             const Eigen::Matrix<float, Eigen::Dynamic, 1> update = -J.transpose() * distance;
-        //             integrateJointConfiguration(q, q_new, update);
-        //         }
-        //         return distance.squaredNorm();
-
-        //     }
-
-        //     // project with vamp inverse
-        //     double projectStep(const ConfigurationArray &q, ConfigurationArray &q_new, bool update_q = true)
-        //     {
-        //         Eigen::Matrix<float, 6, Eigen::Dynamic> J;
-        //         Eigen::Transform<float, 3, Eigen::Isometry> eef_pose;
-        //         Eigen::Matrix<float, 7, 1> grad;
-
-        //         Robot::jacobian_eefk(q, J, eef_pose); // can be parallel from distance
-        //         const Eigen::Vector<float, 6> distance = distanceToConstraintEEF(eef_pose);
-
-        //         std::array<float, 6> dist_arr;
-        //         std::copy(distance.data(), distance.data() + distance.size(), dist_arr.begin());
-
-
-
-        //         if (update_q)
-        //         {
-        //             // ;
-                    
-        //             Robot::jacobian_solve(q, dist_arr, grad);
-        //             // std::cout << grad << std::endl;
-        //             integrateJointConfiguration(q, q_new, -grad);
-        //         }
-        //         return distance.squaredNorm();
-
-        //     }
-
-
-        //     bool project(const ConfigurationArray &q, ConfigurationArray &q_new)
-        //     {
-        //         bool success = false;
-        //         // double distance = projectStep(q, q_new, false);
-        //         // size_t project_iter = 0;
-        //         // // std::cout << distance << " " << std::endl;
-        //         // while ((project_iter < max_project_iters) && (distance > tolerance))
-        //         // {
-        //         //     distance = projectStepJT(q_new, q_new, true);
-        //         //     // std::cout << distance << " " << std::endl;
-        //         // }
-        //         // if (distance < tolerance)
-        //         // {
-        //         //     // std::cout << distance << " " << std::endl;
-        //         //     const auto fk = Robot::eefk(q_new);
-        //         //     std::cout << fk.matrix()(2,3) << std::endl;
-
-        //         //     success = true;
-        //         // }
-        //         return success;
-                    
-        //     }
-
-        //     bool isValid(const ConfigurationArray &q)
-        //     {
-        //         const Eigen::Transform<float, 3, Eigen::Isometry> eef_pose = Robot::eefk(q);
-        //         const Eigen::Vector<float, 6> distance = distanceToConstraintEEF(eef_pose);
-
-        //         return distance.squaredNorm() < tolerance;
-        //     }
-
-        //     virtual const Eigen::VectorXf distanceToConstraintEEF(Eigen::Transform<float, 3, Eigen::Isometry> computed_eef_pose_world_frame) = 0;
             
     };
 
@@ -147,70 +42,65 @@ namespace vamp::planning
             const size_t se3_size = 16;
 
             // 6 is for SE3 space 
-            Eigen::Transform<float, 3, Eigen::Isometry> eef_pose_w_ref_reference;
-            Eigen::Transform<float, 3, Eigen::Isometry> ref_frame_w_world;
+            Eigen::Transform<float, 3, Eigen::Isometry> secondary_hand_w_first;
+            // Eigen::Transform<float, 3, Eigen::Isometry> ref_frame_w_world;
 
             // std::pair<vamp::FloatVector<6>, vamp::FloatVector<6>> bounds;
             std::pair<std::array<float, 6>, std::array<float, 6>> bounds; 
 
             struct TSRFuncInput {
                 ConfigurationBlock q;
-                vamp::FloatVector<rake, 7>rTeB;
-                vamp::FloatVector<rake, 7> wTrB;
+                vamp::FloatVector<rake, 7>lTrB;
                 vamp::FloatVector<rake, 6> lbB;
                 vamp::FloatVector<rake, 6> ubB;
                 
                 auto operator[](size_t index) const {
-                    if (index < 7) // q
+                    if (index < Robot::dimension) // q
                         return q[index];
 
-                    if (index >= 7 && index < (2 * 7)) // rtE
-                        return rTeB[index - 7];
+                    if (index >= Robot::dimension && index < Robot::dimension + 7) // rtE
+                        return lTrB[index - Robot::dimension];
 
-                    else if (index >= (2 * 7) && index < (3 * 7))
-                        return wTrB[index - (2 * 7)];
+                    else if (index >= (Robot::dimension + 7) && index < (Robot::dimension + 7 + 6))
+                        return lbB[index - (Robot::dimension + 7)];
 
-
-                    else if (index >= (3 * 7) && index < (3 * 7 + 6))
-                        return lbB[index - (3 * 7)];
-
-                    else if (index >= (3 * 7 + 6) && index < (3 * 7 + 6 * 2))
-                        return ubB[index - (3 * 7 + 6)];
+                    else if (index >= (Robot::dimension + 7 + 6) && index < (Robot::dimension + 7 + 6 * 2))
+                        return ubB[index - (Robot::dimension + 7 + 6)];
                     else
-                        return rTeB[0]; // to prevent complaining
+                        return lTrB[0]; // to prevent complaining
                 }
             };
             TSRFuncInput tsr_function_inp;
 
 
             struct JacobianProjectInp {
-                vamp::FloatVector<rake, 6 * 7>J; // jacobian
+                vamp::FloatVector<rake, 6 * Robot::dimension>J; // jacobian
                 vamp::FloatVector<rake, 6> err; // error vector
 
                 auto &operator[](size_t index) {
-                    if (index < 42)
+                    if (index < 6 * Robot::dimension)
                         return J[index];
-                    else if (index >= 42 && index < 48)
-                        return err[index - 42];
+                    else if (index >= 6 * Robot::dimension && index < 6 * Robot::dimension + 6)
+                        return err[index - 6 * Robot::dimension];
                     else
                         return err[0];
                 }
 
                 const auto operator[](size_t index) const {
-                    if (index < 42)
+                    if (index < 6 * Robot::dimension)
                         return J[index];
-                    else if (index >= 42 && index < 48)
-                        return err[index - 42];
+                    else if (index >= 6 * Robot::dimension && index < 6 * Robot::dimension + 6)
+                        return err[index - 6 * Robot::dimension];
                     else
                         return err[0];
                 }
 
 
-                JacobianProjectInp& operator=(vamp::FloatVector<rake, 6 + 6 * 7> y) {
+                JacobianProjectInp& operator=(vamp::FloatVector<rake, 6 + 6 * Robot::dimension> y) {
                     for(auto i=0U; i < 6; i++)
-                        err[i] = y[42 + i];
-                    for(auto i=0U; i < 42; i++)
-                        J[i] = y[42];
+                        err[i] = y[6 * Robot::dimension + i];
+                    for(auto i=0U; i < 6 * Robot::dimension; i++)
+                        J[i] = y[i];
                     return *this;
                 }
 
@@ -218,78 +108,6 @@ namespace vamp::planning
             };
             JacobianProjectInp jac_proj_inp;
             ConfigurationBlock q_old;
-
-
-            struct ErrGradOut {
-                vamp::FloatVector<rake, 7> grad; // jacobian
-                vamp::FloatVector<rake, 6> err; // error vector
-
-                auto &operator[](size_t index) {
-                    if (index < 7)
-                        return grad[index];
-                    else if (index >= 7 && index < 13)
-                        return err[index - 7];
-                    else
-                        return grad[0];
-                }
-
-                const auto operator[](size_t index) const {
-                    if (index < 7)
-                        return grad[index];
-                    else if (index >= 7 && index < 13)
-                        return err[index - 7];
-                    else
-                        return grad[0];
-                }
-
-
-                ErrGradOut& operator=(vamp::FloatVector<rake, 6 + 7> y) {
-                    for(auto i=0U; i < 7; i++)
-                        grad[i] = y[i];
-                    for(auto i=0U; i < 6; i++)
-                        err[i] = y[i + 7];
-                    return *this;
-                }
-
-
-            };
-            ErrGradOut grad_err;
-
-
-            struct QpErrOut {
-                vamp::FloatVector<rake, 7> q_proj; // jacobian
-                vamp::FloatVector<rake, 6> err; // error vector
-
-                auto &operator[](size_t index) {
-                    if (index < 7)
-                        return q_proj[index];
-                    else if (index >= 7 && index < 13)
-                        return err[index - 7];
-                    else
-                        return q_proj[0];
-                }
-
-                const auto operator[](size_t index) const {
-                    if (index < 7)
-                        return q_proj[index];
-                    else if (index >= 7 && index < 13)
-                        return err[index - 7];
-                    else
-                        return q_proj[0];
-                }
-
-
-                QpErrOut& operator=(vamp::FloatVector<rake, 6 + 7> y) {
-                    for(auto i=0U; i < 7; i++)
-                        q_proj[i] = y[i];
-                    for(auto i=0U; i < 6; i++)
-                        err[i] = y[i + 7];
-                    return *this;
-                }
-
-
-            };
-            QpErrOut qproj_err;
 
 
         template <std::size_t dim>
@@ -303,20 +121,16 @@ namespace vamp::planning
         public:
 
             TaskSpaceConstraint(
-                const Eigen::Transform<float, 3, Eigen::Isometry> eef_pose_w_ref_reference, // rTe
-                const Eigen::Transform<float, 3, Eigen::Isometry> ref_frame_w_world, // wTr
+                const Eigen::Transform<float, 3, Eigen::Isometry> secondary_hand_w_first, // rTe
                 const std::pair<std::array<float, 6>, std::array<float, 6>> bounds
-            ) : eef_pose_w_ref_reference(eef_pose_w_ref_reference),  ref_frame_w_world(ref_frame_w_world), bounds(bounds)
+            ) : secondary_hand_w_first(secondary_hand_w_first)
             {
 
 
-                Eigen::Quaternion<float> q1(eef_pose_w_ref_reference.linear());
-                std::array<float, 7> transform1 = {q1.w(), q1.x(), q1.y(), q1.z(), eef_pose_w_ref_reference.translation().x(), eef_pose_w_ref_reference.translation().y(), eef_pose_w_ref_reference.translation().z()};
+                Eigen::Quaternion<float> q1(secondary_hand_w_first.linear());
+                std::array<float, 7> transform1 = {q1.w(), q1.x(), q1.y(), q1.z(), secondary_hand_w_first.translation().x(), secondary_hand_w_first.translation().y(), secondary_hand_w_first.translation().z()};
 
-                Eigen::Quaternion<float> q2(ref_frame_w_world.linear());
-                std::array<float, 7> transform2 = {q2.w(), q2.x(), q2.y(), q2.z(), ref_frame_w_world.translation().x(), ref_frame_w_world.translation().y(), ref_frame_w_world.translation().z()};
-                assignBlock<7>(transform1, tsr_function_inp.rTeB);
-                assignBlock<7>(transform2, tsr_function_inp.wTrB);
+                assignBlock<7>(transform1, tsr_function_inp.lTrB);
                 
                 assignBlock<6>(bounds.first, tsr_function_inp.lbB);
                 assignBlock<6>(bounds.second, tsr_function_inp.ubB);
@@ -328,16 +142,10 @@ namespace vamp::planning
 
         const auto print_robot_tsr_error(const ConfigurationBlock &q)
         {
-            // std::cout << "-------- Printing ------- " << std::endl;
+            std::cout << "-------- Printing ------- " << std::endl;
             auto dist = distanceToConstraint(q);
-            // for(auto i=0U; i < 42; i++)
-            //     std::cout << jac_proj_inp.J[{i, 0}] << " ";
-            // std::cout << std::endl;
-            // for(auto i=0U; i < 6; i++)
-            //     std::cout << jac_proj_inp.err[{i, 0}] << " ";
-            // std::cout << std::endl;
-            projectStepJt(q, q_old, true);
-            // std::cout << "-------- Printed ------- " << std::endl;
+            // projectStepJt(q, q_old, true);
+            std::cout << "-------- Printed ------- " << std::endl;
 
         }
 
@@ -346,54 +154,47 @@ namespace vamp::planning
             for (int i=0U; i < Robot::dimension; i++)
                 tsr_function_inp.q[i] = q[i];
             
-            Robot::tsr_function_ori_blend_simd(tsr_function_inp, jac_proj_inp);
+            // for (int i = 0U; i < Robot::dimension; i++)
+            //     std::cout << tsr_function_inp[i] << " ";
+            // std::cout << std::endl;
+
+            // for (int i = 0U; i < 6; i++){
+            //     std::cout << tsr_function_inp[i] << " ";
+            // }
+            // std::cout << std::endl;
+
+            
+            Robot::tsr_function_simd(tsr_function_inp, jac_proj_inp);
 
             for(int i=0U; i < 6;i++)
             {
-                jac_proj_inp[i + 42] = (jac_proj_inp[i + 42] - tsr_function_inp[ 21 + i]).min(0.F)
-                                    + (jac_proj_inp[i + 42] - tsr_function_inp[ 27 + i]).max(0.F);
-
+                jac_proj_inp[i + 6 * Robot::dimension] = (jac_proj_inp[i + 6 * Robot::dimension] - tsr_function_inp[ Robot::dimension + 7 + i]).min(0.F)
+                                    + (jac_proj_inp[i + 6 * Robot::dimension] - tsr_function_inp[ Robot::dimension + 7 + 6 + i]).max(0.F);
             }
 
-            auto d =(jac_proj_inp[0 + 42] * jac_proj_inp[0 + 42] +
-                      jac_proj_inp[1 + 42] * jac_proj_inp[1 + 42] +
-                      jac_proj_inp[2 + 42] * jac_proj_inp[2 + 42] + 
-                      jac_proj_inp[3 + 42] * jac_proj_inp[3 + 42] + 
-                      jac_proj_inp[4 + 42] * jac_proj_inp[4 + 42] + 
-                      jac_proj_inp[5 + 42] * jac_proj_inp[5 + 42]
-                    ).abs();
-            return d;
-        }
-
-
-        const auto gradient_and_error(const ConfigurationBlock &q)
-        {
-            // std::cout << "-------- Printing g&e------- " << std::endl;
-            for (int i=0U; i < 7; i++)
-                tsr_function_inp.q[i] = q[i];
-
-            Robot::full_tsr_project(tsr_function_inp, qproj_err);
-
-            // for(auto i=0U; i < 6; i++)
-            //     std::cout << grad_err.err[{i, 0}] << " ";
+            // for (int i=0U; i < 6 * Robot::dimension; i++)
+            // {
+            //     if(i % Robot::dimension == 0)
+            //         std::cout << std::endl;
+            //     std::cout << jac_proj_inp.J[{i, 7}] << ",";
+            // }
             // std::cout << std::endl;
-            // for(auto i=0U; i < 7; i++)
-            //     std::cout << grad_err.grad[{i, 0}] << " ";
+            
+            // std::cout << "Err is : " << std::endl;
+            // for (int i=0U; i < 6; i++)
+            //     std::cout << jac_proj_inp.err[{i, 7}] << ",";
             // std::cout << std::endl;
 
 
-
-            auto d = (grad_err[0 + 7] * grad_err[0 + 7] +
-                      grad_err[1 + 7] * grad_err[1 + 7] +
-                      grad_err[2 + 7] * grad_err[2 + 7] + 
-                      grad_err[3 + 7] * grad_err[3 + 7] + 
-                      grad_err[4 + 7] * grad_err[4 + 7] + 
-                      grad_err[5 + 7] * grad_err[5 + 7]
+            auto d =(jac_proj_inp[0 + 6 * Robot::dimension] * jac_proj_inp[0 + 6 * Robot::dimension] +
+                      jac_proj_inp[1 + 6 * Robot::dimension] * jac_proj_inp[1 + 6 * Robot::dimension] +
+                      jac_proj_inp[2 + 6 * Robot::dimension] * jac_proj_inp[2 + 6 * Robot::dimension] + 
+                      jac_proj_inp[3 + 6 * Robot::dimension] * jac_proj_inp[3 + 6 * Robot::dimension] + 
+                      jac_proj_inp[4 + 6 * Robot::dimension] * jac_proj_inp[4 + 6 * Robot::dimension] + 
+                      jac_proj_inp[5 + 6 * Robot::dimension] * jac_proj_inp[5 + 6 * Robot::dimension]
                     ).abs();
             return d;
-            // std::cout << "-------- Printed g&e------- " << std::endl;
         }
-
 
 
         auto jacobian_solve_config_jt(const JacobianProjectInp &x) noexcept
@@ -404,34 +205,36 @@ namespace vamp::planning
             @param x - A container for J and E with the [] operator
             @return grad
             */
-            vamp::FloatVector<rake, 7> y;
-            // y[0] = x[5] * x[47] + x[4] * x[46] + x[3] * x[45] + x[2] * x[44] + x[1] * x[43] + x[0] * x[42];
-            // y[1] = x[11] * x[47] + x[10] * x[46] + x[9] * x[45] + x[8] * x[44] + x[7] * x[43] + x[6] * x[42];
-            // y[2] =
-            //     x[17] * x[47] + x[16] * x[46] + x[15] * x[45] + x[14] * x[44] + x[13] * x[43] + x[12] * x[42];
-            // y[3] =
-            //     x[23] * x[47] + x[22] * x[46] + x[21] * x[45] + x[20] * x[44] + x[19] * x[43] + x[18] * x[42];
-            // y[4] =
-            //     x[29] * x[47] + x[28] * x[46] + x[27] * x[45] + x[26] * x[44] + x[25] * x[43] + x[24] * x[42];
-            // y[5] =
-            //     x[35] * x[47] + x[34] * x[46] + x[33] * x[45] + x[32] * x[44] + x[31] * x[43] + x[30] * x[42];
-            // y[6] =
-            //     x[41] * x[47] + x[40] * x[46] + x[39] * x[45] + x[38] * x[44] + x[37] * x[43] + x[36] * x[42];
-
+            vamp::FloatVector<rake, Robot::dimension> y;
             y[0] =
-                x[35] * x[47] + x[28] * x[46] + x[21] * x[45] + x[14] * x[44] + x[7] * x[43] + x[0] * x[42];
+                x[70] * x[89] + x[56] * x[88] + x[42] * x[87] + x[28] * x[86] + x[14] * x[85] + x[0] * x[84];
             y[1] =
-                x[36] * x[47] + x[29] * x[46] + x[22] * x[45] + x[15] * x[44] + x[8] * x[43] + x[1] * x[42];
+                x[71] * x[89] + x[57] * x[88] + x[43] * x[87] + x[29] * x[86] + x[15] * x[85] + x[1] * x[84];
             y[2] =
-                x[37] * x[47] + x[30] * x[46] + x[23] * x[45] + x[16] * x[44] + x[9] * x[43] + x[2] * x[42];
+                x[72] * x[89] + x[58] * x[88] + x[44] * x[87] + x[30] * x[86] + x[16] * x[85] + x[2] * x[84];
             y[3] =
-                x[38] * x[47] + x[31] * x[46] + x[24] * x[45] + x[17] * x[44] + x[10] * x[43] + x[3] * x[42];
+                x[73] * x[89] + x[59] * x[88] + x[45] * x[87] + x[31] * x[86] + x[17] * x[85] + x[3] * x[84];
             y[4] =
-                x[39] * x[47] + x[32] * x[46] + x[25] * x[45] + x[18] * x[44] + x[11] * x[43] + x[4] * x[42];
+                x[74] * x[89] + x[60] * x[88] + x[46] * x[87] + x[32] * x[86] + x[18] * x[85] + x[4] * x[84];
             y[5] =
-                x[40] * x[47] + x[33] * x[46] + x[26] * x[45] + x[19] * x[44] + x[12] * x[43] + x[5] * x[42];
+                x[75] * x[89] + x[61] * x[88] + x[47] * x[87] + x[33] * x[86] + x[19] * x[85] + x[5] * x[84];
             y[6] =
-                x[41] * x[47] + x[34] * x[46] + x[27] * x[45] + x[20] * x[44] + x[13] * x[43] + x[6] * x[42];            
+                x[76] * x[89] + x[62] * x[88] + x[48] * x[87] + x[34] * x[86] + x[20] * x[85] + x[6] * x[84];
+            y[7] =
+                x[77] * x[89] + x[63] * x[88] + x[49] * x[87] + x[35] * x[86] + x[21] * x[85] + x[7] * x[84];
+            y[8] =
+                x[78] * x[89] + x[64] * x[88] + x[50] * x[87] + x[36] * x[86] + x[22] * x[85] + x[8] * x[84];
+            y[9] =
+                x[79] * x[89] + x[65] * x[88] + x[51] * x[87] + x[37] * x[86] + x[23] * x[85] + x[9] * x[84];
+            y[10] =
+                x[80] * x[89] + x[66] * x[88] + x[52] * x[87] + x[38] * x[86] + x[24] * x[85] + x[10] * x[84];
+            y[11] =
+                x[81] * x[89] + x[67] * x[88] + x[53] * x[87] + x[39] * x[86] + x[25] * x[85] + x[11] * x[84];
+            y[12] =
+                x[82] * x[89] + x[68] * x[88] + x[54] * x[87] + x[40] * x[86] + x[26] * x[85] + x[12] * x[84];
+            y[13] =
+                x[83] * x[89] + x[69] * x[88] + x[55] * x[87] + x[41] * x[86] + x[27] * x[85] + x[13] * x[84];
+            
             return y;
         }
 
@@ -444,127 +247,468 @@ namespace vamp::planning
             @return grad
             */
 
-            FloatVector<8, 34> v;
-            FloatVector<8, 7> y;
+            FloatVector<8, 118> v;
+            FloatVector<8, 14> y;
             v[0] = (
-                0.0001 + x[0] * x[0] + x[7] * x[7] + x[14] * x[14] + x[21] * x[21] + x[28] * x[28] +
-                x[35] * x[35]).sqrt();
-            v[1] = (x[35] * x[47] + x[28] * x[46] + x[21] * x[45] + x[14] * x[44] + x[7] * x[43] +
-                    x[0] * x[42]) /
+                0.0001 + x[0] * x[0] + x[14] * x[14] + x[28] * x[28] + x[42] * x[42] + x[56] * x[56] +
+                x[70] * x[70]).sqrt();
+            v[1] = (x[70] * x[89] + x[56] * x[88] + x[42] * x[87] + x[28] * x[86] + x[14] * x[85] +
+                    x[0] * x[84]) /
                    v[0];
-            v[2] =
-                (x[1] * x[0] + x[8] * x[7] + x[15] * x[14] + x[22] * x[21] + x[29] * x[28] + x[36] * x[35]) /
-                v[0];
+            v[2] = (x[1] * x[0] + x[15] * x[14] + x[29] * x[28] + x[43] * x[42] + x[57] * x[56] +
+                    x[71] * x[70]) /
+                   v[0];
             v[3] = (
-                0.0001 + x[1] * x[1] + x[8] * x[8] + x[15] * x[15] + x[22] * x[22] + x[29] * x[29] +
-                x[36] * x[36] - v[2] * v[2]).sqrt();
-            v[4] = (x[36] * x[47] + x[29] * x[46] + x[22] * x[45] + x[15] * x[44] + x[8] * x[43] +
-                    x[1] * x[42] - v[2] * v[1]) /
+                0.0001 + x[1] * x[1] + x[15] * x[15] + x[29] * x[29] + x[43] * x[43] + x[57] * x[57] +
+                x[71] * x[71] - v[2] * v[2]).sqrt();
+            v[4] = (x[71] * x[89] + x[57] * x[88] + x[43] * x[87] + x[29] * x[86] + x[15] * x[85] +
+                    x[1] * x[84] - v[2] * v[1]) /
                    v[3];
-            v[5] =
-                (x[2] * x[0] + x[9] * x[7] + x[16] * x[14] + x[23] * x[21] + x[30] * x[28] + x[37] * x[35]) /
-                v[0];
-            v[6] = (x[2] * x[1] + x[9] * x[8] + x[16] * x[15] + x[23] * x[22] + x[30] * x[29] +
-                    x[37] * x[36] - v[5] * v[2]) /
+            v[5] = (x[2] * x[0] + x[16] * x[14] + x[30] * x[28] + x[44] * x[42] + x[58] * x[56] +
+                    x[72] * x[70]) /
+                   v[0];
+            v[6] = (x[2] * x[1] + x[16] * x[15] + x[30] * x[29] + x[44] * x[43] + x[58] * x[57] +
+                    x[72] * x[71] - v[5] * v[2]) /
                    v[3];
             v[7] = (
-                0.0001 + x[2] * x[2] + x[9] * x[9] + x[16] * x[16] + x[23] * x[23] + x[30] * x[30] +
-                x[37] * x[37] - v[5] * v[5] - v[6] * v[6]).sqrt();
-            v[8] = (x[37] * x[47] + x[30] * x[46] + x[23] * x[45] + x[16] * x[44] + x[9] * x[43] +
-                    x[2] * x[42] - v[5] * v[1] - v[6] * v[4]) /
+                0.0001 + x[2] * x[2] + x[16] * x[16] + x[30] * x[30] + x[44] * x[44] + x[58] * x[58] +
+                x[72] * x[72] - v[5] * v[5] - v[6] * v[6]).sqrt();
+            v[8] = (x[72] * x[89] + x[58] * x[88] + x[44] * x[87] + x[30] * x[86] + x[16] * x[85] +
+                    x[2] * x[84] - v[5] * v[1] - v[6] * v[4]) /
                    v[7];
-            v[9] =
-                (x[3] * x[0] + x[10] * x[7] + x[17] * x[14] + x[24] * x[21] + x[31] * x[28] + x[38] * x[35]) /
-                v[0];
-            v[10] = (x[3] * x[1] + x[10] * x[8] + x[17] * x[15] + x[24] * x[22] + x[31] * x[29] +
-                     x[38] * x[36] - v[9] * v[2]) /
+            v[9] = (x[3] * x[0] + x[17] * x[14] + x[31] * x[28] + x[45] * x[42] + x[59] * x[56] +
+                    x[73] * x[70]) /
+                   v[0];
+            v[10] = (x[3] * x[1] + x[17] * x[15] + x[31] * x[29] + x[45] * x[43] + x[59] * x[57] +
+                     x[73] * x[71] - v[9] * v[2]) /
                     v[3];
-            v[11] = (x[3] * x[2] + x[10] * x[9] + x[17] * x[16] + x[24] * x[23] + x[31] * x[30] +
-                     x[38] * x[37] - v[9] * v[5] - v[10] * v[6]) /
+            v[11] = (x[3] * x[2] + x[17] * x[16] + x[31] * x[30] + x[45] * x[44] + x[59] * x[58] +
+                     x[73] * x[72] - v[9] * v[5] - v[10] * v[6]) /
                     v[7];
             v[12] = (
-                0.0001 + x[3] * x[3] + x[10] * x[10] + x[17] * x[17] + x[24] * x[24] + x[31] * x[31] +
-                x[38] * x[38] - v[9] * v[9] - v[10] * v[10] - v[11] * v[11]).sqrt();
-            v[13] = (x[38] * x[47] + x[31] * x[46] + x[24] * x[45] + x[17] * x[44] + x[10] * x[43] +
-                     x[3] * x[42] - v[9] * v[1] - v[10] * v[4] - v[11] * v[8]) /
+                0.0001 + x[3] * x[3] + x[17] * x[17] + x[31] * x[31] + x[45] * x[45] + x[59] * x[59] +
+                x[73] * x[73] - v[9] * v[9] - v[10] * v[10] - v[11] * v[11]).sqrt();
+            v[13] = (x[73] * x[89] + x[59] * x[88] + x[45] * x[87] + x[31] * x[86] + x[17] * x[85] +
+                     x[3] * x[84] - v[9] * v[1] - v[10] * v[4] - v[11] * v[8]) /
                     v[12];
-            v[14] =
-                (x[4] * x[0] + x[11] * x[7] + x[18] * x[14] + x[25] * x[21] + x[32] * x[28] + x[39] * x[35]) /
-                v[0];
-            v[15] = (x[4] * x[1] + x[11] * x[8] + x[18] * x[15] + x[25] * x[22] + x[32] * x[29] +
-                     x[39] * x[36] - v[14] * v[2]) /
+            v[14] = (x[4] * x[0] + x[18] * x[14] + x[32] * x[28] + x[46] * x[42] + x[60] * x[56] +
+                     x[74] * x[70]) /
+                    v[0];
+            v[15] = (x[4] * x[1] + x[18] * x[15] + x[32] * x[29] + x[46] * x[43] + x[60] * x[57] +
+                     x[74] * x[71] - v[14] * v[2]) /
                     v[3];
-            v[16] = (x[4] * x[2] + x[11] * x[9] + x[18] * x[16] + x[25] * x[23] + x[32] * x[30] +
-                     x[39] * x[37] - v[14] * v[5] - v[15] * v[6]) /
+            v[16] = (x[4] * x[2] + x[18] * x[16] + x[32] * x[30] + x[46] * x[44] + x[60] * x[58] +
+                     x[74] * x[72] - v[14] * v[5] - v[15] * v[6]) /
                     v[7];
-            v[17] = (x[4] * x[3] + x[11] * x[10] + x[18] * x[17] + x[25] * x[24] + x[32] * x[31] +
-                     x[39] * x[38] - v[14] * v[9] - v[15] * v[10] - v[16] * v[11]) /
+            v[17] = (x[4] * x[3] + x[18] * x[17] + x[32] * x[31] + x[46] * x[45] + x[60] * x[59] +
+                     x[74] * x[73] - v[14] * v[9] - v[15] * v[10] - v[16] * v[11]) /
                     v[12];
             v[18] = (
-                0.0001 + x[4] * x[4] + x[11] * x[11] + x[18] * x[18] + x[25] * x[25] + x[32] * x[32] +
-                x[39] * x[39] - v[14] * v[14] - v[15] * v[15] - v[16] * v[16] - v[17] * v[17]).sqrt();
-            v[19] = (x[39] * x[47] + x[32] * x[46] + x[25] * x[45] + x[18] * x[44] + x[11] * x[43] +
-                     x[4] * x[42] - v[14] * v[1] - v[15] * v[4] - v[16] * v[8] - v[17] * v[13]) /
+                0.0001 + x[4] * x[4] + x[18] * x[18] + x[32] * x[32] + x[46] * x[46] + x[60] * x[60] +
+                x[74] * x[74] - v[14] * v[14] - v[15] * v[15] - v[16] * v[16] - v[17] * v[17]).sqrt();
+            v[19] = (x[74] * x[89] + x[60] * x[88] + x[46] * x[87] + x[32] * x[86] + x[18] * x[85] +
+                     x[4] * x[84] - v[14] * v[1] - v[15] * v[4] - v[16] * v[8] - v[17] * v[13]) /
                     v[18];
-            v[20] =
-                (x[5] * x[0] + x[12] * x[7] + x[19] * x[14] + x[26] * x[21] + x[33] * x[28] + x[40] * x[35]) /
-                v[0];
-            v[21] = (x[5] * x[1] + x[12] * x[8] + x[19] * x[15] + x[26] * x[22] + x[33] * x[29] +
-                     x[40] * x[36] - v[20] * v[2]) /
+            v[20] = (x[5] * x[0] + x[19] * x[14] + x[33] * x[28] + x[47] * x[42] + x[61] * x[56] +
+                     x[75] * x[70]) /
+                    v[0];
+            v[21] = (x[5] * x[1] + x[19] * x[15] + x[33] * x[29] + x[47] * x[43] + x[61] * x[57] +
+                     x[75] * x[71] - v[20] * v[2]) /
                     v[3];
-            v[22] = (x[5] * x[2] + x[12] * x[9] + x[19] * x[16] + x[26] * x[23] + x[33] * x[30] +
-                     x[40] * x[37] - v[20] * v[5] - v[21] * v[6]) /
+            v[22] = (x[5] * x[2] + x[19] * x[16] + x[33] * x[30] + x[47] * x[44] + x[61] * x[58] +
+                     x[75] * x[72] - v[20] * v[5] - v[21] * v[6]) /
                     v[7];
-            v[23] = (x[5] * x[3] + x[12] * x[10] + x[19] * x[17] + x[26] * x[24] + x[33] * x[31] +
-                     x[40] * x[38] - v[20] * v[9] - v[21] * v[10] - v[22] * v[11]) /
+            v[23] = (x[5] * x[3] + x[19] * x[17] + x[33] * x[31] + x[47] * x[45] + x[61] * x[59] +
+                     x[75] * x[73] - v[20] * v[9] - v[21] * v[10] - v[22] * v[11]) /
                     v[12];
-            v[24] = (x[5] * x[4] + x[12] * x[11] + x[19] * x[18] + x[26] * x[25] + x[33] * x[32] +
-                     x[40] * x[39] - v[20] * v[14] - v[21] * v[15] - v[22] * v[16] - v[23] * v[17]) /
+            v[24] = (x[5] * x[4] + x[19] * x[18] + x[33] * x[32] + x[47] * x[46] + x[61] * x[60] +
+                     x[75] * x[74] - v[20] * v[14] - v[21] * v[15] - v[22] * v[16] - v[23] * v[17]) /
                     v[18];
             v[25] = (
-                0.0001 + x[5] * x[5] + x[12] * x[12] + x[19] * x[19] + x[26] * x[26] + x[33] * x[33] +
-                x[40] * x[40] - v[20] * v[20] - v[21] * v[21] - v[22] * v[22] - v[23] * v[23] -
+                0.0001 + x[5] * x[5] + x[19] * x[19] + x[33] * x[33] + x[47] * x[47] + x[61] * x[61] +
+                x[75] * x[75] - v[20] * v[20] - v[21] * v[21] - v[22] * v[22] - v[23] * v[23] -
                 v[24] * v[24]).sqrt();
             v[26] =
-                (x[40] * x[47] + x[33] * x[46] + x[26] * x[45] + x[19] * x[44] + x[12] * x[43] +
-                 x[5] * x[42] - v[20] * v[1] - v[21] * v[4] - v[22] * v[8] - v[23] * v[13] - v[24] * v[19]) /
+                (x[75] * x[89] + x[61] * x[88] + x[47] * x[87] + x[33] * x[86] + x[19] * x[85] +
+                 x[5] * x[84] - v[20] * v[1] - v[21] * v[4] - v[22] * v[8] - v[23] * v[13] - v[24] * v[19]) /
                 v[25];
-            v[27] =
-                (x[6] * x[0] + x[13] * x[7] + x[20] * x[14] + x[27] * x[21] + x[34] * x[28] + x[41] * x[35]) /
-                v[0];
-            v[28] = (x[6] * x[1] + x[13] * x[8] + x[20] * x[15] + x[27] * x[22] + x[34] * x[29] +
-                     x[41] * x[36] - v[27] * v[2]) /
+            v[27] = (x[6] * x[0] + x[20] * x[14] + x[34] * x[28] + x[48] * x[42] + x[62] * x[56] +
+                     x[76] * x[70]) /
+                    v[0];
+            v[28] = (x[6] * x[1] + x[20] * x[15] + x[34] * x[29] + x[48] * x[43] + x[62] * x[57] +
+                     x[76] * x[71] - v[27] * v[2]) /
                     v[3];
-            v[29] = (x[6] * x[2] + x[13] * x[9] + x[20] * x[16] + x[27] * x[23] + x[34] * x[30] +
-                     x[41] * x[37] - v[27] * v[5] - v[28] * v[6]) /
+            v[29] = (x[6] * x[2] + x[20] * x[16] + x[34] * x[30] + x[48] * x[44] + x[62] * x[58] +
+                     x[76] * x[72] - v[27] * v[5] - v[28] * v[6]) /
                     v[7];
-            v[30] = (x[6] * x[3] + x[13] * x[10] + x[20] * x[17] + x[27] * x[24] + x[34] * x[31] +
-                     x[41] * x[38] - v[27] * v[9] - v[28] * v[10] - v[29] * v[11]) /
+            v[30] = (x[6] * x[3] + x[20] * x[17] + x[34] * x[31] + x[48] * x[45] + x[62] * x[59] +
+                     x[76] * x[73] - v[27] * v[9] - v[28] * v[10] - v[29] * v[11]) /
                     v[12];
-            v[31] = (x[6] * x[4] + x[13] * x[11] + x[20] * x[18] + x[27] * x[25] + x[34] * x[32] +
-                     x[41] * x[39] - v[27] * v[14] - v[28] * v[15] - v[29] * v[16] - v[30] * v[17]) /
+            v[31] = (x[6] * x[4] + x[20] * x[18] + x[34] * x[32] + x[48] * x[46] + x[62] * x[60] +
+                     x[76] * x[74] - v[27] * v[14] - v[28] * v[15] - v[29] * v[16] - v[30] * v[17]) /
                     v[18];
             v[32] =
-                (x[6] * x[5] + x[13] * x[12] + x[20] * x[19] + x[27] * x[26] + x[34] * x[33] + x[41] * x[40] -
+                (x[6] * x[5] + x[20] * x[19] + x[34] * x[33] + x[48] * x[47] + x[62] * x[61] + x[76] * x[75] -
                  v[27] * v[20] - v[28] * v[21] - v[29] * v[22] - v[30] * v[23] - v[31] * v[24]) /
                 v[25];
             v[33] = (
-                0.0001 + x[6] * x[6] + x[13] * x[13] + x[20] * x[20] + x[27] * x[27] + x[34] * x[34] +
-                x[41] * x[41] - v[27] * v[27] - v[28] * v[28] - v[29] * v[29] - v[30] * v[30] -
+                0.0001 + x[6] * x[6] + x[20] * x[20] + x[34] * x[34] + x[48] * x[48] + x[62] * x[62] +
+                x[76] * x[76] - v[27] * v[27] - v[28] * v[28] - v[29] * v[29] - v[30] * v[30] -
                 v[31] * v[31] - v[32] * v[32]).sqrt();
-            y[6] = ((x[41] * x[47] + x[34] * x[46] + x[27] * x[45] + x[20] * x[44] + x[13] * x[43] +
-                     x[6] * x[42] - v[27] * v[1] - v[28] * v[4] - v[29] * v[8] - v[30] * v[13] -
+            v[34] = (x[76] * x[89] + x[62] * x[88] + x[48] * x[87] + x[34] * x[86] + x[20] * x[85] +
+                     x[6] * x[84] - v[27] * v[1] - v[28] * v[4] - v[29] * v[8] - v[30] * v[13] -
                      v[31] * v[19] - v[32] * v[26]) /
-                    v[33]) /
+                    v[33];
+            v[35] = (x[7] * x[0] + x[21] * x[14] + x[35] * x[28] + x[49] * x[42] + x[63] * x[56] +
+                     x[77] * x[70]) /
+                    v[0];
+            v[36] = (x[7] * x[1] + x[21] * x[15] + x[35] * x[29] + x[49] * x[43] + x[63] * x[57] +
+                     x[77] * x[71] - v[35] * v[2]) /
+                    v[3];
+            v[37] = (x[7] * x[2] + x[21] * x[16] + x[35] * x[30] + x[49] * x[44] + x[63] * x[58] +
+                     x[77] * x[72] - v[35] * v[5] - v[36] * v[6]) /
+                    v[7];
+            v[38] = (x[7] * x[3] + x[21] * x[17] + x[35] * x[31] + x[49] * x[45] + x[63] * x[59] +
+                     x[77] * x[73] - v[35] * v[9] - v[36] * v[10] - v[37] * v[11]) /
+                    v[12];
+            v[39] = (x[7] * x[4] + x[21] * x[18] + x[35] * x[32] + x[49] * x[46] + x[63] * x[60] +
+                     x[77] * x[74] - v[35] * v[14] - v[36] * v[15] - v[37] * v[16] - v[38] * v[17]) /
+                    v[18];
+            v[40] =
+                (x[7] * x[5] + x[21] * x[19] + x[35] * x[33] + x[49] * x[47] + x[63] * x[61] + x[77] * x[75] -
+                 v[35] * v[20] - v[36] * v[21] - v[37] * v[22] - v[38] * v[23] - v[39] * v[24]) /
+                v[25];
+            v[41] = (x[7] * x[6] + x[21] * x[20] + x[35] * x[34] + x[49] * x[48] + x[63] * x[62] +
+                     x[77] * x[76] - v[35] * v[27] - v[36] * v[28] - v[37] * v[29] - v[38] * v[30] -
+                     v[39] * v[31] - v[40] * v[32]) /
+                    v[33];
+            v[42] = (
+                0.0001 + x[7] * x[7] + x[21] * x[21] + x[35] * x[35] + x[49] * x[49] + x[63] * x[63] +
+                x[77] * x[77] - v[35] * v[35] - v[36] * v[36] - v[37] * v[37] - v[38] * v[38] -
+                v[39] * v[39] - v[40] * v[40] - v[41] * v[41]).sqrt();
+            v[43] = (x[77] * x[89] + x[63] * x[88] + x[49] * x[87] + x[35] * x[86] + x[21] * x[85] +
+                     x[7] * x[84] - v[35] * v[1] - v[36] * v[4] - v[37] * v[8] - v[38] * v[13] -
+                     v[39] * v[19] - v[40] * v[26] - v[41] * v[34]) /
+                    v[42];
+            v[44] = (x[8] * x[0] + x[22] * x[14] + x[36] * x[28] + x[50] * x[42] + x[64] * x[56] +
+                     x[78] * x[70]) /
+                    v[0];
+            v[45] = (x[8] * x[1] + x[22] * x[15] + x[36] * x[29] + x[50] * x[43] + x[64] * x[57] +
+                     x[78] * x[71] - v[44] * v[2]) /
+                    v[3];
+            v[46] = (x[8] * x[2] + x[22] * x[16] + x[36] * x[30] + x[50] * x[44] + x[64] * x[58] +
+                     x[78] * x[72] - v[44] * v[5] - v[45] * v[6]) /
+                    v[7];
+            v[47] = (x[8] * x[3] + x[22] * x[17] + x[36] * x[31] + x[50] * x[45] + x[64] * x[59] +
+                     x[78] * x[73] - v[44] * v[9] - v[45] * v[10] - v[46] * v[11]) /
+                    v[12];
+            v[48] = (x[8] * x[4] + x[22] * x[18] + x[36] * x[32] + x[50] * x[46] + x[64] * x[60] +
+                     x[78] * x[74] - v[44] * v[14] - v[45] * v[15] - v[46] * v[16] - v[47] * v[17]) /
+                    v[18];
+            v[49] =
+                (x[8] * x[5] + x[22] * x[19] + x[36] * x[33] + x[50] * x[47] + x[64] * x[61] + x[78] * x[75] -
+                 v[44] * v[20] - v[45] * v[21] - v[46] * v[22] - v[47] * v[23] - v[48] * v[24]) /
+                v[25];
+            v[50] = (x[8] * x[6] + x[22] * x[20] + x[36] * x[34] + x[50] * x[48] + x[64] * x[62] +
+                     x[78] * x[76] - v[44] * v[27] - v[45] * v[28] - v[46] * v[29] - v[47] * v[30] -
+                     v[48] * v[31] - v[49] * v[32]) /
+                    v[33];
+            v[51] = (x[8] * x[7] + x[22] * x[21] + x[36] * x[35] + x[50] * x[49] + x[64] * x[63] +
+                     x[78] * x[77] - v[44] * v[35] - v[45] * v[36] - v[46] * v[37] - v[47] * v[38] -
+                     v[48] * v[39] - v[49] * v[40] - v[50] * v[41]) /
+                    v[42];
+            v[52] = (
+                0.0001 + x[8] * x[8] + x[22] * x[22] + x[36] * x[36] + x[50] * x[50] + x[64] * x[64] +
+                x[78] * x[78] - v[44] * v[44] - v[45] * v[45] - v[46] * v[46] - v[47] * v[47] -
+                v[48] * v[48] - v[49] * v[49] - v[50] * v[50] - v[51] * v[51]).sqrt();
+            v[53] = (x[78] * x[89] + x[64] * x[88] + x[50] * x[87] + x[36] * x[86] + x[22] * x[85] +
+                     x[8] * x[84] - v[44] * v[1] - v[45] * v[4] - v[46] * v[8] - v[47] * v[13] -
+                     v[48] * v[19] - v[49] * v[26] - v[50] * v[34] - v[51] * v[43]) /
+                    v[52];
+            v[54] = (x[9] * x[0] + x[23] * x[14] + x[37] * x[28] + x[51] * x[42] + x[65] * x[56] +
+                     x[79] * x[70]) /
+                    v[0];
+            v[55] = (x[9] * x[1] + x[23] * x[15] + x[37] * x[29] + x[51] * x[43] + x[65] * x[57] +
+                     x[79] * x[71] - v[54] * v[2]) /
+                    v[3];
+            v[56] = (x[9] * x[2] + x[23] * x[16] + x[37] * x[30] + x[51] * x[44] + x[65] * x[58] +
+                     x[79] * x[72] - v[54] * v[5] - v[55] * v[6]) /
+                    v[7];
+            v[57] = (x[9] * x[3] + x[23] * x[17] + x[37] * x[31] + x[51] * x[45] + x[65] * x[59] +
+                     x[79] * x[73] - v[54] * v[9] - v[55] * v[10] - v[56] * v[11]) /
+                    v[12];
+            v[58] = (x[9] * x[4] + x[23] * x[18] + x[37] * x[32] + x[51] * x[46] + x[65] * x[60] +
+                     x[79] * x[74] - v[54] * v[14] - v[55] * v[15] - v[56] * v[16] - v[57] * v[17]) /
+                    v[18];
+            v[59] =
+                (x[9] * x[5] + x[23] * x[19] + x[37] * x[33] + x[51] * x[47] + x[65] * x[61] + x[79] * x[75] -
+                 v[54] * v[20] - v[55] * v[21] - v[56] * v[22] - v[57] * v[23] - v[58] * v[24]) /
+                v[25];
+            v[60] = (x[9] * x[6] + x[23] * x[20] + x[37] * x[34] + x[51] * x[48] + x[65] * x[62] +
+                     x[79] * x[76] - v[54] * v[27] - v[55] * v[28] - v[56] * v[29] - v[57] * v[30] -
+                     v[58] * v[31] - v[59] * v[32]) /
+                    v[33];
+            v[61] = (x[9] * x[7] + x[23] * x[21] + x[37] * x[35] + x[51] * x[49] + x[65] * x[63] +
+                     x[79] * x[77] - v[54] * v[35] - v[55] * v[36] - v[56] * v[37] - v[57] * v[38] -
+                     v[58] * v[39] - v[59] * v[40] - v[60] * v[41]) /
+                    v[42];
+            v[62] = (x[9] * x[8] + x[23] * x[22] + x[37] * x[36] + x[51] * x[50] + x[65] * x[64] +
+                     x[79] * x[78] - v[54] * v[44] - v[55] * v[45] - v[56] * v[46] - v[57] * v[47] -
+                     v[58] * v[48] - v[59] * v[49] - v[60] * v[50] - v[61] * v[51]) /
+                    v[52];
+            v[63] = (
+                0.0001 + x[9] * x[9] + x[23] * x[23] + x[37] * x[37] + x[51] * x[51] + x[65] * x[65] +
+                x[79] * x[79] - v[54] * v[54] - v[55] * v[55] - v[56] * v[56] - v[57] * v[57] -
+                v[58] * v[58] - v[59] * v[59] - v[60] * v[60] - v[61] * v[61] - v[62] * v[62]).sqrt();
+            v[64] = (x[79] * x[89] + x[65] * x[88] + x[51] * x[87] + x[37] * x[86] + x[23] * x[85] +
+                     x[9] * x[84] - v[54] * v[1] - v[55] * v[4] - v[56] * v[8] - v[57] * v[13] -
+                     v[58] * v[19] - v[59] * v[26] - v[60] * v[34] - v[61] * v[43] - v[62] * v[53]) /
+                    v[63];
+            v[65] = (x[10] * x[0] + x[24] * x[14] + x[38] * x[28] + x[52] * x[42] + x[66] * x[56] +
+                     x[80] * x[70]) /
+                    v[0];
+            v[66] = (x[10] * x[1] + x[24] * x[15] + x[38] * x[29] + x[52] * x[43] + x[66] * x[57] +
+                     x[80] * x[71] - v[65] * v[2]) /
+                    v[3];
+            v[67] = (x[10] * x[2] + x[24] * x[16] + x[38] * x[30] + x[52] * x[44] + x[66] * x[58] +
+                     x[80] * x[72] - v[65] * v[5] - v[66] * v[6]) /
+                    v[7];
+            v[68] = (x[10] * x[3] + x[24] * x[17] + x[38] * x[31] + x[52] * x[45] + x[66] * x[59] +
+                     x[80] * x[73] - v[65] * v[9] - v[66] * v[10] - v[67] * v[11]) /
+                    v[12];
+            v[69] = (x[10] * x[4] + x[24] * x[18] + x[38] * x[32] + x[52] * x[46] + x[66] * x[60] +
+                     x[80] * x[74] - v[65] * v[14] - v[66] * v[15] - v[67] * v[16] - v[68] * v[17]) /
+                    v[18];
+            v[70] = (x[10] * x[5] + x[24] * x[19] + x[38] * x[33] + x[52] * x[47] + x[66] * x[61] +
+                     x[80] * x[75] - v[65] * v[20] - v[66] * v[21] - v[67] * v[22] - v[68] * v[23] -
+                     v[69] * v[24]) /
+                    v[25];
+            v[71] = (x[10] * x[6] + x[24] * x[20] + x[38] * x[34] + x[52] * x[48] + x[66] * x[62] +
+                     x[80] * x[76] - v[65] * v[27] - v[66] * v[28] - v[67] * v[29] - v[68] * v[30] -
+                     v[69] * v[31] - v[70] * v[32]) /
+                    v[33];
+            v[72] = (x[10] * x[7] + x[24] * x[21] + x[38] * x[35] + x[52] * x[49] + x[66] * x[63] +
+                     x[80] * x[77] - v[65] * v[35] - v[66] * v[36] - v[67] * v[37] - v[68] * v[38] -
+                     v[69] * v[39] - v[70] * v[40] - v[71] * v[41]) /
+                    v[42];
+            v[73] = (x[10] * x[8] + x[24] * x[22] + x[38] * x[36] + x[52] * x[50] + x[66] * x[64] +
+                     x[80] * x[78] - v[65] * v[44] - v[66] * v[45] - v[67] * v[46] - v[68] * v[47] -
+                     v[69] * v[48] - v[70] * v[49] - v[71] * v[50] - v[72] * v[51]) /
+                    v[52];
+            v[74] = (x[10] * x[9] + x[24] * x[23] + x[38] * x[37] + x[52] * x[51] + x[66] * x[65] +
+                     x[80] * x[79] - v[65] * v[54] - v[66] * v[55] - v[67] * v[56] - v[68] * v[57] -
+                     v[69] * v[58] - v[70] * v[59] - v[71] * v[60] - v[72] * v[61] - v[73] * v[62]) /
+                    v[63];
+            v[75] = (
+                0.0001 + x[10] * x[10] + x[24] * x[24] + x[38] * x[38] + x[52] * x[52] + x[66] * x[66] +
+                x[80] * x[80] - v[65] * v[65] - v[66] * v[66] - v[67] * v[67] - v[68] * v[68] -
+                v[69] * v[69] - v[70] * v[70] - v[71] * v[71] - v[72] * v[72] - v[73] * v[73] -
+                v[74] * v[74]).sqrt();
+            v[76] =
+                (x[80] * x[89] + x[66] * x[88] + x[52] * x[87] + x[38] * x[86] + x[24] * x[85] +
+                 x[10] * x[84] - v[65] * v[1] - v[66] * v[4] - v[67] * v[8] - v[68] * v[13] - v[69] * v[19] -
+                 v[70] * v[26] - v[71] * v[34] - v[72] * v[43] - v[73] * v[53] - v[74] * v[64]) /
+                v[75];
+            v[77] = (x[11] * x[0] + x[25] * x[14] + x[39] * x[28] + x[53] * x[42] + x[67] * x[56] +
+                     x[81] * x[70]) /
+                    v[0];
+            v[78] = (x[11] * x[1] + x[25] * x[15] + x[39] * x[29] + x[53] * x[43] + x[67] * x[57] +
+                     x[81] * x[71] - v[77] * v[2]) /
+                    v[3];
+            v[79] = (x[11] * x[2] + x[25] * x[16] + x[39] * x[30] + x[53] * x[44] + x[67] * x[58] +
+                     x[81] * x[72] - v[77] * v[5] - v[78] * v[6]) /
+                    v[7];
+            v[80] = (x[11] * x[3] + x[25] * x[17] + x[39] * x[31] + x[53] * x[45] + x[67] * x[59] +
+                     x[81] * x[73] - v[77] * v[9] - v[78] * v[10] - v[79] * v[11]) /
+                    v[12];
+            v[81] = (x[11] * x[4] + x[25] * x[18] + x[39] * x[32] + x[53] * x[46] + x[67] * x[60] +
+                     x[81] * x[74] - v[77] * v[14] - v[78] * v[15] - v[79] * v[16] - v[80] * v[17]) /
+                    v[18];
+            v[82] = (x[11] * x[5] + x[25] * x[19] + x[39] * x[33] + x[53] * x[47] + x[67] * x[61] +
+                     x[81] * x[75] - v[77] * v[20] - v[78] * v[21] - v[79] * v[22] - v[80] * v[23] -
+                     v[81] * v[24]) /
+                    v[25];
+            v[83] = (x[11] * x[6] + x[25] * x[20] + x[39] * x[34] + x[53] * x[48] + x[67] * x[62] +
+                     x[81] * x[76] - v[77] * v[27] - v[78] * v[28] - v[79] * v[29] - v[80] * v[30] -
+                     v[81] * v[31] - v[82] * v[32]) /
+                    v[33];
+            v[84] = (x[11] * x[7] + x[25] * x[21] + x[39] * x[35] + x[53] * x[49] + x[67] * x[63] +
+                     x[81] * x[77] - v[77] * v[35] - v[78] * v[36] - v[79] * v[37] - v[80] * v[38] -
+                     v[81] * v[39] - v[82] * v[40] - v[83] * v[41]) /
+                    v[42];
+            v[85] = (x[11] * x[8] + x[25] * x[22] + x[39] * x[36] + x[53] * x[50] + x[67] * x[64] +
+                     x[81] * x[78] - v[77] * v[44] - v[78] * v[45] - v[79] * v[46] - v[80] * v[47] -
+                     v[81] * v[48] - v[82] * v[49] - v[83] * v[50] - v[84] * v[51]) /
+                    v[52];
+            v[86] = (x[11] * x[9] + x[25] * x[23] + x[39] * x[37] + x[53] * x[51] + x[67] * x[65] +
+                     x[81] * x[79] - v[77] * v[54] - v[78] * v[55] - v[79] * v[56] - v[80] * v[57] -
+                     v[81] * v[58] - v[82] * v[59] - v[83] * v[60] - v[84] * v[61] - v[85] * v[62]) /
+                    v[63];
+            v[87] = (x[11] * x[10] + x[25] * x[24] + x[39] * x[38] + x[53] * x[52] + x[67] * x[66] +
+                     x[81] * x[80] - v[77] * v[65] - v[78] * v[66] - v[79] * v[67] - v[80] * v[68] -
+                     v[81] * v[69] - v[82] * v[70] - v[83] * v[71] - v[84] * v[72] - v[85] * v[73] -
+                     v[86] * v[74]) /
+                    v[75];
+            v[88] = (
+                0.0001 + x[11] * x[11] + x[25] * x[25] + x[39] * x[39] + x[53] * x[53] + x[67] * x[67] +
+                x[81] * x[81] - v[77] * v[77] - v[78] * v[78] - v[79] * v[79] - v[80] * v[80] -
+                v[81] * v[81] - v[82] * v[82] - v[83] * v[83] - v[84] * v[84] - v[85] * v[85] -
+                v[86] * v[86] - v[87] * v[87]).sqrt();
+            v[89] = (x[81] * x[89] + x[67] * x[88] + x[53] * x[87] + x[39] * x[86] + x[25] * x[85] +
+                     x[11] * x[84] - v[77] * v[1] - v[78] * v[4] - v[79] * v[8] - v[80] * v[13] -
+                     v[81] * v[19] - v[82] * v[26] - v[83] * v[34] - v[84] * v[43] - v[85] * v[53] -
+                     v[86] * v[64] - v[87] * v[76]) /
+                    v[88];
+            v[90] = (x[12] * x[0] + x[26] * x[14] + x[40] * x[28] + x[54] * x[42] + x[68] * x[56] +
+                     x[82] * x[70]) /
+                    v[0];
+            v[91] = (x[12] * x[1] + x[26] * x[15] + x[40] * x[29] + x[54] * x[43] + x[68] * x[57] +
+                     x[82] * x[71] - v[90] * v[2]) /
+                    v[3];
+            v[92] = (x[12] * x[2] + x[26] * x[16] + x[40] * x[30] + x[54] * x[44] + x[68] * x[58] +
+                     x[82] * x[72] - v[90] * v[5] - v[91] * v[6]) /
+                    v[7];
+            v[93] = (x[12] * x[3] + x[26] * x[17] + x[40] * x[31] + x[54] * x[45] + x[68] * x[59] +
+                     x[82] * x[73] - v[90] * v[9] - v[91] * v[10] - v[92] * v[11]) /
+                    v[12];
+            v[94] = (x[12] * x[4] + x[26] * x[18] + x[40] * x[32] + x[54] * x[46] + x[68] * x[60] +
+                     x[82] * x[74] - v[90] * v[14] - v[91] * v[15] - v[92] * v[16] - v[93] * v[17]) /
+                    v[18];
+            v[95] = (x[12] * x[5] + x[26] * x[19] + x[40] * x[33] + x[54] * x[47] + x[68] * x[61] +
+                     x[82] * x[75] - v[90] * v[20] - v[91] * v[21] - v[92] * v[22] - v[93] * v[23] -
+                     v[94] * v[24]) /
+                    v[25];
+            v[96] = (x[12] * x[6] + x[26] * x[20] + x[40] * x[34] + x[54] * x[48] + x[68] * x[62] +
+                     x[82] * x[76] - v[90] * v[27] - v[91] * v[28] - v[92] * v[29] - v[93] * v[30] -
+                     v[94] * v[31] - v[95] * v[32]) /
+                    v[33];
+            v[97] = (x[12] * x[7] + x[26] * x[21] + x[40] * x[35] + x[54] * x[49] + x[68] * x[63] +
+                     x[82] * x[77] - v[90] * v[35] - v[91] * v[36] - v[92] * v[37] - v[93] * v[38] -
+                     v[94] * v[39] - v[95] * v[40] - v[96] * v[41]) /
+                    v[42];
+            v[98] = (x[12] * x[8] + x[26] * x[22] + x[40] * x[36] + x[54] * x[50] + x[68] * x[64] +
+                     x[82] * x[78] - v[90] * v[44] - v[91] * v[45] - v[92] * v[46] - v[93] * v[47] -
+                     v[94] * v[48] - v[95] * v[49] - v[96] * v[50] - v[97] * v[51]) /
+                    v[52];
+            v[99] = (x[12] * x[9] + x[26] * x[23] + x[40] * x[37] + x[54] * x[51] + x[68] * x[65] +
+                     x[82] * x[79] - v[90] * v[54] - v[91] * v[55] - v[92] * v[56] - v[93] * v[57] -
+                     v[94] * v[58] - v[95] * v[59] - v[96] * v[60] - v[97] * v[61] - v[98] * v[62]) /
+                    v[63];
+            v[100] = (x[12] * x[10] + x[26] * x[24] + x[40] * x[38] + x[54] * x[52] + x[68] * x[66] +
+                      x[82] * x[80] - v[90] * v[65] - v[91] * v[66] - v[92] * v[67] - v[93] * v[68] -
+                      v[94] * v[69] - v[95] * v[70] - v[96] * v[71] - v[97] * v[72] - v[98] * v[73] -
+                      v[99] * v[74]) /
+                     v[75];
+            v[101] = (x[12] * x[11] + x[26] * x[25] + x[40] * x[39] + x[54] * x[53] + x[68] * x[67] +
+                      x[82] * x[81] - v[90] * v[77] - v[91] * v[78] - v[92] * v[79] - v[93] * v[80] -
+                      v[94] * v[81] - v[95] * v[82] - v[96] * v[83] - v[97] * v[84] - v[98] * v[85] -
+                      v[99] * v[86] - v[100] * v[87]) /
+                     v[88];
+            v[102] = (
+                0.0001 + x[12] * x[12] + x[26] * x[26] + x[40] * x[40] + x[54] * x[54] + x[68] * x[68] +
+                x[82] * x[82] - v[90] * v[90] - v[91] * v[91] - v[92] * v[92] - v[93] * v[93] -
+                v[94] * v[94] - v[95] * v[95] - v[96] * v[96] - v[97] * v[97] - v[98] * v[98] -
+                v[99] * v[99] - v[100] * v[100] - v[101] * v[101]).sqrt();
+            v[103] = (x[82] * x[89] + x[68] * x[88] + x[54] * x[87] + x[40] * x[86] + x[26] * x[85] +
+                      x[12] * x[84] - v[90] * v[1] - v[91] * v[4] - v[92] * v[8] - v[93] * v[13] -
+                      v[94] * v[19] - v[95] * v[26] - v[96] * v[34] - v[97] * v[43] - v[98] * v[53] -
+                      v[99] * v[64] - v[100] * v[76] - v[101] * v[89]) /
+                     v[102];
+            v[104] = (x[13] * x[0] + x[27] * x[14] + x[41] * x[28] + x[55] * x[42] + x[69] * x[56] +
+                      x[83] * x[70]) /
+                     v[0];
+            v[105] = (x[13] * x[1] + x[27] * x[15] + x[41] * x[29] + x[55] * x[43] + x[69] * x[57] +
+                      x[83] * x[71] - v[104] * v[2]) /
+                     v[3];
+            v[106] = (x[13] * x[2] + x[27] * x[16] + x[41] * x[30] + x[55] * x[44] + x[69] * x[58] +
+                      x[83] * x[72] - v[104] * v[5] - v[105] * v[6]) /
+                     v[7];
+            v[107] = (x[13] * x[3] + x[27] * x[17] + x[41] * x[31] + x[55] * x[45] + x[69] * x[59] +
+                      x[83] * x[73] - v[104] * v[9] - v[105] * v[10] - v[106] * v[11]) /
+                     v[12];
+            v[108] = (x[13] * x[4] + x[27] * x[18] + x[41] * x[32] + x[55] * x[46] + x[69] * x[60] +
+                      x[83] * x[74] - v[104] * v[14] - v[105] * v[15] - v[106] * v[16] - v[107] * v[17]) /
+                     v[18];
+            v[109] = (x[13] * x[5] + x[27] * x[19] + x[41] * x[33] + x[55] * x[47] + x[69] * x[61] +
+                      x[83] * x[75] - v[104] * v[20] - v[105] * v[21] - v[106] * v[22] - v[107] * v[23] -
+                      v[108] * v[24]) /
+                     v[25];
+            v[110] = (x[13] * x[6] + x[27] * x[20] + x[41] * x[34] + x[55] * x[48] + x[69] * x[62] +
+                      x[83] * x[76] - v[104] * v[27] - v[105] * v[28] - v[106] * v[29] - v[107] * v[30] -
+                      v[108] * v[31] - v[109] * v[32]) /
+                     v[33];
+            v[111] = (x[13] * x[7] + x[27] * x[21] + x[41] * x[35] + x[55] * x[49] + x[69] * x[63] +
+                      x[83] * x[77] - v[104] * v[35] - v[105] * v[36] - v[106] * v[37] - v[107] * v[38] -
+                      v[108] * v[39] - v[109] * v[40] - v[110] * v[41]) /
+                     v[42];
+            v[112] = (x[13] * x[8] + x[27] * x[22] + x[41] * x[36] + x[55] * x[50] + x[69] * x[64] +
+                      x[83] * x[78] - v[104] * v[44] - v[105] * v[45] - v[106] * v[46] - v[107] * v[47] -
+                      v[108] * v[48] - v[109] * v[49] - v[110] * v[50] - v[111] * v[51]) /
+                     v[52];
+            v[113] = (x[13] * x[9] + x[27] * x[23] + x[41] * x[37] + x[55] * x[51] + x[69] * x[65] +
+                      x[83] * x[79] - v[104] * v[54] - v[105] * v[55] - v[106] * v[56] - v[107] * v[57] -
+                      v[108] * v[58] - v[109] * v[59] - v[110] * v[60] - v[111] * v[61] - v[112] * v[62]) /
+                     v[63];
+            v[114] = (x[13] * x[10] + x[27] * x[24] + x[41] * x[38] + x[55] * x[52] + x[69] * x[66] +
+                      x[83] * x[80] - v[104] * v[65] - v[105] * v[66] - v[106] * v[67] - v[107] * v[68] -
+                      v[108] * v[69] - v[109] * v[70] - v[110] * v[71] - v[111] * v[72] - v[112] * v[73] -
+                      v[113] * v[74]) /
+                     v[75];
+            v[115] = (x[13] * x[11] + x[27] * x[25] + x[41] * x[39] + x[55] * x[53] + x[69] * x[67] +
+                      x[83] * x[81] - v[104] * v[77] - v[105] * v[78] - v[106] * v[79] - v[107] * v[80] -
+                      v[108] * v[81] - v[109] * v[82] - v[110] * v[83] - v[111] * v[84] - v[112] * v[85] -
+                      v[113] * v[86] - v[114] * v[87]) /
+                     v[88];
+            v[116] = (x[13] * x[12] + x[27] * x[26] + x[41] * x[40] + x[55] * x[54] + x[69] * x[68] +
+                      x[83] * x[82] - v[104] * v[90] - v[105] * v[91] - v[106] * v[92] - v[107] * v[93] -
+                      v[108] * v[94] - v[109] * v[95] - v[110] * v[96] - v[111] * v[97] - v[112] * v[98] -
+                      v[113] * v[99] - v[114] * v[100] - v[115] * v[101]) /
+                     v[102];
+            v[117] = (
+                0.0001 + x[13] * x[13] + x[27] * x[27] + x[41] * x[41] + x[55] * x[55] + x[69] * x[69] +
+                x[83] * x[83] - v[104] * v[104] - v[105] * v[105] - v[106] * v[106] - v[107] * v[107] -
+                v[108] * v[108] - v[109] * v[109] - v[110] * v[110] - v[111] * v[111] - v[112] * v[112] -
+                v[113] * v[113] - v[114] * v[114] - v[115] * v[115] - v[116] * v[116]).sqrt();
+            y[13] = ((x[83] * x[89] + x[69] * x[88] + x[55] * x[87] + x[41] * x[86] + x[27] * x[85] +
+                      x[13] * x[84] - v[104] * v[1] - v[105] * v[4] - v[106] * v[8] - v[107] * v[13] -
+                      v[108] * v[19] - v[109] * v[26] - v[110] * v[34] - v[111] * v[43] - v[112] * v[53] -
+                      v[113] * v[64] - v[114] * v[76] - v[115] * v[89] - v[116] * v[103]) /
+                     v[117]) /
+                    v[117];
+            y[12] = (v[103] - v[116] * y[13]) / v[102];
+            y[11] = (v[89] - v[101] * y[12] - v[115] * y[13]) / v[88];
+            y[10] = (v[76] - v[87] * y[11] - v[100] * y[12] - v[114] * y[13]) / v[75];
+            y[9] = (v[64] - v[74] * y[10] - v[86] * y[11] - v[99] * y[12] - v[113] * y[13]) / v[63];
+            y[8] = (v[53] - v[62] * y[9] - v[73] * y[10] - v[85] * y[11] - v[98] * y[12] - v[112] * y[13]) /
+                   v[52];
+            y[7] = (v[43] - v[51] * y[8] - v[61] * y[9] - v[72] * y[10] - v[84] * y[11] - v[97] * y[12] -
+                    v[111] * y[13]) /
+                   v[42];
+            y[6] = (v[34] - v[41] * y[7] - v[50] * y[8] - v[60] * y[9] - v[71] * y[10] - v[83] * y[11] -
+                    v[96] * y[12] - v[110] * y[13]) /
                    v[33];
-            y[5] = (v[26] - v[32] * y[6]) / v[25];
-            y[4] = (v[19] - v[24] * y[5] - v[31] * y[6]) / v[18];
-            y[3] = (v[13] - v[17] * y[4] - v[23] * y[5] - v[30] * y[6]) / v[12];
-            y[2] = (v[8] - v[11] * y[3] - v[16] * y[4] - v[22] * y[5] - v[29] * y[6]) / v[7];
-            y[1] = (v[4] - v[6] * y[2] - v[10] * y[3] - v[15] * y[4] - v[21] * y[5] - v[28] * y[6]) / v[3];
+            y[5] = (v[26] - v[32] * y[6] - v[40] * y[7] - v[49] * y[8] - v[59] * y[9] - v[70] * y[10] -
+                    v[82] * y[11] - v[95] * y[12] - v[109] * y[13]) /
+                   v[25];
+            y[4] = (v[19] - v[24] * y[5] - v[31] * y[6] - v[39] * y[7] - v[48] * y[8] - v[58] * y[9] -
+                    v[69] * y[10] - v[81] * y[11] - v[94] * y[12] - v[108] * y[13]) /
+                   v[18];
+            y[3] = (v[13] - v[17] * y[4] - v[23] * y[5] - v[30] * y[6] - v[38] * y[7] - v[47] * y[8] -
+                    v[57] * y[9] - v[68] * y[10] - v[80] * y[11] - v[93] * y[12] - v[107] * y[13]) /
+                   v[12];
+            y[2] = (v[8] - v[11] * y[3] - v[16] * y[4] - v[22] * y[5] - v[29] * y[6] - v[37] * y[7] -
+                    v[46] * y[8] - v[56] * y[9] - v[67] * y[10] - v[79] * y[11] - v[92] * y[12] -
+                    v[106] * y[13]) /
+                   v[7];
+            y[1] = (v[4] - v[6] * y[2] - v[10] * y[3] - v[15] * y[4] - v[21] * y[5] - v[28] * y[6] -
+                    v[36] * y[7] - v[45] * y[8] - v[55] * y[9] - v[66] * y[10] - v[78] * y[11] -
+                    v[91] * y[12] - v[105] * y[13]) /
+                   v[3];
             y[0] = (v[1] - v[2] * y[1] - v[5] * y[2] - v[9] * y[3] - v[14] * y[4] - v[20] * y[5] -
-                    v[27] * y[6]) /
+                    v[27] * y[6] - v[35] * y[7] - v[44] * y[8] - v[54] * y[9] - v[65] * y[10] -
+                    v[77] * y[11] - v[90] * y[12] - v[104] * y[13]) /
                    v[0];
+
 
             return y;
         }
@@ -609,17 +753,6 @@ namespace vamp::planning
             return dist;
         }
 
-        auto projectStepDirect(const ConfigurationBlock &q, ConfigurationBlock &q_new, bool update_q = true)
-        {
-            auto dist = gradient_and_error(q);
-            if (update_q){
-                for(auto i=0U; i < Robot::dimension; i++)
-                    q_new[i] = qproj_err[i];
-            }
-            //     integrateJointConfiguration(q, q_new, grad_err.grad);
-            return dist;
-        }
-
         void integrateJointConfigurationJt(const ConfigurationBlock &q, ConfigurationBlock &q_new, const ConfigurationBlock &grad)
         {
             for (auto i = 0U; i < Robot::dimension; i++)
@@ -643,7 +776,7 @@ namespace vamp::planning
 
             while ((project_iter < 100) and (not dist.test_all_less_equal(0.0001F)))
             {
-                dist = projectStepJt(q_old, q_new, true);
+                dist = projectStep(q_old, q_new, true);
                 auto q_dist = (q_new[0] - q_old[0]) * (q_new[0] - q_old[0]);
                 for (auto i = 1U; i < Robot::dimension; i++)
                     q_dist = q_dist + (q_new[i] - q_old[i]) * (q_new[i] - q_old[i]);
