@@ -33,8 +33,77 @@ inline constexpr auto cos(const DataT &v) -> DataT
 template <typename DataT>
 inline constexpr auto sqrt(const DataT &v) -> DataT
 {
-    return v.sqrt();
+
+    if constexpr (std::is_arithmetic_v<DataT>)
+    {
+        return std::sqrt(v);
+    }
+    else
+    {
+        return v.sqrt();
+    }
+
 }
+
+
+template <typename DataT, typename DataTB>
+inline constexpr auto max(const DataT &x, const DataTB &y) -> DataT
+{
+    return x.max(y);
+}
+
+template <typename DataT, typename DataTB>
+inline constexpr auto min(const DataT &x, const DataTB &y) -> DataT
+{
+    return x.min(y);
+}
+
+template <typename DataA, typename DataB, typename DataC>
+inline constexpr auto blend(const DataA &a, const DataB &b, const DataC &mask ) -> DataC
+{
+    if constexpr (std::is_arithmetic_v<DataC>)
+    {
+        return (mask >=0) ? a:b;
+    }
+    else
+    {
+        DataC a_vec(a);
+        DataC b_vec(b);
+        return a_vec.blend(b_vec, mask);
+    }
+}
+
+template <typename DataT>
+inline constexpr auto asin(const DataT &v) -> DataT
+{
+
+    if constexpr (std::is_arithmetic_v<DataT>)
+    {
+        return std::asin(v);
+    }
+    else
+    {
+        return v.asin();
+    }
+
+}
+
+template <typename DataT>
+inline constexpr auto acos(const DataT &v) -> DataT
+{
+
+    if constexpr (std::is_arithmetic_v<DataT>)
+    {
+        return std::acos(v);
+    }
+    else
+    {
+        return v.acos();
+    }
+
+}
+
+
 
 template <typename DataT>
 inline static auto to_isometry(const DataT *buf) -> Eigen::Transform<DataT, 3, Eigen::Isometry>
@@ -50,21 +119,9 @@ inline static auto to_isometry(const DataT *buf) -> Eigen::Transform<DataT, 3, E
     return out;
 }
 
-template <size_t N, typename DataT>
-inline static auto to_isometries(const DataT *buf) -> std::array<Eigen::Transform<DataT, 3, Eigen::Isometry>, N>
+template <typename DataT>
+inline static auto to_matrix(const DataT *buf, const size_t rows, const size_t cols) -> Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>
 {
-    std::array<Eigen::Transform<DataT, 3, Eigen::Isometry>, N> out;
-
-    for(size_t i=0; i < N; i++)
-    {
-        auto offset = i * 12;
-        const Eigen::Map<const Eigen::Matrix<DataT, 3, 3>> R(&buf[offset + 3]);
-
-        out[i].translation()[0] = buf[offset + 0];
-        out[i].translation()[1] = buf[offset + 1];
-        out[i].translation()[2] = buf[offset + 2];
-        out[i].linear() = R;
-    }
-
+    const Eigen::Map<const Eigen::MatrixXf> out(buf, rows, cols);
     return out;
 }
