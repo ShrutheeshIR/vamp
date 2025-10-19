@@ -11,7 +11,6 @@ option(VAMP_BUILD_CPP_DEMO "Build VAMP C++ Demo Scripts" ON)
 option(VAMP_BUILD_OMPL_DEMO "Build VAMP C++ OMPL Integration Demo Scripts" OFF)
 option(VAMP_OMPL_PATH "Search Path for OMPL Installation - Only Needed for Demo Script" "")
 
-
 if(VAMP_FORCE_CLANG)
   find_program(CLANG "clang")
   find_program(CLANGPP "clang++")
@@ -142,10 +141,14 @@ endif()
 if(VAMP_BUILD_CPP_DEMO)
   add_executable(vamp_rrtc_example scripts/cpp/rrtc_example.cc)
   target_link_libraries(vamp_rrtc_example PRIVATE vamp_cpp)
-  
+
+  add_executable(task_space_constraints_examples scripts/cpp/task_space_constraints_examples.cc)
+  target_link_libraries(task_space_constraints_examples PRIVATE vamp_cpp)
+
   # Disable strict warnings for demos to maintain compatibility
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(vamp_rrtc_example PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
+    target_compile_options(task_space_constraints_examples PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
   endif()
 endif()
 
