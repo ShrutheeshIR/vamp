@@ -33,7 +33,7 @@ namespace vamp::planning
         template <std::size_t dim>
         inline static auto assignBlock(std::array<float, dim> src, vamp::FloatVector<rake, dim> &dest)
         {
-            for (auto i = 0U; i < dim; i++)
+            for (size_t i = 0; i < dim; i++)
             {
                 dest[i] = src[i];
             }
@@ -51,7 +51,7 @@ namespace vamp::planning
             const ConfigurationBlock &gradient,
             float alpha = 1.0)
         {
-            for (auto i = 0U; i < Robot::dimension; i++)
+            for (size_t i = 0; i < Robot::dimension; i++)
             {
                 q_new[i] = q[i] - gradient[i] * alpha;
             }
@@ -63,8 +63,8 @@ namespace vamp::planning
         virtual vamp::FloatVector<rake, 1> projectStep(
             const ConfigurationBlock &q,
             ConfigurationBlock &q_new,
-            bool update_q = true,
-            ProjMethod projection_method = ProjMethod::InnerLM) = 0;
+            ProjMethod projection_method = ProjMethod::InnerLM,
+            bool update_q = true) = 0;
 
         bool projectConfiguration(
             const ConfigurationBlock &q,
@@ -87,7 +87,7 @@ namespace vamp::planning
             auto dist = distanceToConstraint(q);
 
             size_t project_iter = 0;
-            for (auto i = 0U; i < Robot::dimension; i++)
+            for (size_t i = 0; i < Robot::dimension; i++)
             {
                 q_new[i] = q[i];
                 q_old[i] = q[i];
@@ -95,7 +95,7 @@ namespace vamp::planning
 
             while ((project_iter < 100) and (not dist.test_all_less_equal(0.0001F)))
             {
-                dist = projectStep(q_old, q_new, true);
+                dist = projectStep(q_old, q_new, projection_method, true);
                 auto q_dist_from_prev = (q_new[0] - q_old[0]) * (q_new[0] - q_old[0]);
                 auto q_dist_from_start = (q_new[0] - q[0]) * (q_new[0] - q[0]);
 
@@ -110,7 +110,7 @@ namespace vamp::planning
                     break;
                 }
 
-                if (q_dist_from_start.test_any_greater_equal(4 * max_q_dist * max_q_dist))  // from triangle
+                if (q_dist_from_prev.test_any_greater_equal(4 * max_q_dist * max_q_dist))  // from triangle
                                                                                             // inequality
                 {
                     break;
@@ -122,6 +122,7 @@ namespace vamp::planning
             {
                 success = true;
             }
+            std::cout << "Num projection steps : " << project_iter << " ";
 
             return success;
         }
@@ -164,7 +165,7 @@ namespace vamp::planning
                 size_t eef_id = (index - Robot::dimension) / size_per_eef;
                 size_t index_e = (index - Robot::dimension) % size_per_eef;
 
-                if (index_e >= 0 && index_e < 7)  // rtE
+                if (index_e < 7)  // rtE
                 {
                     return rTeB[eef_id * 7 + index_e];
                 }
@@ -183,6 +184,8 @@ namespace vamp::planning
                 {
                     return ubB[eef_id * 6 + index_e - (3 * 7 + 6)];
                 }
+                else
+                    return q[0];
             }
         };
 
@@ -232,11 +235,11 @@ namespace vamp::planning
             JacobianProjectInp &
             operator=(vamp::FloatVector<rake, 6 * Robot::n_eef + 6 * Robot::n_eef * Robot::dimension> y)
             {
-                for (auto i = 0U; i < 6 * Robot::n_eef; i++)
+                for (size_t i = 0; i < 6 * Robot::n_eef; i++)
                 {
                     err[i] = y[6 * Robot::n_eef * Robot::dimension + i];
                 }
-                for (auto i = 0U; i < 6 * Robot::n_eef * Robot::dimension; i++)
+                for (size_t i = 0; i < 6 * Robot::n_eef * Robot::dimension; i++)
                 {
                     J[i] = y[i];
                 }
@@ -281,9 +284,21 @@ namespace vamp::planning
             RobotConstraint<Robot, rake>::template assignBlock<6>(bounds.second, tsr_function_inp.ubB);
         }
 
+        auto print_robot_tsr_error(const ConfigurationBlock &q)
+        {
+            auto dist = distanceToConstraint(q);
+            for(auto i=0U; i < 6 * Robot::n_eef * Robot::dimension; i++)
+                std::cout << jac_proj_inp.J[{i, 0}] << " ";
+            std::cout << std::endl;
+            for(auto i=0U; i < 6 * Robot::n_eef; i++)
+                std::cout << jac_proj_inp.err[{i, 0}] << " ";
+            std::cout << std::endl;
+
+        }
+
         vamp::FloatVector<rake, 1> distanceToConstraint(const ConfigurationBlock &q)
         {
-            for (int i = 0U; i < Robot::dimension; i++)
+            for (size_t i = 0; i < Robot::dimension; i++)
             {
                 tsr_function_inp.q[i] = q[i];
             }
@@ -291,14 +306,14 @@ namespace vamp::planning
             Robot::template tsr_error<rake>(tsr_function_inp, jac_proj_inp);
 
             const size_t jac_offset = 6 * Robot::n_eef * Robot::dimension;
-            // for (int i = 0U; i < 6 * Robot::n_eef; i++)
-            // {
-            //     jac_proj_inp[i + jac_offset] =
-            //         (jac_proj_inp[i + jac_offset] - tsr_function_inp.lbB[i]).min(0.F) +
-            //         (jac_proj_inp[i + jac_offset] - tsr_function_inp.ubB[i]).max(0.F);
-            // }
-            auto d = jac_proj_inp.err[0] * jac_proj_inp.err[0];
             for (size_t i = 0; i < 6 * Robot::n_eef; i++)
+            {
+                jac_proj_inp[i + jac_offset] =
+                    (jac_proj_inp[i + jac_offset] - tsr_function_inp.lbB[i]).min(0.F) +
+                    (jac_proj_inp[i + jac_offset] - tsr_function_inp.ubB[i]).max(0.F);
+            }
+            auto d = jac_proj_inp.err[0] * jac_proj_inp.err[0];
+            for (size_t i = 1; i < 6 * Robot::n_eef; i++)
             {
                 d = d + jac_proj_inp.err[i] * jac_proj_inp.err[i];
             }
@@ -309,8 +324,8 @@ namespace vamp::planning
         vamp::FloatVector<rake, 1> projectStep(
             const ConfigurationBlock &q,
             ConfigurationBlock &q_new,
-            bool update_q = true,
-            ProjMethod projection_method = ProjMethod::InnerLM)
+            ProjMethod projection_method = ProjMethod::InnerLM,
+            bool update_q = true)
         {
             auto dist = distanceToConstraint(q);
             if (update_q)
