@@ -10,6 +10,7 @@ option(VAMP_INSTALL_CPP_LIBRARY "Install VAMP C++ library (disable for Python wh
 option(VAMP_BUILD_CPP_DEMO "Build VAMP C++ Demo Scripts" ON)
 option(VAMP_BUILD_OMPL_DEMO "Build VAMP C++ OMPL Integration Demo Scripts" OFF)
 option(VAMP_OMPL_PATH "Search Path for OMPL Installation - Only Needed for Demo Script" "")
+add_compile_options(-w) 
 
 if(VAMP_FORCE_CLANG)
   find_program(CLANG "clang")

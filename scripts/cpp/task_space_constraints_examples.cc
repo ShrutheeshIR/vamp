@@ -82,7 +82,7 @@ auto main(int, char **) -> int
             block[i] = Robot::Configuration(goal).broadcast(i) + delta[del_ind];
 
         start_time = std::chrono::steady_clock::now();
-        // auto dist = task_constraint.distanceToConstraint(block);
+        auto dist = task_constraint.distanceToConstraint(block);
         // std::cout << "Dist to constraint" << "->" << vamp::utils::get_elapsed_nanoseconds(start_time) << std::endl;
         // std::cout << "From block : " << dist << std::endl;
         // task_constraint.print_robot_tsr_error(block);
@@ -91,38 +91,38 @@ auto main(int, char **) -> int
         bool success;
 
 
-        // std::cout << "Output of project step inner" << std::endl;
-        // start_time = std::chrono::steady_clock::now();
-        // task_constraint.projectStep(block, projected_block);
-        // for(auto i=0U; i < Robot::dimension; i++)
-        //     std::cout << projected_block[{i, 0}] << " ";
-        // std::cout << "->" << vamp::utils::get_elapsed_nanoseconds(start_time) << std::endl;
-
-        // std::cout << "Output of project step outer" << std::endl;
-        // start_time = std::chrono::steady_clock::now();
-        // task_constraint.projectStep(block, projected_block, vamp::planning::ProjMethod::OuterLM);
-        // for(auto i=0U; i < Robot::dimension; i++)
-        //     std::cout << projected_block[{i, 0}] << " ";
-        // std::cout << "->" << vamp::utils::get_elapsed_nanoseconds(start_time) << std::endl;
-
-        // std::cout << "Output of project step Jac" << std::endl;
-        // start_time = std::chrono::steady_clock::now();
-        // task_constraint.projectStep(block, projected_block, vamp::planning::ProjMethod::GradDesc);
-        // for(auto i=0U; i < Robot::dimension; i++)
-        //     std::cout << projected_block[{i, 0}] << " ";
-        // std::cout << "->" << vamp::utils::get_elapsed_nanoseconds(start_time) << std::endl;
-
+        std::cout << " Output of project step inner ";
         start_time = std::chrono::steady_clock::now();
-        success = task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::OuterLM);
+        task_constraint.projectStep(block, projected_block);
         // for(auto i=0U; i < Robot::dimension; i++)
         //     std::cout << projected_block[{i, 0}] << " ";
-        std::cout << "Outer " << success << "->" << vamp::utils::get_elapsed_nanoseconds(start_time) << " ";
+        std::cout << "->" << vamp::utils::get_elapsed_nanoseconds(start_time);
 
+        std::cout << " Output of project step outer ";
         start_time = std::chrono::steady_clock::now();
-        success = task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM);
+        task_constraint.projectStep(block, projected_block, vamp::planning::ProjMethod::OuterLM);
         // for(auto i=0U; i < Robot::dimension; i++)
         //     std::cout << projected_block[{i, 0}] << " ";
-        std::cout << "Inner " << success << "->" << vamp::utils::get_elapsed_nanoseconds(start_time) << std::endl;
+        std::cout << "->" << vamp::utils::get_elapsed_nanoseconds(start_time);
+
+        std::cout << " Output of project step Jac ";
+        start_time = std::chrono::steady_clock::now();
+        task_constraint.projectStep(block, projected_block, vamp::planning::ProjMethod::GradDesc);
+        // for(auto i=0U; i < Robot::dimension; i++)
+        //     std::cout << projected_block[{i, 0}] << " ";
+        std::cout << "->" << vamp::utils::get_elapsed_nanoseconds(start_time) << std::endl;
+
+        // start_time = std::chrono::steady_clock::now();
+        // success = task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::OuterLM);
+        // // for(auto i=0U; i < Robot::dimension; i++)
+        // //     std::cout << projected_block[{i, 0}] << " ";
+        // std::cout << "Outer " << success << "->" << vamp::utils::get_elapsed_nanoseconds(start_time) << " ";
+
+        // start_time = std::chrono::steady_clock::now();
+        // success = task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM);
+        // // for(auto i=0U; i < Robot::dimension; i++)
+        // //     std::cout << projected_block[{i, 0}] << " ";
+        // std::cout << "Inner " << success << "->" << vamp::utils::get_elapsed_nanoseconds(start_time) << std::endl;
 
         // start_time = std::chrono::steady_clock::now();
         // success = task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::GradDesc);
