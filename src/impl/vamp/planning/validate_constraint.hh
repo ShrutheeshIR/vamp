@@ -100,9 +100,6 @@ namespace vamp::planning
             //     projected_vector.push_back(typename Robot::Configuration(last_projected));
             // }
         }
-        // std::cout << "projected : " <<  typename Robot::Configuration(last_projected) << "from " << start
-        // << block << projected_block << start + vector << std::endl; projected_vector.push_back(typename
-        // Robot::Configuration(last_projected));
         return true;
     }
 
