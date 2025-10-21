@@ -64,17 +64,18 @@ auto main(int, char **) -> int
     auto result =
         RRTC::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, rng);
 
+    std::cout << std::endl << result.path.size() << std::endl;
     // If successful
     if (result.path.size() > 0)
     {
         // Simplify path with default settings
-        vamp::planning::SimplifySettings simplify_settings;
-        auto simplify_result = vamp::planning::simplify<Robot, rake, Robot::resolution>(
-            result.path, env_v, simplify_settings, rng);
+        // vamp::planning::SimplifySettings simplify_settings;
+        // auto simplify_result = vamp::planning::simplify<Robot, rake, Robot::resolution>(
+        //     result.path, env_v, simplify_settings, rng);
 
         // Output configurations of simplified path
         std::cout << std::fixed << std::setprecision(3);
-        for (const auto &config : simplify_result.path)
+        for (const auto &config : result.path)
         {
             const auto &array = config.to_array();
             for (auto i = 0U; i < Robot::dimension; ++i)

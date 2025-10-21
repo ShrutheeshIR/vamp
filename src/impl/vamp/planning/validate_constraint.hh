@@ -5,7 +5,7 @@
 #include <vamp/utils.hh>
 #include <vamp/vector.hh>
 #include <vamp/collision/environment.hh>
-#include <vamp/planning/task_space_constraints.hh>
+#include <vamp/planning/task_space_constraint.hh>
 #include <vamp/planning/validate.hh>
 
 namespace vamp::planning
@@ -37,13 +37,13 @@ namespace vamp::planning
 
         std::size_t n = std::max(std::ceil(distance / static_cast<float>(rake) * resolution), 1.F);
 
-        bool ableToProject = constraint.project(block, initial_projected_block, distance);
+        bool ableToProject = constraint.projectConfiguration(block, initial_projected_block, ProjMethod::InnerLM, distance);
         if (not ableToProject)
         {
             return ableToProject;
         }
 
-        bool valid = (environment.attachments) ?
+        bool valid = (environment.eef_attachments.size()) ?
                          Robot::template fkcc_attach<rake>(environment, initial_projected_block) :
                          Robot::template fkcc<rake>(environment, initial_projected_block);
 
@@ -81,7 +81,7 @@ namespace vamp::planning
                 initial_projected_block[j] = initial_projected_block[j] - backstep.broadcast(j);
             }
 
-            if (not constraint.project(initial_projected_block, projected_block, q_dist))
+            if (not constraint.projectConfiguration(initial_projected_block, projected_block, ProjMethod::InnerLM, q_dist))
             {
                 return false;
             }
@@ -113,6 +113,6 @@ namespace vamp::planning
     {
         auto vector = goal - start;
         return project_constraint_vector<Robot, rake, resolution>(
-            start, vector, vector.l2_norm(), projected_vector, constraint);
+            start, vector, vector.l2_norm(), projected_vector, constraint, environment);
     }
 }  // namespace vamp::planning

@@ -5,7 +5,7 @@
 #include <vamp/collision/environment.hh>
 #include <vamp/planning/nn.hh>
 #include <vamp/planning/plan.hh>
-#include <vamp/planning/validate.hh>
+#include <vamp/planning/validate_constraint.hh>
 #include <vamp/planning/rrtc_settings.hh>
 #include <vamp/random/rng.hh>
 #include <vamp/utils.hh>
@@ -14,9 +14,10 @@
 namespace vamp::planning
 {
     template <typename Robot, std::size_t rake, std::size_t resolution>
-    struct RRTC
+    struct CRRTC
     {
         using Configuration = typename Robot::Configuration;
+        using ConfigurationArray = typename Robot::ConfigurationArray;
         static constexpr auto dimension = Robot::dimension;
         using RNG = typename vamp::rng::RNG<Robot>;
 
@@ -25,9 +26,10 @@ namespace vamp::planning
             const Configuration &goal,
             const collision::Environment<FloatVector<rake>> &environment,
             const RRTCSettings &settings,
+            TaskSpaceConstraint<Robot, rake> &constraint,
             typename RNG::Ptr rng) noexcept -> PlanningResult<Robot>
         {
-            return solve(start, std::vector<Configuration>{goal}, environment, settings, rng);
+            return solve(start, std::vector<Configuration>{goal}, environment, settings, constraint, rng);
         }
 
         inline static auto solve(
@@ -35,12 +37,14 @@ namespace vamp::planning
             const std::vector<Configuration> &goals,
             const collision::Environment<FloatVector<rake>> &environment,
             const RRTCSettings &settings,
+            TaskSpaceConstraint<Robot, rake> &constraint,
             typename RNG::Ptr rng) noexcept -> PlanningResult<Robot>
         {
             PlanningResult<Robot> result;
 
             NN<dimension> start_tree;
             NN<dimension> goal_tree;
+            std::vector <Configuration> projected_vector;
 
             constexpr const std::size_t start_index = 0;
 
@@ -59,7 +63,7 @@ namespace vamp::planning
 
             for (const auto &goal : goals)
             {
-                if (validate_motion<Robot, rake, resolution>(start, goal, environment))
+                if (project_constraint_motion<Robot, rake, resolution>(start, goal, projected_vector, constraint, environment))
                 {
                     result.path.emplace_back(start);
                     result.path.emplace_back(goal);
@@ -95,8 +99,11 @@ namespace vamp::planning
                 free_index++;
             }
 
-            while (iter++ < settings.max_iterations and free_index < settings.max_samples)
+            bool connected = false;
+            while (iter++ < settings.max_iterations and free_index < settings.max_samples and not connected)
             {
+                // if (iter % 1 == 0)
+                    // std::cout << "Starting iteration : " << iter << ", " << free_index << ", " <<connected << " , " << settings.max_samples << std::endl;
                 float asize = tree_a->size();
                 float bsize = tree_b->size();
                 float ratio = std::abs(asize - bsize) / asize;
@@ -132,95 +139,138 @@ namespace vamp::planning
                 bool reach = nearest_distance < settings.range;
                 auto extension_vector =
                     (reach) ? nearest_vector : nearest_vector * (settings.range / nearest_distance);
-
-                if (validate_vector<Robot, rake, resolution>(
+                if (project_constraint_vector<Robot, rake, resolution>(
                         nearest_configuration,
                         extension_vector,
                         (reach) ? nearest_distance : settings.range,
-                        environment))
+                        projected_vector,
+                        constraint,
+                        environment
+                    ))
+
                 {
-                    float *new_configuration_index = buffer_index(free_index);
-                    auto new_configuration = nearest_configuration + extension_vector;
-                    new_configuration.to_array(new_configuration_index);
-                    tree_a->insert(NNNode<dimension>{free_index, {new_configuration_index}});
 
-                    parents[free_index] = nearest_node.index;
-                    radii[free_index] = std::numeric_limits<float>::max();
+                    float *new_configuration_index;
+                    Configuration new_configuration;
+                    auto parent_index = nearest_node.index;
 
-                    free_index++;
-
-                    if (settings.dynamic_domain and nearest_radius != std::numeric_limits<float>::max())
+                    for(auto proj_vector : projected_vector)
                     {
-                        radii[nearest_node.index] *= (1 + settings.alpha);
-                    }
+                        new_configuration_index = buffer_index(free_index);
+                        new_configuration = proj_vector;
+                        new_configuration.to_array(new_configuration_index);
+                        tree_a->insert(NNNode<dimension>{free_index, {new_configuration_index}});
 
-                    // Extend to goal tree
-                    const auto other_nearest =
-                        tree_b->nearest(NNFloatArray<dimension>{new_configuration_index});
-                    if (not other_nearest)
-                    {
-                        continue;
-                    }
-
-                    const auto &[other_nearest_node, other_nearest_distance] = *other_nearest;
-                    const auto other_nearest_configuration = other_nearest_node.as_vector();
-                    auto other_nearest_vector = other_nearest_configuration - new_configuration;
-
-                    const std::size_t n_extensions = std::ceil(other_nearest_distance / settings.range);
-                    const float increment_length = other_nearest_distance / static_cast<float>(n_extensions);
-                    auto increment = other_nearest_vector * (1.0F / static_cast<float>(n_extensions));
-
-                    std::size_t i_extension = 0;
-                    auto prior = new_configuration;
-                    for (; i_extension < n_extensions and
-                           validate_vector<Robot, rake, resolution>(
-                               prior, increment, increment_length, environment) and
-                           free_index < settings.max_samples;
-                         ++i_extension)
-                    {
-                        auto next = prior + increment;
-                        float *next_index = buffer_index(free_index);
-                        next.to_array(next_index);
-                        tree_a->insert(NNNode<dimension>{free_index, {next_index}});
-                        parents[free_index] = free_index - 1;
+                        parents[free_index] = parent_index;
                         radii[free_index] = std::numeric_limits<float>::max();
 
+
+                        if (settings.dynamic_domain and nearest_radius != std::numeric_limits<float>::max())
+                        {
+                            radii[parent_index] *= (1 + settings.alpha);
+                        }
+
+                        parent_index = free_index;
                         free_index++;
 
-                        prior = next;
                     }
 
-                    if (i_extension == n_extensions)  // connected
-                    {
-                        auto current = free_index - 1;
-                        result.path.emplace_back(buffer_index(current));
-                        while (parents[current] != current)
+
+                    auto prior = new_configuration;
+                    auto prior_index = new_configuration_index;
+
+                    auto counter = 0U;
+
+                    // try to connect to goal directly
+                    while (not connected)
+                    {   
+                        counter++;
+                        // if (counter > 2)
+                        //     break;
+                        // Extend to goal tree
+                        const auto other_nearest =
+                            tree_b->nearest(NNFloatArray<dimension>{prior_index});
+                        if (not other_nearest)
+                            break;
+
+
+                        const auto &[other_nearest_node, other_nearest_distance] = *other_nearest;
+                        const auto other_nearest_configuration = other_nearest_node.as_vector();
+
+                        auto other_nearest_vector = other_nearest_configuration - prior;
+                        bool other_reach = other_nearest_distance < settings.range;
+
+                        auto other_extension_vector =
+                            (other_reach) ? other_nearest_vector : other_nearest_vector * (settings.range / other_nearest_distance);
+
+                        if(not project_constraint_vector<Robot, rake, resolution>(
+                            prior,
+                            other_extension_vector,
+                            (other_reach) ? other_nearest_distance : settings.range,
+                            projected_vector,
+                            constraint,
+                            environment
+                            )
+                        )
                         {
-                            auto parent = parents[current];
-                            result.path.emplace_back(buffer_index(parent));
-                            result.cost += result.path[result.path.size() - 1].distance(
-                                result.path[result.path.size() - 2]);
-                            current = parent;
+                            break;
+                        }
+                        if (free_index >= settings.max_samples)
+                            break;
+
+
+                        float *next_index;
+                        Configuration next;
+
+                        for(auto proj_vector : projected_vector)
+                        {
+                            next_index = buffer_index(free_index);
+                            next = proj_vector;
+                            next.to_array(next_index);
+                            tree_a->insert(NNNode<dimension>{free_index, {next_index}});
+                            parents[free_index] = free_index - 1;
+                            radii[free_index] = std::numeric_limits<float>::max();
+                            free_index++;
                         }
 
-                        std::reverse(result.path.begin(), result.path.end());
-                        current = other_nearest_node.index;
-
-                        while (parents[current] != current)
+                        bool other_reached = (other_nearest_configuration - next).squared_l2_norm() < 0.01;
+                        if (other_reached)  // connected
                         {
-                            auto parent = parents[current];
-                            result.path.emplace_back(buffer_index(parent));
-                            result.cost += result.path[result.path.size() - 1].distance(
-                                result.path[result.path.size() - 2]);
-                            current = parent;
-                        }
+                            auto current = free_index - 1;
+                            result.path.emplace_back(buffer_index(current));
+                            while (parents[current] != current)
+                            {
+                                auto parent = parents[current];
+                                result.path.emplace_back(buffer_index(parent));
+                                result.cost += result.path[result.path.size() - 1].distance(
+                                    result.path[result.path.size() - 2]);
+                                current = parent;
+                            }
 
-                        if (not tree_a_is_start)
-                        {
                             std::reverse(result.path.begin(), result.path.end());
+                            current = other_nearest_node.index;
+
+                            while (parents[current] != current)
+                            {
+                                auto parent = parents[current];
+                                result.path.emplace_back(buffer_index(parent));
+                                result.cost += result.path[result.path.size() - 1].distance(
+                                    result.path[result.path.size() - 2]);
+                                current = parent;
+                            }
+
+                            if (not tree_a_is_start)
+                            {
+                                std::reverse(result.path.begin(), result.path.end());
+                            }
+                            connected = true;
+
+                            break;
                         }
 
-                        break;
+                        prior = next;
+                        prior_index = next_index;
+
                     }
                 }
                 else if (settings.dynamic_domain)
