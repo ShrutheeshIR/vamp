@@ -122,7 +122,7 @@ namespace vamp::planning
             {
                 success = true;
             }
-            std::cout << "Num projection steps : " << project_iter << " ";
+            // std::cout << "Num projection steps : " << project_iter << " ";
 
             return success;
         }

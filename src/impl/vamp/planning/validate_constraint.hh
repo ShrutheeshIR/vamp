@@ -37,7 +37,7 @@ namespace vamp::planning
 
         std::size_t n = std::max(std::ceil(distance / static_cast<float>(rake) * resolution), 1.F);
 
-        bool ableToProject = constraint.projectConfiguration(block, initial_projected_block, ProjMethod::InnerLM, distance);
+        bool ableToProject = constraint.projectConfiguration(block, initial_projected_block, ProjMethod::GradDesc, distance);
         if (not ableToProject)
         {
             return ableToProject;
@@ -48,7 +48,7 @@ namespace vamp::planning
                          Robot::template fkcc<rake>(environment, initial_projected_block);
 
         typename Robot::ConfigurationArray last_projected;
-        for (auto i = rake - 1; i < rake; i++)
+        for (auto i = 0; i < rake; i++)
         {
             for (auto j = 0U; j < Robot::dimension; j++)
             {
@@ -81,7 +81,7 @@ namespace vamp::planning
                 initial_projected_block[j] = initial_projected_block[j] - backstep.broadcast(j);
             }
 
-            if (not constraint.projectConfiguration(initial_projected_block, projected_block, ProjMethod::InnerLM, q_dist))
+            if (not constraint.projectConfiguration(initial_projected_block, projected_block, ProjMethod::GradDesc, q_dist))
             {
                 return false;
             }
