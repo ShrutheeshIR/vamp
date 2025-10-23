@@ -56,6 +56,7 @@ namespace vamp::planning
             }
             projected_vector.push_back(typename Robot::Configuration(last_projected));
         }
+        // std::cout << initial_projected_block << std::endl;
 
         if (not valid or n == 1)
         {
@@ -72,6 +73,7 @@ namespace vamp::planning
         }
 
         n = std::max(std::ceil(q_dist / static_cast<float>(rake) * resolution), 1.F);
+        // std::cout << " N : " << n << " qdist " << q_dist << " res " << resolution << " new vector " << new_vector << std::endl;
         const auto backstep = new_vector / (rake * n);
 
         for (auto i = 1U; i < n; ++i)
@@ -100,6 +102,7 @@ namespace vamp::planning
             //     projected_vector.push_back(typename Robot::Configuration(last_projected));
             // }
         }
+        // std::cout << "projected : " <<  typename Robot::Configuration(last_projected) << "from " << start << "block " <<  block << " proj block " <<  projected_block << " to " <<  start + vector << n << std::endl;
         return true;
     }
 

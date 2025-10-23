@@ -14,8 +14,8 @@ namespace vamp::planning
         bool balance = true;
         float tree_ratio = 1.;
 
-        std::size_t max_iterations = 100000;
-        std::size_t max_samples = 100000;
+        std::size_t max_iterations = 1000000;
+        std::size_t max_samples = 1000000;
         bool start_tree_first = true;
     };
 }  // namespace vamp::planning

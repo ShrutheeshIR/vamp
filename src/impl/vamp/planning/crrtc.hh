@@ -61,20 +61,20 @@ namespace vamp::planning
 
             auto start_time = std::chrono::steady_clock::now();
 
-            for (const auto &goal : goals)
-            {
-                if (project_constraint_motion<Robot, rake, resolution>(start, goal, projected_vector, constraint, environment))
-                {
-                    result.path.emplace_back(start);
-                    result.path.emplace_back(goal);
-                    result.nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
-                    result.iterations = 0;
-                    result.size.emplace_back(1);
-                    result.size.emplace_back(1);
+            // for (const auto &goal : goals)
+            // {
+            //     if (project_constraint_motion<Robot, rake, resolution>(start, goal, projected_vector, constraint, environment))
+            //     {
+            //         result.path.emplace_back(start);
+            //         result.path.emplace_back(goal);
+            //         result.nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
+            //         result.iterations = 0;
+            //         result.size.emplace_back(1);
+            //         result.size.emplace_back(1);
 
-                    return result;
-                }
-            }
+            //         return result;
+            //     }
+            // }
 
             // trees
             bool tree_a_is_start = not settings.start_tree_first;
@@ -185,8 +185,8 @@ namespace vamp::planning
                     while (not connected)
                     {   
                         counter++;
-                        if (counter > 2)
-                            break;
+                        // if (counter > 2)
+                        //     break;
                         // Extend to goal tree
                         const auto other_nearest =
                             tree_b->nearest(NNFloatArray<dimension>{prior_index});
@@ -286,6 +286,7 @@ namespace vamp::planning
                     }
                 }
             }
+            std::cout << "Terminated with  : " << iter << ", " << free_index << ", " <<connected << " , " << settings.max_samples << ", " << tree_a->size() << ", " << tree_b->size() << std::endl;
 
             result.nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
             result.iterations = iter;
