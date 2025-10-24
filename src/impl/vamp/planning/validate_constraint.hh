@@ -18,7 +18,9 @@ namespace vamp::planning
         float distance,
         std::vector<typename Robot::Configuration> &projected_vector,
         TaskSpaceConstraint<Robot, rake> &constraint,
-        const collision::Environment<FloatVector<rake>> &environment) -> bool
+        const collision::Environment<FloatVector<rake>> &environment,
+        ProjMethod projection_method = ProjMethod::GradDesc,
+        float projection_descent_rate = 1.0) -> bool
     {
         projected_vector.clear();
 
@@ -37,7 +39,9 @@ namespace vamp::planning
 
         std::size_t n = std::max(std::ceil(distance / static_cast<float>(rake) * resolution), 1.F);
 
-        bool ableToProject = constraint.projectConfiguration(block, initial_projected_block, ProjMethod::GradDesc, distance);
+        // std::cout << "Proj method " << projection_method << std::endl;
+
+        bool ableToProject = constraint.projectConfiguration(block, initial_projected_block, ProjMethod::GradDesc, distance, projection_descent_rate);
         if (not ableToProject)
         {
             return ableToProject;

@@ -145,7 +145,9 @@ namespace vamp::planning
                         (reach) ? nearest_distance : settings.range,
                         projected_vector,
                         constraint,
-                        environment
+                        environment,
+                        static_cast<ProjMethod>(settings.projection_method),
+                        settings.descend_rate
                     ))
 
                 {
@@ -209,7 +211,9 @@ namespace vamp::planning
                             (other_reach) ? other_nearest_distance : settings.range,
                             projected_vector,
                             constraint,
-                            environment
+                            environment,
+                            static_cast<ProjMethod>(settings.projection_method),
+                            settings.descend_rate
                             )
                         )
                         {
@@ -286,12 +290,12 @@ namespace vamp::planning
                     }
                 }
             }
-            std::cout << "Terminated with  : " << iter << ", " << free_index << ", " <<connected << " , " << settings.max_samples << ", " << tree_a->size() << ", " << tree_b->size() << std::endl;
 
             result.nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
             result.iterations = iter;
             result.size.emplace_back(start_tree.size());
             result.size.emplace_back(goal_tree.size());
+            std::cout << "Terminated with  : " << iter << ", " << free_index << ", " <<connected << " , " << settings.max_samples << ", " << tree_a->size() << ", " << tree_b->size() << ", " << result.iterations << ", " << result.nanoseconds/1e6 << std::endl;
             return result;
         }
     };

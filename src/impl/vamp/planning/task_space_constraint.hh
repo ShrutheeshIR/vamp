@@ -39,11 +39,9 @@ namespace vamp::planning
             }
         }
 
-        // some housekeeping variables predefined for speed
-        ConfigurationBlock q_old;
 
     public:
-        virtual vamp::FloatVector<rake, 1> distanceToConstraint(const ConfigurationBlock &q) = 0;
+        // virtual vamp::FloatVector<rake, 1> distanceToConstraint(const ConfigurationBlock &q) = 0;
 
         void integrateJointConfiguration(
             const ConfigurationBlock &q,
@@ -60,73 +58,12 @@ namespace vamp::planning
             Robot::scale_configuration_block(q_new);
         }
 
-        virtual vamp::FloatVector<rake, 1> projectStep(
-            const ConfigurationBlock &q,
-            ConfigurationBlock &q_new,
-            ProjMethod projection_method = ProjMethod::InnerLM,
-            bool update_q = true) = 0;
+        // virtual vamp::FloatVector<rake, 1> projectStep(
+        //     const ConfigurationBlock &q,
+        //     ConfigurationBlock &q_new,
+        //     ProjMethod projection_method = ProjMethod::InnerLM,
+        //     bool update_q = true) = 0;
 
-        bool projectConfiguration(
-            const ConfigurationBlock &q,
-            ConfigurationBlock &q_new,
-            ProjMethod projection_method = ProjMethod::InnerLM,
-            float max_q_dist = 5.0)
-        {
-            /**
-             * project a configuration block in parallel onto the constraint manifold
-             * @param q - original config
-             * @param q_new - projected config
-             * @param projection_method - something from ProjMethod
-             * @param max_q_dist - break out early if projected config is farther than max_q_dist away from
-             * start
-             *
-             * @return success of projection
-             */
-
-            bool success = false;
-            auto dist = distanceToConstraint(q);
-
-            size_t project_iter = 0;
-            for (size_t i = 0; i < Robot::dimension; i++)
-            {
-                q_new[i] = q[i];
-                q_old[i] = q[i];
-            }
-
-            while ((project_iter < 100) and (not dist.test_all_less_equal(0.0001F)))
-            {
-                dist = projectStep(q_old, q_new, projection_method, true);
-                auto q_dist_from_prev = (q_new[0] - q_old[0]) * (q_new[0] - q_old[0]);
-                auto q_dist_from_start = (q_new[0] - q[0]) * (q_new[0] - q[0]);
-
-                for (auto i = 1U; i < Robot::dimension; i++)
-                {
-                    q_dist_from_prev = q_dist_from_prev + (q_new[i] - q_old[i]) * (q_new[i] - q_old[i]);
-                    q_dist_from_start = q_dist_from_start + (q_new[i] - q[i]) * (q_new[i] - q[i]);
-                }
-
-                if (q_dist_from_prev.test_all_less_equal(0.00001F))  // if i make no forward progress
-                {
-                    break;
-                }
-
-                if (q_dist_from_prev.test_any_greater_equal(4 * max_q_dist * max_q_dist))  // from triangle
-                                                                                            // inequality
-                {
-                    break;
-                }
-                q_old = q_new + 0.0;
-                project_iter += 1;
-            }
-            if (dist.test_all_less_equal(0.0001F))
-            {
-                success = true;
-            }
-            // std::cout << "Num projection steps : " << project_iter << " ";
-            // std::cout << "Num steps : " << project_iter << " and success : " << success << " " << " dist " << dist << " q " << q << " q_new " << q_new << std::endl;
-
-            return success;
-        }
     };
 
     template <typename Robot, std::size_t rake>
@@ -249,6 +186,8 @@ namespace vamp::planning
         };
 
         JacobianProjectInp jac_proj_inp;
+        // some housekeeping variables predefined for speed
+        ConfigurationBlock q_old;
 
     public:
         TaskSpaceConstraint(
@@ -326,7 +265,8 @@ namespace vamp::planning
             const ConfigurationBlock &q,
             ConfigurationBlock &q_new,
             ProjMethod projection_method = ProjMethod::InnerLM,
-            bool update_q = true)
+            bool update_q = true,
+            float alpha = 1.0)
         {
             auto dist = distanceToConstraint(q);
             if (update_q)
@@ -345,10 +285,74 @@ namespace vamp::planning
                 {
                     Robot::template solve_tsr_error_gradient_descent<rake>(jac_proj_inp, grad);
                 }
-                RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad);
+                RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
             }
             return dist;
         }
+        bool projectConfiguration(
+            const ConfigurationBlock &q,
+            ConfigurationBlock &q_new,
+            ProjMethod projection_method = ProjMethod::InnerLM,
+            float max_q_dist = 5.0,
+            float descend_rate = 1.0)
+        {
+            /**
+             * project a configuration block in parallel onto the constraint manifold
+             * @param q - original config
+             * @param q_new - projected config
+             * @param projection_method - something from ProjMethod
+             * @param max_q_dist - break out early if projected config is farther than max_q_dist away from
+             * start
+             *
+             * @return success of projection
+             */
+
+            bool success = false;
+            auto dist = distanceToConstraint(q);
+
+            size_t project_iter = 0;
+            for (size_t i = 0; i < Robot::dimension; i++)
+            {
+                q_new[i] = q[i];
+                q_old[i] = q[i];
+            }
+
+            while ((project_iter < 100) and (not dist.test_all_less_equal(0.0001F)))
+            {
+                dist = projectStep(q_old, q_new, projection_method, true, descend_rate);
+                auto q_dist_from_prev = (q_new[0] - q_old[0]) * (q_new[0] - q_old[0]);
+                auto q_dist_from_start = (q_new[0] - q[0]) * (q_new[0] - q[0]);
+
+                for (auto i = 1U; i < Robot::dimension; i++)
+                {
+                    q_dist_from_prev = q_dist_from_prev + (q_new[i] - q_old[i]) * (q_new[i] - q_old[i]);
+                    q_dist_from_start = q_dist_from_start + (q_new[i] - q[i]) * (q_new[i] - q[i]);
+                }
+
+                if (q_dist_from_prev.test_all_less_equal(0.00001F))  // if i make no forward progress
+                {
+                    break;
+                }
+
+                // if (q_dist_from_prev.test_any_greater_equal(4 * max_q_dist * max_q_dist))  // from triangle
+                //                                                                             // inequality
+                // {
+                //     break;
+                // }
+                q_old = q_new + 0.0;
+                project_iter += 1;
+            }
+            if (dist.test_all_less_equal(0.0001F))
+            {
+                success = true;
+            }
+            // std::cout << "Num projection steps : " << project_iter << " ";
+            // std::cout << "Num steps : " << project_iter << " and success : " << success << " " << " dist " << dist << " q " << q << " q_new " << q_new << std::endl;
+
+            return success;
+        }
+
+
     };
 
 }  // namespace vamp::planning

@@ -67,6 +67,23 @@ static constexpr float radius = 0.15;
 auto main(int, char **) -> int
 {
 
+    // Setup RRTC and plan
+    vamp::planning::RRTCSettings rrtc_settings;
+
+    // float ranges[] = {2.0};
+    float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
+    bool dd[] = {false, true};
+    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};
+
+    float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
+    // float descend_rates[] = {0.75, 1.0};
+    // float descend_rates[] = {1.0};
+    for(const auto range: ranges){
+        for(const auto dyndom: dd){
+            for(const auto &pm: projection_method){
+                for(const auto descent_rate: descend_rates){
+
+                if(pm < 2) continue;
 
     // Build sphere cage environment
     EnvironmentInput environment;
@@ -93,7 +110,7 @@ auto main(int, char **) -> int
             std::cerr << "Error reading line: " << line << std::endl;
             continue;
         }
-        std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
+        // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
         environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x + 0.1, y + 1.0, z + 0.1}, {0.0, 0.0, 0.0}, {dx, dy, dz}));
     }        
     infile.close();
@@ -125,54 +142,59 @@ auto main(int, char **) -> int
     // T <<   -0.537748,    0.711259,     -0.4527,   0.48284483,   0.543885,     0.70293,    0.458344,     -0.6341026,   0.644218, 0.000256485,   -0.764842,    0.34187168,          0,           0,           0,           1;
     // T << 1,  0.000398163,  4.62412e-17, 5.0781602e-01, 0.000398163, -1, -6.92765e-12, 6.1428678e-01, -2.7121e-15,  6.92765e-12, -1, 3.4187165e-01, 0.0, 0.0, 0.0, 1;
     const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
-    std::cout << "Target pose is : " << target_pose.translation().transpose() << std::endl;
+    // std::cout << "Target pose is : " << target_pose.translation().transpose() << std::endl;
     const auto in_hand_pose = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
     vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(in_hand_pose, target_pose, std::make_pair(lower_bound, upper_bound));
 
 
 
-    // Setup RRTC and plan
-    vamp::planning::RRTCSettings rrtc_settings;
-    rrtc_settings.range = 0.5;
+    
+    rrtc_settings.range = range;
     // rrtc_settings.max_iterations = 20000;
-    rrtc_settings.dynamic_domain = false;
-    std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
+    rrtc_settings.dynamic_domain = dyndom;
+    rrtc_settings.projection_method = pm;
+    rrtc_settings.descend_rate = descent_rate;
+    // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
+    std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
     auto result =
         CRRTC::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
-
-    std::cout << result.path.size() << std::endl;
-
-    if (result.path.size() > 0)
-    {
-
-        std::ofstream outfile("trajectory.txt");
-
-
-        // Output configurations of simplified path
-        std::cout << std::fixed << std::setprecision(3);
-        for (const auto &config : result.path)
-        {
-            const auto &array = config.to_array();
-            Robot::ConfigurationArray soln;
-            bool first = true;
-            for (auto i = 0U; i < Robot::dimension; ++i)
-            {
-                // std::cout << array[i] << ", ";
-                soln[i] = array[i];
-
-                if (!first) outfile << ",";
-                outfile << array[i];
-                first = false;
             }
-
-            // auto fka = Robot::eefk(soln);
-            // std::cout <<std::endl << fka.matrix() <<std::endl;
-            // std::cout << std::endl;
-            outfile << "\n";
         }
     }
+    }
+    // std::cout << result.path.size() << std::endl;
 
-    std::cout << "Planner took " << std::setprecision(5) << result.nanoseconds / 1e6 << "ms and " << result.iterations << " steps" << std::endl;
+    // if (result.path.size() > 0)
+    // {
+
+    //     std::ofstream outfile("trajectory.txt");
+
+
+    //     // Output configurations of simplified path
+    //     std::cout << std::fixed << std::setprecision(3);
+    //     for (const auto &config : result.path)
+    //     {
+    //         const auto &array = config.to_array();
+    //         Robot::ConfigurationArray soln;
+    //         bool first = true;
+    //         for (auto i = 0U; i < Robot::dimension; ++i)
+    //         {
+    //             // std::cout << array[i] << ", ";
+    //             soln[i] = array[i];
+
+    //             if (!first) outfile << ",";
+    //             outfile << array[i];
+    //             first = false;
+    //         }
+
+    //         // auto fka = Robot::eefk(soln);
+    //         // std::cout <<std::endl << fka.matrix() <<std::endl;
+    //         // std::cout << std::endl;
+    //         outfile << "\n";
+    //     }
+    // }
+
+    // std::cout << "Planner took " << std::setprecision(5) << result.nanoseconds / 1e6 << "ms and " << result.iterations << " steps" << std::endl;
 
 
 
