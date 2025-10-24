@@ -36,8 +36,8 @@ problem = [
 
 def main(
     obstacle_radius: float = 0.2,
-    attachment_radius: float = 0.07,
-    attachment_offset: float = 0.04,
+    attachment_radius: float = 0.05,
+    attachment_offset: float = 0.02,
     planner: str = "rrtc",
     **kwargs,
 ):
@@ -54,7 +54,14 @@ def main(
     attachment2 = vamp.Attachment(tf)
 
     # Add a single sphere to the attachment - spheres are added in the attachment's local frame
-    attachment.add_spheres([vamp.Sphere([0, 0, 0], attachment_radius)])
+    attachment.add_spheres(
+        [
+            vamp.Sphere([0, 0, 0], 0.05),
+            vamp.Sphere([0.0, 0, 0.1], 0.05),
+            vamp.Sphere([0.0, 0, 0.2], 0.05),
+            vamp.Sphere([0.0, 0, 0.3], 0.05),
+        ]
+    )
     attachment2.add_spheres([vamp.Sphere([0, 0, 0], attachment_radius)])
 
     robot_dir = Path(__file__).parents[1] / "resources" / "panda"
@@ -75,11 +82,24 @@ def main(
     e.attach(attachment2, 1)
 
     # Add attachment sphere to visualization
-    attachment_sph = add_spheres(
-        server,
-        np.zeros((2, 3)),
-        np.array([attachment_radius] * 2),
-        colors=[[0, 255, 0], [0, 0, 255]],
+    attachment_sph_groups = []
+    attachment_sph_groups.append(
+        add_spheres(
+            server,
+            np.array([[0, 0, 0], [0.0, 0, 0.1], [0.0, 0, 0.2], [0.0, 0, 0.3]]),
+            [attachment_radius] * 4,
+            colors=[[0, 255, 0], [0, 255, 0], [0, 255, 0], [0, 255, 0]],
+            prefix="attach1",
+        )
+    )
+    attachment_sph_groups.append(
+        add_spheres(
+            server,
+            np.array([[0, 0, 0]]),
+            [attachment_radius] * 1,
+            colors=[[0, 0, 255]],
+            prefix="attach2",
+        )
     )
 
     # Update attachment sphere positions corresponding to the waypoints.
@@ -87,12 +107,10 @@ def main(
     def get_attachment_pos(configuration):
         for idx, attach in enumerate([attachment, attachment2]):
             attach.set_ee_pose(vamp_module.eefk(configuration)[idx])
-        return np.array(
-            [
-                attachment.posed_spheres[0].position,
-                attachment2.posed_spheres[0].position,
-            ]
-        )
+        return [
+            np.array([sph.position for sph in attachment.posed_spheres]),
+            np.array([sph.position for sph in attachment2.posed_spheres]),
+        ]
 
     # Plan and display
     sampler = vamp_module.halton()
@@ -101,9 +119,10 @@ def main(
     simple.path.interpolate_to_resolution(vamp.panda.resolution())
 
     attachment_positions = [get_attachment_pos(pos) for pos in simple.path.numpy()]
+    print(attachment_positions)
 
     add_trajectory(
-        server, simple.path.numpy(), robot, attachment_sph, attachment_positions
+        server, simple.path.numpy(), robot, attachment_sph_groups, attachment_positions
     )
 
     # display
