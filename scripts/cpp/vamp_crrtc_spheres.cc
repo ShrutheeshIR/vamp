@@ -116,10 +116,10 @@ auto main(int, char **) -> int
 
 
     std::array<float, 6> lower_bound = {
-        -10.01, -10.01, -0.03, -0.1, -0.1, -3.14
+        -0.01, -10.01, -0.03, -0.1, -0.1, -3.14
     };
     std::array<float, 6> upper_bound = {
-        10.03, 10.01, 0.03, 0.1, 0.1, 3.14
+        0.03, 10.01, 0.03, 0.1, 0.1, 3.14
     };
 
     Eigen::Matrix<float, 4, 4> T;

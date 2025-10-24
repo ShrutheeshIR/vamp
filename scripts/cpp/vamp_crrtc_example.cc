@@ -63,6 +63,21 @@ static const std::vector<std::array<float, 3>> problem = {
 // Radius for obstacle spheres
 static constexpr float radius = 0.15;
 
+struct Attempt {
+    float range;
+    bool dynamic_domain;
+    vamp::planning::ProjMethod proj_method;
+    float descend_rate;
+    bool success;
+    std::size_t planning_time;
+    std::size_t planning_iterations;
+    std::size_t path_length;
+    
+    bool operator<(const Attempt& other) const {
+        return planning_time < other.planning_time;
+    }
+};
+
 
 auto main(int, char **) -> int
 {
@@ -70,20 +85,21 @@ auto main(int, char **) -> int
     // Setup RRTC and plan
     vamp::planning::RRTCSettings rrtc_settings;
 
-    // float ranges[] = {2.0};
-    float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
+    float ranges[] = {1.0};
+    // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     bool dd[] = {false, true};
     vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};
 
-    float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
+    // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
     // float descend_rates[] = {0.75, 1.0};
-    // float descend_rates[] = {1.0};
+    float descend_rates[] = {1.0};
+    std::vector<Attempt> succ_attempts;
     for(const auto range: ranges){
         for(const auto dyndom: dd){
             for(const auto &pm: projection_method){
                 for(const auto descent_rate: descend_rates){
 
-                if(pm < 2) continue;
+                // if(pm < 2) continue;
 
     // Build sphere cage environment
     EnvironmentInput environment;
@@ -150,7 +166,7 @@ auto main(int, char **) -> int
 
     
     rrtc_settings.range = range;
-    // rrtc_settings.max_iterations = 20000;
+    rrtc_settings.max_iterations = 1000000;
     rrtc_settings.dynamic_domain = dyndom;
     rrtc_settings.projection_method = pm;
     rrtc_settings.descend_rate = descent_rate;
@@ -158,43 +174,67 @@ auto main(int, char **) -> int
     std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
     auto result =
         CRRTC::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
+
+    if(result.path.size() > 0)
+    {
+        Attempt a{
+            range,
+            dyndom,
+            pm,
+            descent_rate,
+            true,
+            result.nanoseconds,
+            result.iterations,
+            result.path.size()
+        };
+
+
+        if((succ_attempts.size() == 0) || (succ_attempts.size() > 0 && a < succ_attempts[0])){
+
+        std::cout << "\nPrinting Result!! " << result.path.size() << std::endl;
+        // Output configurations of simplified path
+        std::cout << std::fixed << std::setprecision(3);
+        std::ofstream outfile("/src/trajectory.txt");
+        for (const auto &config : result.path)
+        {
+            const auto &array = config.to_array();
+            Robot::ConfigurationArray soln;
+            bool first = true;
+            for (auto i = 0U; i < Robot::dimension; ++i)
+            {
+                // std::cout << array[i] << ", ";
+                soln[i] = array[i];
+
+                if (!first) outfile << ",";
+                outfile << array[i];
+                first = false;
+            }
+
+            // auto fka = Robot::eefk(soln);
+            // std::cout <<std::endl << fka.matrix() <<std::endl;
+            // std::cout << std::endl;
+            outfile << "\n";
+        }
+        outfile.close();
+    }
+        // std::cin.ignore();
+        succ_attempts.push_back(a);
+        std::sort(succ_attempts.begin(), succ_attempts.end());
+        
+
+
+    }
             }
         }
     }
     }
-    // std::cout << result.path.size() << std::endl;
+    std::cout << "------Final Result --------" << std::endl;
+    std::sort(succ_attempts.rbegin(), succ_attempts.rend());
+    for (const auto &a : succ_attempts) {
+        std::cout << a.range << ", " << a.dynamic_domain << ", " << a.proj_method << ", " << a.descend_rate << ", " << a.planning_time/1e6 << ", " << a.planning_iterations << ", " << a.path_length << std::endl;
 
-    // if (result.path.size() > 0)
-    // {
-
-    //     std::ofstream outfile("trajectory.txt");
-
-
-    //     // Output configurations of simplified path
-    //     std::cout << std::fixed << std::setprecision(3);
-    //     for (const auto &config : result.path)
-    //     {
-    //         const auto &array = config.to_array();
-    //         Robot::ConfigurationArray soln;
-    //         bool first = true;
-    //         for (auto i = 0U; i < Robot::dimension; ++i)
-    //         {
-    //             // std::cout << array[i] << ", ";
-    //             soln[i] = array[i];
-
-    //             if (!first) outfile << ",";
-    //             outfile << array[i];
-    //             first = false;
-    //         }
-
-    //         // auto fka = Robot::eefk(soln);
-    //         // std::cout <<std::endl << fka.matrix() <<std::endl;
-    //         // std::cout << std::endl;
-    //         outfile << "\n";
-    //     }
-    // }
-
-    // std::cout << "Planner took " << std::setprecision(5) << result.nanoseconds / 1e6 << "ms and " << result.iterations << " steps" << std::endl;
+    }
+    std::cout << "---------------------------" << std::endl;
 
 
 
