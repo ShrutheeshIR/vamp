@@ -41,7 +41,7 @@ namespace vamp::planning
 
         // std::cout << "Proj method " << projection_method << std::endl;
 
-        bool ableToProject = constraint.projectConfiguration(block, initial_projected_block, ProjMethod::GradDesc, distance, projection_descent_rate);
+        bool ableToProject = constraint.projectConfiguration(block, initial_projected_block, projection_method, distance, projection_descent_rate);
         if (not ableToProject)
         {
             return ableToProject;
