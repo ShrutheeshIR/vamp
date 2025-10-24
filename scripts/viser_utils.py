@@ -76,5 +76,8 @@ def add_trajectory(server, waypoints, robot, attachment_handles, attachment_posi
         joint_config = waypoints[waypoint_idx]
         robot.update_cfg(joint_config)
 
-        for attach_idx, attachment_handle in enumerate(attachment_handles):
-            attachment_handle.position = attachment_positions[waypoint_idx][attach_idx]
+        for attach_idx_group, attachment_handle_group in enumerate(attachment_handles):
+            for attach_idx, attachment_handle in enumerate(attachment_handle_group):
+                attachment_handle.position = attachment_positions[waypoint_idx][
+                    attach_idx_group
+                ][attach_idx]
