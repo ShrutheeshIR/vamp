@@ -58,15 +58,16 @@ auto main(int, char **) -> int
     auto rng = std::make_shared<vamp::rng::Halton<Robot>>();
 
     std::array<float, 6> lower_bound = {
-        -10.01, -10.01, -0.02, -10.1, -10.1, -3.14
+        -10.01, -10.01, -0.02, -10.1, -10.1, -0.1
     };
     std::array<float, 6> upper_bound = {
-        10.03, 10.01, 0.02, 10.1, 10.1, 3.14
+        10.03, 10.01, 0.02, 10.1, 10.1, 0.1
     };
+
 
     Eigen::Matrix<float, 4, 4> T;
 
-    T << 1,0,0,   0.246,   0,1,0,      0.670,   0,0,1,    0.151 ,          0,           0,           0,           1;
+    T << -1,0,0,   0.246,   0,1,0,      0.670,   0,0,-1,    0.151 ,          0,           0,           0,           1;
 
     const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
     std::cout << "Target pose is : " << target_pose.translation().transpose() << std::endl;
@@ -81,19 +82,19 @@ auto main(int, char **) -> int
     float delta[] = {-1.0, -0.5, -0.3, -0.2, -0.1, 0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.5, 0.1, 0.2, 0.3, 0.5, 1.0};
 
     for(auto del_ind = 0U; del_ind < 17; del_ind++){
+        ;
+        // typename Robot::template ConfigurationBlock<rake> block;
+        // for (auto i = 0U; i < Robot::dimension; ++i)
+        //     block[i] = Robot::Configuration(goal).broadcast(i) + delta[del_ind];
 
-        typename Robot::template ConfigurationBlock<rake> block;
-        for (auto i = 0U; i < Robot::dimension; ++i)
-            block[i] = Robot::Configuration(goal).broadcast(i) + delta[del_ind];
+        // start_time = std::chrono::steady_clock::now();
+        // auto dist = task_constraint.distanceToConstraint(block);
+        // // std::cout << "Dist to constraint" << "->" << vamp::utils::get_elapsed_nanoseconds(start_time);
+        // // std::cout << "From block : " << dist << std::endl;
+        // // task_constraint.print_robot_tsr_error(block);
 
-        start_time = std::chrono::steady_clock::now();
-        auto dist = task_constraint.distanceToConstraint(block);
-        // std::cout << "Dist to constraint" << "->" << vamp::utils::get_elapsed_nanoseconds(start_time);
-        // std::cout << "From block : " << dist << std::endl;
-        // task_constraint.print_robot_tsr_error(block);
-
-        typename Robot::template ConfigurationBlock<rake> projected_block;
-        bool success;
+        // typename Robot::template ConfigurationBlock<rake> projected_block;
+        // bool success;
 
 
         // std::cout << " Output of project step inner ";
@@ -139,6 +140,18 @@ auto main(int, char **) -> int
         // std::cout << success << " " << std::endl;
 
     }
+
+    Robot::ConfigurationArray test = {-0.154247,-1.38187,1.88281,-1.42206,-0.691598,3.52511,1.43219};
+    typename Robot::template ConfigurationBlock<rake> block;
+    for (auto i = 0U; i < Robot::dimension; ++i)
+        block[i] = Robot::Configuration(test).broadcast(i) + 0.0;
+    auto dist = task_constraint.distanceToConstraint(block);
+    // std::cout << "Dist to constraint" << "->" << vamp::utils::get_elapsed_nanoseconds(start_time);
+    std::cout << "From block : " << dist << std::endl;
+    task_constraint.print_robot_tsr_error(block);
+    std::cout << Robot::eefk(test)[0].matrix() << std::endl;
+
+
 
 
     return 0;

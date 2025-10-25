@@ -20,6 +20,7 @@ static constexpr const std::size_t rake = vamp::FloatVectorWidth;
 using EnvironmentInput = vamp::collision::Environment<float>;
 using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution>;
+using AttachmentInput = vamp::collision::Attachment<float>;
 
 // Start and goal configurations
 // static constexpr Robot::ConfigurationArray start = {0., -0.785, 0., -2.356, 0., 1.571, 0.785};
@@ -85,14 +86,14 @@ auto main(int, char **) -> int
     // Setup RRTC and plan
     vamp::planning::RRTCSettings rrtc_settings;
 
-    float ranges[] = {1.0};
+    float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     bool dd[] = {false, true};
-    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};
+    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM};
 
     // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
-    // float descend_rates[] = {0.75, 1.0};
-    float descend_rates[] = {1.0};
+    float descend_rates[] = {0.75, 1.0};
+    // float descend_rates[] = {1.0};
     std::vector<Attempt> succ_attempts;
     for(const auto range: ranges){
         for(const auto dyndom: dd){
@@ -127,23 +128,33 @@ auto main(int, char **) -> int
             continue;
         }
         // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
-        environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x + 0.1, y + 1.0, z + 0.1}, {0.0, 0.0, 0.0}, {dx, dy, dz}));
+        environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x + 0.1, y + 1.0, z + 0.0}, {0.0, 0.0, 0.0}, {dx, dy, dz}));
     }        
     infile.close();
 
 
 
     environment.sort();
+    // attach a stick
+    auto attach_transform = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
+    attach_transform.translation().z() = 0.02;
+    AttachmentInput attachment(attach_transform);
+    // attachment.add_
+    std::vector<vamp::collision::Sphere<float>> spheres = {vamp::collision::Sphere<float>(0.0, 0.0, 0.0, 0.03), vamp::collision::Sphere<float>(0.0, 0.0, 0.05, 0.03), vamp::collision::Sphere<float>(0.0, 0.0, 0.09, 0.03)};
+    attachment.spheres.insert(attachment.spheres.end(), spheres.cbegin(), spheres.cend());
+    environment.attach(attachment, 0);
+
+
     auto env_v = EnvironmentVector(environment);
     // Create RNG for planning
     auto rng = std::make_shared<vamp::rng::Halton<Robot>>();
 
 
     std::array<float, 6> lower_bound = {
-        -10.01, -10.01, -0.02, -10.1, -10.1, -3.14
+        -10.01, -10.01, -0.02, -0.4, -0.4, -10.1
     };
     std::array<float, 6> upper_bound = {
-        10.03, 10.01, 0.02, 10.1, 10.1, 3.14
+        10.03, 10.01, 0.02, 0.4, 0.4, 10.1
     };
 
 
@@ -153,7 +164,7 @@ auto main(int, char **) -> int
     // T <<  0.99086916, -0.13428134,  0.01211568,  0.48284483, -0.13408315, -0.99084246, -0.01591116, -0.6341026,  0.0141413,   0.01414137, -0.9998001,   0.34187168,  0.,          0.,          0.,          1.;
 
     // T <<   1,0,0,   0.48284483,   0,1,0,     -0.6341026,   0,0,1,    0.34187168,          0,           0,           0,           1;
-    T << 1,0,0,   0.246,   0,1,0,      0.670,   0,0,1,    0.151 ,          0,           0,           0,           1;
+    T << -1,0,0,   0.246,   0,1,0,      0.670,   0,0,-1,    0.151 ,          0,           0,           0,           1;
 
     // T <<   -0.537748,    0.711259,     -0.4527,   0.48284483,   0.543885,     0.70293,    0.458344,     -0.6341026,   0.644218, 0.000256485,   -0.764842,    0.34187168,          0,           0,           0,           1;
     // T << 1,  0.000398163,  4.62412e-17, 5.0781602e-01, 0.000398163, -1, -6.92765e-12, 6.1428678e-01, -2.7121e-15,  6.92765e-12, -1, 3.4187165e-01, 0.0, 0.0, 0.0, 1;
@@ -166,7 +177,7 @@ auto main(int, char **) -> int
 
     
     rrtc_settings.range = range;
-    rrtc_settings.max_iterations = 1000000;
+    rrtc_settings.max_iterations = 100000;
     rrtc_settings.dynamic_domain = dyndom;
     rrtc_settings.projection_method = pm;
     rrtc_settings.descend_rate = descent_rate;

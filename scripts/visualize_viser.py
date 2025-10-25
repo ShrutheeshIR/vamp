@@ -119,7 +119,6 @@ def main(
     simple.path.interpolate_to_resolution(vamp.panda.resolution())
 
     attachment_positions = [get_attachment_pos(pos) for pos in simple.path.numpy()]
-    print(attachment_positions)
 
     add_trajectory(
         server, simple.path.numpy(), robot, attachment_sph_groups, attachment_positions

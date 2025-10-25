@@ -227,9 +227,9 @@ namespace vamp::planning
         auto print_robot_tsr_error(const ConfigurationBlock &q)
         {
             auto dist = distanceToConstraint(q);
-            for(auto i=0U; i < 6 * Robot::n_eef * Robot::dimension; i++)
-                std::cout << jac_proj_inp.J[{i, 0}] << " ";
-            std::cout << std::endl;
+            // for(auto i=0U; i < 6 * Robot::n_eef * Robot::dimension; i++)
+            //     std::cout << jac_proj_inp.J[{i, 0}] << " ";
+            // std::cout << std::endl;
             for(auto i=0U; i < 6 * Robot::n_eef; i++)
                 std::cout << jac_proj_inp.err[{i, 0}] << " ";
             std::cout << std::endl;
