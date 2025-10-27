@@ -86,10 +86,12 @@ auto main(int, char **) -> int
     // Setup RRTC and plan
     vamp::planning::RRTCSettings rrtc_settings;
 
-    float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
+    // float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
+    float ranges[] = {0.5, 0.75};
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
-    bool dd[] = {false, true};
-    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM};
+    bool dd[] = {false};
+    // bool dd[] = {false, true};
+    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};
 
     // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
     float descend_rates[] = {0.75, 1.0};
@@ -151,10 +153,10 @@ auto main(int, char **) -> int
 
 
     std::array<float, 6> lower_bound = {
-        -10.01, -10.01, -0.02, -0.4, -0.4, -10.1
+        -10.01, -10.01, -0.01, -0.3, -0.3, -10.1
     };
     std::array<float, 6> upper_bound = {
-        10.03, 10.01, 0.02, 0.4, 0.4, 10.1
+        10.03, 10.01, 0.01, 0.3, 0.3, 10.1
     };
 
 
