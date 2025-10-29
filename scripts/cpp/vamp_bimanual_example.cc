@@ -11,11 +11,11 @@
 #include <vamp/planning/validate_constraint.hh>
 
 // #include <vamp/planning/simplify.hh>
-#include <vamp/robots/panda.hh>
+#include <vamp/robots/bimanual_panda.hh>
 #include <vamp/random/halton.hh>
 #include <fstream>
 
-using Robot = vamp::robots::Panda;
+using Robot = vamp::robots::BimanualPanda;
 static constexpr const std::size_t rake = vamp::FloatVectorWidth;
 using EnvironmentInput = vamp::collision::Environment<float>;
 using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
@@ -23,46 +23,9 @@ using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution>;
 using AttachmentInput = vamp::collision::Attachment<float>;
 
 // Start and goal configurations
-// static constexpr Robot::ConfigurationArray start = {0., -0.785, 0., -2.356, 0., 1.571, 0.785};
-// static constexpr Robot::ConfigurationArray goal = {2.35, 1., 0., -0.8, 0, 2.5, 0.785};
-// static constexpr Robot::ConfigurationArray goal = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
-// static constexpr Robot::ConfigurationArray start = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
+static constexpr Robot::ConfigurationArray start = {-1.3238,  1.358 ,  1.0783, -2.4974,  0.5572,  2.5477, -1.4485, 1.2848,  1.2911, -1.0714, -2.4884, -0.6705,  2.5082,  0.7243 };
+static constexpr Robot::ConfigurationArray goal = {-1.997 ,  0.385 ,  2.1832, -2.0013,  1.3083,  1.8498, -0.7243, 1.2835,  1.3097, -2.0683, -2.1051, -0.1333,  2.4786, -0.7243 };
 
-
-// static constexpr Robot::ConfigurationArray start = {0.99,1.43,-0.05,-0.28,0.33,1.98,1.42};
-static constexpr Robot::ConfigurationArray start = {-0.75,0.21,-0.05,-2.29,-0.32,2.44,1.64};
-static constexpr Robot::ConfigurationArray goal = {1.31,0.67,-0.05,-1.58,-0.32,2.3,-0.81};
-
-// static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
-// static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
-
-
-
-// static constexpr Robot::ConfigurationArray goal = {-0.839708,  0.496555, -0.630832, -0.573204,  0.232247,  1.8259,   -0.467584};
-
-// Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
-static const std::vector<std::array<float, 3>> problem = {
-    // {0.55, 0, 0.25},
-    // {0.55, 0, 0.50},
-    // {0.55, 0, 0.60},
-    // {0.65, 0, 0.50},
-    // {0.75, 0, 0.50},
-    // {0.35, 0.35, 0.25},
-    // {0, 0.55, 0.25},
-    // {-0.55, 0, 0.25},
-    // {-0.35, -0.35, 0.25},
-    // {0, -0.55, 0.25},
-    // {0.35, -0.35, 0.25},
-    // {0.35, 0.35, 0.8},
-    // {0, 0.55, 0.8},
-    // {-0.35, 0.35, 0.8},
-    // {-0.55, 0, 0.8},
-    // {-0.35, -0.35, 0.8},
-    // {0, -0.55, 0.8},
-    // {0.35, -0.35, 0.8},
-};
-// Radius for obstacle spheres
-static constexpr float radius = 0.15;
 
 struct Attempt {
     float range;
@@ -83,18 +46,17 @@ struct Attempt {
 auto main(int, char **) -> int
 {
 
-    // Setup RRTC and plan
     vamp::planning::RRTCSettings rrtc_settings;
 
     // float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
-    float ranges[] = {0.5, 0.75};
-    // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
+    // float ranges[] = {0.5, 0.75};
+    float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     // bool dd[] = {false};
     bool dd[] = {false, true};
     vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};
 
-    // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
-    float descend_rates[] = {0.75, 1.0};
+    float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
+    // float descend_rates[] = {0.75, 1.0};
     // float descend_rates[] = {1.0};
     std::vector<Attempt> succ_attempts;
     for(const auto range: ranges){
@@ -113,38 +75,30 @@ auto main(int, char **) -> int
     //     environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
     // }
     // outfile_sph.close();
-    std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/maze_cuboids.txt");
-    if (!infile.is_open()) {
-        std::cerr << "Failed to open file!" << std::endl;
-        return 1;
-    }
+    // std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/maze_cuboids.txt");
+    // if (!infile.is_open()) {
+    //     std::cerr << "Failed to open file!" << std::endl;
+    //     return 1;
+    // }
 
-    std::string line;
-    while (std::getline(infile, line)) {
-        std::istringstream iss(line);
-        char delim;
-        float x, y, z, dx, dy, dz;
+    // std::string line;
+    // while (std::getline(infile, line)) {
+    //     std::istringstream iss(line);
+    //     char delim;
+    //     float x, y, z, dx, dy, dz;
 
-        if (!(iss >> x >> delim >> y >> delim >> z >> delim >> dx >> delim >> dy >> delim >> dz)) {
-            std::cerr << "Error reading line: " << line << std::endl;
-            continue;
-        }
-        // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
-        environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x + 0.1, y + 1.0, z + 0.11}, {0.0, 0.0, 0.0}, {dx, dy, dz}));
-    }        
-    infile.close();
+    //     if (!(iss >> x >> delim >> y >> delim >> z >> delim >> dx >> delim >> dy >> delim >> dz)) {
+    //         std::cerr << "Error reading line: " << line << std::endl;
+    //         continue;
+    //     }
+    //     // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
+    //     environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x + 0.1, y + 1.0, z + 0.11}, {0.0, 0.0, 0.0}, {dx, dy, dz}));
+    // }        
+    // infile.close();
 
 
 
     environment.sort();
-    // attach a stick
-    auto attach_transform = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
-    attach_transform.translation().z() = 0.02;
-    AttachmentInput attachment(attach_transform);
-    // attachment.add_
-    std::vector<vamp::collision::Sphere<float>> spheres = {vamp::collision::Sphere<float>(0.0, 0.0, 0.0, 0.03), vamp::collision::Sphere<float>(0.0, 0.0, 0.05, 0.03), vamp::collision::Sphere<float>(0.0, 0.0, 0.09, 0.03)};
-    attachment.spheres.insert(attachment.spheres.end(), spheres.cbegin(), spheres.cend());
-    // environment.attach(attachment, 0);
 
 
     auto env_v = EnvironmentVector(environment);
@@ -153,27 +107,18 @@ auto main(int, char **) -> int
 
 
     std::array<float, 6> lower_bound = {
-        -10.01, -10.01, -0.01, -0.3, -0.3, -10.1
+        -0.02, -0.02, -0.02, -0.1, -0.1, -0.1
     };
     std::array<float, 6> upper_bound = {
-        10.03, 10.01, 0.01, 0.3, 0.3, 10.1
+        0.02, 0.02, 0.02, 0.1, 0.1, 0.1
     };
 
 
     // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
     Eigen::Matrix<float, 4, 4> T;
-    // T << 1,  0.000398119,  7.35017e-08,      0.30702,  0.000398119,           -1, -6.92765e-12, -5.94873e-12,  7.35017e-08,  3.61875e-11,           -1,      0.48527,            0,            0,            0,            1;
-    // T <<  0.99086916, -0.13428134,  0.01211568,  0.48284483, -0.13408315, -0.99084246, -0.01591116, -0.6341026,  0.0141413,   0.01414137, -0.9998001,   0.34187168,  0.,          0.,          0.,          1.;
-
-    // T <<   1,0,0,   0.48284483,   0,1,0,     -0.6341026,   0,0,1,    0.34187168,          0,           0,           0,           1;
-    T << -1,0,0,   0.246,   0,1,0,      0.670,   0,0,-1,    0.151 ,          0,           0,           0,           1;
-
-    // T <<   -0.537748,    0.711259,     -0.4527,   0.48284483,   0.543885,     0.70293,    0.458344,     -0.6341026,   0.644218, 0.000256485,   -0.764842,    0.34187168,          0,           0,           0,           1;
-    // T << 1,  0.000398163,  4.62412e-17, 5.0781602e-01, 0.000398163, -1, -6.92765e-12, 6.1428678e-01, -2.7121e-15,  6.92765e-12, -1, 3.4187165e-01, 0.0, 0.0, 0.0, 1;
+    T << -0.719427, 0.694568, 6.59173e-05, -2.2769e-05, 0.694568, 0.719427, -2.26738e-05, -0.000370264, -6.31774e-05, 2.94462e-05, -1, 0.171814, 0, 0, 0, 1;
     const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
-    // std::cout << "Target pose is : " << target_pose.translation().transpose() << std::endl;
-    const auto in_hand_pose = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
-    vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(in_hand_pose, target_pose, std::make_pair(lower_bound, upper_bound));
+    vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> task_constraint(target_pose, std::make_pair(lower_bound, upper_bound));
 
 
 

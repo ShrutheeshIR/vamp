@@ -98721,7 +98721,7 @@ namespace vamp::robots
             }
         }
 
-        hellothere template <std::size_t rake, typename InputVector, typename OutputVector>
+        template <std::size_t rake, typename InputVector, typename OutputVector>
         inline static auto tsr_bimanual_error(const InputVector &x, OutputVector &out)
         {
             std::array<FloatVector<rake, 1>, 270> v;

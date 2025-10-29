@@ -17,7 +17,7 @@ namespace vamp::planning
         const typename Robot::Configuration &vector,
         float distance,
         std::vector<typename Robot::Configuration> &projected_vector,
-        TaskSpaceConstraint<Robot, rake> &constraint,
+        BimanualTaskSpaceConstraint<Robot, rake> &constraint,
         const collision::Environment<FloatVector<rake>> &environment,
         ProjMethod projection_method = ProjMethod::GradDesc,
         float projection_descent_rate = 1.0) -> bool
@@ -115,7 +115,7 @@ namespace vamp::planning
         const typename Robot::Configuration &start,
         const typename Robot::Configuration &goal,
         std::vector<typename Robot::Configuration> &projected_vector,
-        TaskSpaceConstraint<Robot, rake> &constraint,
+        BimanualTaskSpaceConstraint<Robot, rake> &constraint,
         const collision::Environment<FloatVector<rake>> &environment) -> bool
     {
         auto vector = goal - start;
