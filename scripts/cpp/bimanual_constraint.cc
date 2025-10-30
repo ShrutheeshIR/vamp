@@ -56,10 +56,10 @@ auto main(int, char **) -> int
 
 
     std::array<float, 6> lower_bound = {
-        -0.02, -0.02, -0.02, -0.1, -0.1, -0.1
+        -0.00001, -0.00001, -0.00001, -0.00001, -0.00001, -0.00001
     };
     std::array<float, 6> upper_bound = {
-        0.02, 0.02, 0.02, 0.1, 0.1, 0.1
+        0.00001, 0.00001, 0.00001, 0.00001, 0.00001, 0.00001
     };
 
 
@@ -74,7 +74,7 @@ auto main(int, char **) -> int
     for (auto i = 0U; i < Robot::dimension; ++i)
         block[i] = Robot::Configuration(start).broadcast(i) + 0.0;
 
-    task_constraint.print_robot_tsr_error(block);
+    // task_constraint.print_robot_tsr_error(block);
 
     auto fks = Robot::eefk(goal);
     auto err = (fks[0].inverse() * fks[1]).matrix();
@@ -93,10 +93,20 @@ auto main(int, char **) -> int
     for (auto i = 0U; i < Robot::dimension; ++i)
         block[i] = Robot::Configuration(goal).broadcast(i) + 0.0;
 
-    task_constraint.print_robot_tsr_error(block);
+    // task_constraint.print_robot_tsr_error(block);
 
     fks = Robot::eefk(goal);
     err = (fks[0].inverse() * fks[1]).matrix();
+
+    Robot::ConfigurationArray test = {-1.45844, 1.1634, 1.29928, -2.39818, 0.70742, 2.40812, -1.30366, 1.28454, 1.29482, -1.27078, -2.41174, -0.56306, 2.50228, 0.43458};
+    for (auto i = 0U; i < Robot::dimension; ++i)
+        block[i] = Robot::Configuration(test).broadcast(i);
+
+    task_constraint.print_robot_tsr_error(block);
+    std::cout << "----Projecting ----" << std::endl;
+    typename Robot::template ConfigurationBlock<rake> projected_block;
+    bool success = task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::GradDesc);
+
 
     // std::cout << fks[0].matrix() << std::endl;
     // std::cout << fks[1].matrix() << std::endl;
@@ -118,11 +128,16 @@ auto main(int, char **) -> int
         auto cfg = startc + extension_vector * ext / 10;
         for (auto i = 0U; i < Robot::dimension; ++i)
             block[i] = cfg.broadcast(i) + 0.0;
+
+        for(auto i=0U; i < Robot::dimension; i++)
+            std::cout << block[{i, 0}] << " ";
+        std::cout << " --> " ;
+
         task_constraint.print_robot_tsr_error(block);
 
         typename Robot::template ConfigurationBlock<rake> projected_block;
 
-        bool success = task_constraint.projectConfiguration(block, projected_block);
+        bool success = task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::GradDesc);
         for(auto i=0U; i < Robot::dimension; i++)
             std::cout << projected_block[{i, 0}] << " ";
         std::cout << " --> " << success << " -- ";

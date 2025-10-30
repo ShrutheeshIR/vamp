@@ -499,9 +499,12 @@ namespace vamp::planning
 
 
             auto dist = distanceToConstraint(q);
-            // for(auto i=0U; i < 6 * Robot::n_eef * Robot::dimension; i++)
-            //     std::cout << jac_proj_inp.J[{i, 0}] << " ";
-            // std::cout << std::endl;
+            for(auto i=0U; i < 6 * Robot::dimension; i++){
+                if (i%Robot::dimension == 0)
+                    std::cout << std::endl;
+                std::cout << std::setprecision(5) << jac_proj_inp.J[{i, 0}] << " ";
+            }
+            std::cout << std::endl;
             for(auto i=0U; i < 6; i++)
                 std::cout << jac_proj_inp.err[{i, 0}] << " ";
             std::cout << std::endl;
@@ -519,12 +522,12 @@ namespace vamp::planning
 
 
             const size_t jac_offset = 6 * Robot::dimension;
-            for (size_t i = 0; i < 6; i++)
-            {
-                jac_proj_inp[i + jac_offset] =
-                    (jac_proj_inp[i + jac_offset] - tsr_function_inp.lbB[i]).min(0.F) +
-                    (jac_proj_inp[i + jac_offset] - tsr_function_inp.ubB[i]).max(0.F);
-            }
+            // for (size_t i = 0; i < 6; i++)
+            // {
+            //     jac_proj_inp[i + jac_offset] =
+            //         (jac_proj_inp[i + jac_offset] - tsr_function_inp.lbB[i]).min(0.F) +
+            //         (jac_proj_inp[i + jac_offset] - tsr_function_inp.ubB[i]).max(0.F);
+            // }
             auto d = jac_proj_inp.err[0] * jac_proj_inp.err[0];
             for (size_t i = 1; i < 6; i++)
             {
@@ -548,15 +551,15 @@ namespace vamp::planning
 
                 if (projection_method == ProjMethod::InnerLM)
                 {
-                    Robot::template solve_tsr_error_lm_inner<rake>(jac_proj_inp, grad);
+                    Robot::template solve_tsr_relative_error_lm_inner<rake>(jac_proj_inp, grad);
                 }
                 if (projection_method == ProjMethod::OuterLM)
                 {
-                    Robot::template solve_tsr_error_lm_outer<rake>(jac_proj_inp, grad);
+                    Robot::template solve_tsr_relative_error_lm_outer<rake>(jac_proj_inp, grad);
                 }
                 if (projection_method == ProjMethod::GradDesc)
                 {
-                    Robot::template solve_tsr_error_gradient_descent<rake>(jac_proj_inp, grad);
+                    Robot::template solve_tsr_relative_error_gradient_descent<rake>(jac_proj_inp, grad);
                 }
                 RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
             }
