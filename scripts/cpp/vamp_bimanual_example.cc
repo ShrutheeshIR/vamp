@@ -48,15 +48,15 @@ auto main(int, char **) -> int
 
     vamp::planning::RRTCSettings rrtc_settings;
 
-    // float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
+    float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
     // float ranges[] = {0.5, 0.75};
-    float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
+    // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     // bool dd[] = {false};
     bool dd[] = {false, true};
     vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};
 
-    float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
-    // float descend_rates[] = {0.75, 1.0};
+    // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
+    float descend_rates[] = {0.75, 1.0};
     // float descend_rates[] = {1.0};
     std::vector<Attempt> succ_attempts;
     for(const auto range: ranges){
@@ -75,26 +75,26 @@ auto main(int, char **) -> int
     //     environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
     // }
     // outfile_sph.close();
-    // std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/maze_cuboids.txt");
-    // if (!infile.is_open()) {
-    //     std::cerr << "Failed to open file!" << std::endl;
-    //     return 1;
-    // }
+    std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/shelf_drake.txt");
+    if (!infile.is_open()) {
+        std::cerr << "Failed to open file!" << std::endl;
+        return 1;
+    }
 
-    // std::string line;
-    // while (std::getline(infile, line)) {
-    //     std::istringstream iss(line);
-    //     char delim;
-    //     float x, y, z, dx, dy, dz;
+    std::string line;
+    while (std::getline(infile, line)) {
+        std::istringstream iss(line);
+        char delim;
+        float x, y, z, dx, dy, dz;
 
-    //     if (!(iss >> x >> delim >> y >> delim >> z >> delim >> dx >> delim >> dy >> delim >> dz)) {
-    //         std::cerr << "Error reading line: " << line << std::endl;
-    //         continue;
-    //     }
-    //     // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
-    //     environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x + 0.1, y + 1.0, z + 0.11}, {0.0, 0.0, 0.0}, {dx, dy, dz}));
-    // }        
-    // infile.close();
+        if (!(iss >> x >> delim >> y >> delim >> z >> delim >> dx >> delim >> dy >> delim >> dz)) {
+            std::cerr << "Error reading line: " << line << std::endl;
+            continue;
+        }
+        // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
+        environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x, y, z}, {0.0, 0.0, 0.0}, {dx/2, dy/2, dz/2}));
+    }        
+    infile.close();
 
 
 
