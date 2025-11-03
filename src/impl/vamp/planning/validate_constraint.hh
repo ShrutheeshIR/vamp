@@ -8,6 +8,7 @@
 #include <vamp/planning/task_space_constraints.hh>
 #include <vamp/planning/validate.hh>
 #include <chrono>
+#include <iomanip>
 
 
 using namespace std::chrono;
@@ -55,9 +56,12 @@ namespace vamp::planning
 
         bool ableToProject = constraint.project(block, initial_projected_block, distance);
         auto t5 = high_resolution_clock::now();
-        if (not ableToProject)
+        if (not ableToProject) {
+            std::cout << "NOT ABLE TO PROJECT??? BAD SIGN\n";
             return ableToProject;
+        }
         profiler.step5_times.push_back(duration<double, micro>(t5 - t4).count());
+        profiler.type_of_call_to_project.push_back(0);
 
 
 
@@ -98,6 +102,12 @@ namespace vamp::planning
         const auto backstep = new_vector / (rake * n);
         auto t10 = high_resolution_clock::now();
         profiler.step10_times.push_back(duration<double, micro>(t10 - t9).count());
+        //std::cout << new_vector << "\n";
+        //std::cout << vector;
+        std::cout << "\nabove shows new vector, then vector\n";
+        std::cout << "inside of validate_constraint.hh, n is "<<n << "\n";
+        std::cout << "to calculate n, qdist of " << std::setprecision(15) << q_dist << " was used, rake of " << std::setprecision(15) << static_cast<float>(rake) << " was used \n";
+        std::cout << "result was this before ceiling operation:" << std::setprecision(15) << (q_dist / static_cast<float>(rake) * resolution) << "\n";
 
         for (auto i = 1U; i < n; ++i)
         {
@@ -112,6 +122,7 @@ namespace vamp::planning
 
             auto t13 = high_resolution_clock::now();
             profiler.step13_times.push_back(duration<double, micro>(t13 - t12).count());
+            profiler.type_of_call_to_project.push_back(1);
             if (not Robot::template fkcc<rake>(environment, projected_block))
                 return false;
             auto t14 = high_resolution_clock::now();

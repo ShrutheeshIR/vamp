@@ -21,20 +21,21 @@ using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution>;
 
 // Start and goal configurations
-// static constexpr Robot::ConfigurationArray start = {0., -0.785, 0., -2.356, 0., 1.571, 0.785};
-// static constexpr Robot::ConfigurationArray goal = {2.35, 1., 0., -0.8, 0, 2.5, 0.785};
+static constexpr Robot::ConfigurationArray start = {0., -0.785, 0., -2.356, 0., 1.571, 0.785};
+static constexpr Robot::ConfigurationArray goal = {2.35, 1., 0., -0.8, 0, 2.5, 0.785};
 // static constexpr Robot::ConfigurationArray goal = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
 // static constexpr Robot::ConfigurationArray start = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
 
-static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
-static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
+//The following pair will have straight forward motion, rrtc terminates early
+//static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
+//static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
 
 
 
 // static constexpr Robot::ConfigurationArray goal = {-0.839708,  0.496555, -0.630832, -0.573204,  0.232247,  1.8259,   -0.467584};
 
 // Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
-static const std::vector<std::array<float, 3>> problem = {
+/*static const std::vector<std::array<float, 3>> problem = {
     // {0.55, 0, 0.25},
     // {0.55, 0, 0.50},
     // {0.35, 0.35, 0.25},
@@ -50,9 +51,26 @@ static const std::vector<std::array<float, 3>> problem = {
     {-0.35, -0.35, 0.8},
     {0, -0.55, 0.8},
     {0.35, -0.35, 0.8},
+};*/
+
+static const std::vector<std::array<float, 3>> problem = {
+    {0.55, 0, 0.25},
+    {0.35, 0.35, 0.25},
+    {0, 0.55, 0.25},
+    {-0.55, 0, 0.25},
+    {-0.35, -0.35, 0.25},
+    {0, -0.55, 0.25},
+    {0.35, -0.35, 0.25},
+    {0.35, 0.35, 0.8},
+    {0, 0.55, 0.8},
+    {-0.35, 0.35, 0.8},
+    {-0.55, 0, 0.8},
+    {-0.35, -0.35, 0.8},
+    {0, -0.55, 0.8},
+    {0.35, -0.35, 0.8},
 };
 // Radius for obstacle spheres
-static constexpr float radius = 0.15;
+static constexpr float radius = 0.1;
 
 
 auto main(int, char **) -> int
@@ -71,12 +89,19 @@ auto main(int, char **) -> int
     // Create RNG for planning
     auto rng = std::make_shared<vamp::rng::Halton<Robot>>();
 
-
+/*
     std::array<float, 6> lower_bound = {
         -0.01, -10.01, -0.03, -0.1, -0.1, -3.14
     };
     std::array<float, 6> upper_bound = {
         0.03, 10.01, 0.03, 0.1, 0.1, 3.14
+    };
+    */
+   std::array<float, 6> lower_bound = {
+        -100.0, -100.0, -100.0, -100.0, -100.0, -100.0
+    };
+    std::array<float, 6> upper_bound = {
+        100.0, 100.0, 100.0, 100.0, 100.0, 100.0
     };
 
 
@@ -110,7 +135,7 @@ auto main(int, char **) -> int
     Robot::ConfigurationArray goal2 = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
     for (auto i = 0U; i < Robot::dimension; ++i)
         block[i] = Robot::Configuration(goal2).broadcast(i) + 0.05;
-    auto dist = task_constraint.distanceToConstraint(block);
+    /*auto dist = task_constraint.distanceToConstraint(block);*/
     // std::cout << "From block : " << dist << std::endl;
 
 
@@ -118,9 +143,9 @@ auto main(int, char **) -> int
     // const Eigen::Vector<float, 6> distance_vec = task_constraint.distanceToConstraint(goal);
     // std::cout << "From single : "<< distance_vec << std::endl;
 
-
+    /*
     bool success = task_constraint.project(block, projected_block);
-    std::cout << success << std::endl;
+    std::cout << success << std::endl;*/
     // std::cout << block << std::endl;
     // std::cout << projected_block << std::endl;
     // std::cout << " printed config " << std::endl;
@@ -161,7 +186,7 @@ auto main(int, char **) -> int
 
     // Setup RRTC and plan
     vamp::planning::RRTCSettings rrtc_settings;
-    rrtc_settings.range = 0.5;
+    rrtc_settings.range = 1.0;
     std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     auto result =
         CRRTC::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);

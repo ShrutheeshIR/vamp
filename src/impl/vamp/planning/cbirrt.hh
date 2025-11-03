@@ -145,7 +145,7 @@ namespace vamp::planning
                 bool reach = nearest_distance < settings.range;
                 auto extension_vector =
                     (reach) ? nearest_vector : nearest_vector * (settings.range / nearest_distance);
-
+                //std::cout << "extension vector is \n";
                 auto t1 = high_resolution_clock::now();
 
                 profiler.setup_before_validate_times.push_back(duration<double, micro>(t1 - t0).count());
@@ -168,7 +168,6 @@ namespace vamp::planning
                     float *new_configuration_index;
                     Configuration new_configuration;
                     auto parent_index = nearest_node.index;
-
                     for(auto proj_vector : projected_vector)
                     {
                         new_configuration_index = buffer_index(free_index);
@@ -199,34 +198,41 @@ namespace vamp::planning
 
 
                     auto counter = 0U;
+                    const auto other_nearest =
+                            tree_b->nearest(NNFloatArray<dimension>{prior_index});
+                    
+                    // This used to be inside the whilee loop. and of other nearest null, break.
+                    if ( other_nearest) {
+                        const auto &[other_nearest_node, other_nearest_distance] = *other_nearest;
+                        const auto other_nearest_configuration = other_nearest_node.as_vector();
+                        std::cout << "other nearest config is " << other_nearest_configuration << "\n";
+                        std::cout << "prior config is " << prior << "\n";
+                        auto other_nearest_vector = other_nearest_configuration - prior;
+                        const std::size_t n_extensions = std::ceil(other_nearest_distance / settings.range);
+                        const float increment_length = other_nearest_distance / static_cast<float>(n_extensions);
+                        bool other_reach = other_nearest_distance < settings.range; //unused now, but used to calculate
+
+                        auto other_extension_vector = other_nearest_vector * (1.0F / static_cast<float>(n_extensions));
+                        std::cout << "connecting vector is " << other_extension_vector << "\n";
+                    
                     while (not connected)
                     {   
                         auto t4 = high_resolution_clock::now();
                         counter++;
-                        if (counter > 2)
-                            break;
+                        //if (counter > 2)
+                           // break;
                         // Extend to goal tree
-                        const auto other_nearest =
-                            tree_b->nearest(NNFloatArray<dimension>{prior_index});
                         if (not other_nearest)
                             break;
 
 
-                        const auto &[other_nearest_node, other_nearest_distance] = *other_nearest;
-                        const auto other_nearest_configuration = other_nearest_node.as_vector();
-
-                        auto other_nearest_vector = other_nearest_configuration - prior;
-                        bool other_reach = other_nearest_distance < settings.range;
-
-                        auto other_extension_vector =
-                            (other_reach) ? other_nearest_vector : other_nearest_vector * (settings.range / other_nearest_distance);
-
+                        
 
                         auto tbp = high_resolution_clock::now();
                         bool extension_successful_project = project_constraint_vector<Robot, rake, resolution>(
                             prior,
                             other_extension_vector,
-                            (other_reach) ? other_nearest_distance : settings.range,
+                            increment_length,
                             projected_vector,
                             constraint,
                             environment
@@ -237,6 +243,7 @@ namespace vamp::planning
                         if(not extension_successful_project
                         )
                         {
+                            std::cout << "Increment stopped since not valid\n";
                             break;
                         }
                         if (free_index >= settings.max_samples)
@@ -260,10 +267,7 @@ namespace vamp::planning
 
                         bool other_reached = (other_nearest_configuration - next).squared_l2_norm() < 0.01;
 
-
-
-
-
+                        std::cout << "COUNT!\n";
                         auto t6 = high_resolution_clock::now();
 
 
@@ -309,6 +313,7 @@ namespace vamp::planning
 
 
 
+                    }
                     }
                     auto t7 = high_resolution_clock::now();
                     profiler.full_extend_times.push_back(duration<double, micro>(t7 - t3).count());

@@ -6,12 +6,14 @@
 #include <vamp/planning/nn.hh>
 #include <vamp/planning/plan.hh>
 #include <vamp/planning/validate.hh>
-#include <vamp/planning/validate_constraint.hh>
+//#include <vamp/planning/validate_constraint.hh>
 #include <vamp/planning/rrtc_settings.hh>
 #include <vamp/random/rng.hh>
 #include <vamp/utils.hh>
 #include <vamp/vector.hh>
-
+#include <chrono>
+using namespace std::chrono;
+using namespace std;
 
 namespace vamp::planning
 {
@@ -61,7 +63,7 @@ namespace vamp::planning
 
             for (const auto &goal : goals)
             {
-                if (validate_motion<Robot, rake, resolution>(start, goal, environment))
+                /*if (validate_motion<Robot, rake, resolution>(start, goal, environment))
                 {
                     result.path.emplace_back(start);
                     result.path.emplace_back(goal);
@@ -69,9 +71,9 @@ namespace vamp::planning
                     result.iterations = 0;
                     result.size.emplace_back(1);
                     result.size.emplace_back(1);
-
+                    cout << "Terminate early because valid motion from start to goal already exists\n";
                     return result;
-                }
+                }*/
             }
 
             // trees
@@ -136,14 +138,15 @@ namespace vamp::planning
                 auto extension_vector =
                     (reach) ? nearest_vector : nearest_vector * (settings.range / nearest_distance);
                 auto t1 = high_resolution_clock::now();
-                profiler.setup_before_validate_times.push_back(duration<double, micro>(t1 - t0).count());
+                profiler_rrtc.setup_before_validate_times.push_back(duration<double, micro>(t1 - t0).count());
+                //std::cout << "extension vector is \n";
                 bool successful_path = validate_vector<Robot, rake, resolution>(
                         nearest_configuration,
                         extension_vector,
                         (reach) ? nearest_distance : settings.range,
                         environment);
                 auto tp = high_resolution_clock::now();
-                profiler.validate_constraint_vector_times.push_back(duration<double, micro>(tp - t1).count());
+                profiler_rrtc.validate_constraint_vector_times.push_back(duration<double, micro>(tp - t1).count());
                 if (successful_path)
                 {
                     auto t2 = high_resolution_clock::now();
@@ -162,7 +165,7 @@ namespace vamp::planning
                         radii[nearest_node.index] *= (1 + settings.alpha);
                     }
                     auto t3 = high_resolution_clock::now();
-                    profiler.insert_projected_to_tree_times.push_back(duration<double, micro>(t3 - t2).count());
+                    profiler_rrtc.insert_projected_to_tree_times.push_back(duration<double, micro>(t3 - t2).count());
                     // Extend to goal tree
                     const auto other_nearest =
                         tree_b->nearest(NNFloatArray<dimension>{new_configuration_index});
@@ -173,12 +176,14 @@ namespace vamp::planning
 
                     const auto &[other_nearest_node, other_nearest_distance] = *other_nearest;
                     const auto other_nearest_configuration = other_nearest_node.as_vector();
+                    std::cout << "other nearest config is " << other_nearest_configuration << "\n";
+                        std::cout << "prior config is " << new_configuration << "\n";
                     auto other_nearest_vector = other_nearest_configuration - new_configuration;
-
+                    std::cout << other_nearest_distance / settings.range << " \n";
                     const std::size_t n_extensions = std::ceil(other_nearest_distance / settings.range);
                     const float increment_length = other_nearest_distance / static_cast<float>(n_extensions);
                     auto increment = other_nearest_vector * (1.0F / static_cast<float>(n_extensions));
-                    
+                    std::cout << "connecting vector is " << increment << "\n";
                     std::size_t i_extension = 0;
                     auto prior = new_configuration;
                     for (; i_extension < n_extensions and
@@ -190,8 +195,10 @@ namespace vamp::planning
                         auto tbp = high_resolution_clock::now();
                         if (!validate_vector<Robot, rake, resolution>(
                                prior, increment, increment_length, environment)) {
+                                std::cout << "Increment stopped since not valid\n";
                                 break;
                                }
+                        std::cout << "Continued!\n";
                         auto tap = high_resolution_clock::now();
                         auto t5 = high_resolution_clock::now();
                         auto next = prior + increment;
@@ -205,8 +212,9 @@ namespace vamp::planning
 
                         prior = next;
                         auto t6 = high_resolution_clock::now();
-                        profiler.validate_extend_constraint_vector_times.push_back(duration<double, micro>(tap - tbp).count());
-                        profiler.insertt_extended_to_tree_times.push_back(duration<double, micro>(t6 - t5).count());
+                        std::cout << "COUNT!\n";
+                        profiler_rrtc.validate_extend_constraint_vector_times.push_back(duration<double, micro>(tap - tbp).count());
+                        profiler_rrtc.insertt_extended_to_tree_times.push_back(duration<double, micro>(t6 - t5).count());
                     }
 
                     if (i_extension == n_extensions)  // connected
@@ -239,10 +247,16 @@ namespace vamp::planning
                             std::reverse(result.path.begin(), result.path.end());
                         }
 
+
+                        auto t7 = high_resolution_clock::now();
+                        profiler_rrtc.full_extend_times.push_back(duration<double, micro>(t7 - t3).count());
+                        auto t8 = high_resolution_clock::now();
+                        profiler_rrtc.one_iteration_times.push_back(duration<double, micro>(t8 - t0).count());
+                        // a bit rdudant, but this makes sure profiler captures last iteration without changing code structure at all
                         break;
                     }
                     auto t7 = high_resolution_clock::now();
-                    profiler.full_extend_times.push_back(duration<double, micro>(t7 - t3).count());
+                    profiler_rrtc.full_extend_times.push_back(duration<double, micro>(t7 - t3).count());
                 }
                 else if (settings.dynamic_domain)
                 {
@@ -258,14 +272,15 @@ namespace vamp::planning
                 }
                 auto t8 = high_resolution_clock::now();
 
-                profiler.one_iteration_times.push_back(duration<double, micro>(t8 - t0).count());
+                profiler_rrtc.one_iteration_times.push_back(duration<double, micro>(t8 - t0).count());
             }
 
             result.nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
             result.iterations = iter;
             result.size.emplace_back(start_tree.size());
             result.size.emplace_back(goal_tree.size());
-            profiler.printReport();
+            profiler_rrtc.printReport();
+            cout << "Report for RRTC done\n";
             return result;
         }
     };

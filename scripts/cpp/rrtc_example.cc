@@ -19,11 +19,13 @@ using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 using RRTC = vamp::planning::RRTC<Robot, rake, Robot::resolution>;
 
 // Start and goal configurations
-// static constexpr Robot::ConfigurationArray start = {0., -0.785, 0., -2.356, 0., 1.571, 0.785};
-// static constexpr Robot::ConfigurationArray goal = {2.35, 1., 0., -0.8, 0, 2.5, 0.785};
+ static constexpr Robot::ConfigurationArray start = {0., -0.785, 0., -2.356, 0., 1.571, 0.785};
+ static constexpr Robot::ConfigurationArray goal = {2.35, 1., 0., -0.8, 0, 2.5, 0.785};
 // static constexpr Robot::ConfigurationArray goal = {-0.92, 1.05, 0, -0.66, 0, 1.73, 0};
-static constexpr Robot::ConfigurationArray goal = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
-static constexpr Robot::ConfigurationArray start = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
+
+//The following pair will have straight forward motion, rrtc terminates early
+//static constexpr Robot::ConfigurationArray goal = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
+//static constexpr Robot::ConfigurationArray start = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
 
 
 // Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
@@ -69,13 +71,13 @@ auto main(int, char **) -> int
     std::cout << fkg.matrix() <<std::endl;
 
     Robot::Configuration vector = Robot::Configuration(std::array<float, 7>{-0.219703, -0.604149, 0.63926, -0.217288, -0.0688434, -0.131945, -0.329724});
-    auto valid = vamp::planning::validate_vector<Robot, rake, Robot::resolution>(
+    /*auto valid = vamp::planning::validate_vector<Robot, rake, Robot::resolution>(
         Robot::Configuration(goal),
         vector,
         0.53F,
         env_v
     );
-    std::cout << "\n\nvalid " << valid << std::endl;
+    std::cout << "\n\nvalid " << valid << std::endl;*/
 
     // Setup RRTC and plan
     vamp::planning::RRTCSettings rrtc_settings;

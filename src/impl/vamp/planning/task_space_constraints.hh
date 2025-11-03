@@ -49,8 +49,46 @@ namespace vamp::planning
         vector<double> copy_function_times;
         vector<double> project_step_times;
         vector<double> full_project_times;
+        vector<double> final_success_check;
         vector<double> copy_old_to_new_times;
+        vector<int> type_of_call_to_project;
         vector<double> q_dist_times;
+        void print_vector(vector<double> v) {
+            for (double i: v)
+                std::cout << i << ' ';
+            std::cout << "\n";
+        }
+        void output_projection_times() const {
+            // Assuming all relevant vectors are the same size
+            size_t n = std::min({distance_function_times.size(),
+                                copy_function_times.size(),
+                                full_project_times.size(),
+                                final_success_check.size(),
+                                type_of_call_to_project.size()});
+            int step5_index = 0;
+            int step13_index = 0;
+
+            for (size_t i = 0; i < n; ++i) {
+                double sum = distance_function_times[i]
+                        + copy_function_times[i]
+                        + full_project_times[i]
+                        + final_success_check[i];
+
+                std::cout << std::fixed << std::setprecision(6)
+                        << "Sum: " << sum << " ";
+
+                int type = type_of_call_to_project[i];
+                if (type == 0 && step5_index < step5_times.size()) {
+                    std::cout << "Step5: " << step5_times[step5_index];
+                    step5_index++;
+                } else if (type != 0 && step13_index < step13_times.size()) {
+                    std::cout << "Step13: " << step13_times[step13_index];
+                    step13_index++;
+                }
+
+                std::cout << "\n";
+            }
+        }
 
         void report(const string& stepName, const vector<double>& times) {
             if (times.empty()) return;
@@ -97,6 +135,17 @@ namespace vamp::planning
             report("Copy old to new", copy_old_to_new_times);
             report("Compute q dist", q_dist_times);
             report("Full project", full_project_times);
+            report("Final Success Check time", final_success_check);
+            std::cout << "type of projection array is " << type_of_call_to_project.size() << "\n";
+            print_vector(step5_times);
+            std::cout << "thisis step5\n";
+            print_vector(step13_times);
+            std::cout << "thisis step13\n";
+            print_vector(step6_times);
+            std::cout << "thisis step6\n";
+            print_vector(step14_times);
+            std::cout << "thisis step14\n";
+            output_projection_times();
 
         }
     };
@@ -764,7 +813,7 @@ namespace vamp::planning
             if (dist.test_all_less_equal(0.0001F))
                 success = true;
 
-            std::cout << "Num steps : " << project_iter << " and success : " << success << std::endl;
+            //std::cout << "Num steps : " << project_iter << " and success : " << success << std::endl;
 
             // Robot::jacobian_eefk(q_new, tsr_distance_inp.wTeqB, jac_proj_inp.J);
             // std::cout << "FK after proj : " << tsr_distance_inp.wTeqB[12] <<", " << tsr_distance_inp.wTeqB[13] <<", " << tsr_distance_inp.wTeqB[14] << std::endl;
@@ -774,7 +823,8 @@ namespace vamp::planning
 
             // std::cout << "dist is : " << dist << std::endl;
             // std::cout << "success is : " << success << std::endl;
-
+            auto t7 = high_resolution_clock::now();
+            profiler.final_success_check.push_back(duration<double, micro>(t7 - t6).count());
             return success;
                 
         }
