@@ -522,12 +522,12 @@ namespace vamp::planning
 
 
             const size_t jac_offset = 6 * Robot::dimension;
-            // for (size_t i = 0; i < 6; i++)
-            // {
-            //     jac_proj_inp[i + jac_offset] =
-            //         (jac_proj_inp[i + jac_offset] - tsr_function_inp.lbB[i]).min(0.F) +
-            //         (jac_proj_inp[i + jac_offset] - tsr_function_inp.ubB[i]).max(0.F);
-            // }
+            for (size_t i = 0; i < 6; i++)
+            {
+                jac_proj_inp[i + jac_offset] =
+                    (jac_proj_inp[i + jac_offset] - tsr_function_inp.lbB[i]).min(0.F) +
+                    (jac_proj_inp[i + jac_offset] - tsr_function_inp.ubB[i]).max(0.F);
+            }
             auto d = jac_proj_inp.err[0] * jac_proj_inp.err[0];
             for (size_t i = 1; i < 6; i++)
             {
