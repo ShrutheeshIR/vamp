@@ -52,7 +52,7 @@ namespace vamp::planning
                          Robot::template fkcc<rake>(environment, initial_projected_block);
 
         typename Robot::ConfigurationArray last_projected;
-        for (auto i = 0; i < rake; i++)
+        for (auto i = rake-1; i < rake; i++)
         {
             for (auto j = 0U; j < Robot::dimension; j++)
             {
@@ -71,7 +71,7 @@ namespace vamp::planning
             typename Robot::Configuration(last_projected) - start;
 
         auto q_dist = new_vector.squared_l2_norm();
-        if (q_dist > 2 * distance)  // projected too far
+        if (q_dist > 2 * distance * distance)  // projected too far
         {
             return false;
         }
@@ -87,7 +87,7 @@ namespace vamp::planning
                 initial_projected_block[j] = initial_projected_block[j] - backstep.broadcast(j);
             }
 
-            if (not constraint.projectConfiguration(initial_projected_block, projected_block, ProjMethod::GradDesc, q_dist))
+            if (not constraint.projectConfiguration(initial_projected_block, projected_block, projection_method, q_dist))
             {
                 return false;
             }

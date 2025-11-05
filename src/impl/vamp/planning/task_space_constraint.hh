@@ -115,12 +115,12 @@ namespace vamp::planning
 
                 else if (index_e >= (2 * 7) && index_e < (2 * 7 + 6))
                 {
-                    return lbB[eef_id * 6 + index_e - (3 * 7)];
+                    return lbB[eef_id * 6 + index_e - (2 * 7)];
                 }
 
                 else if (index_e >= (2 * 7 + 6) && index_e < (2 * 7 + 6 * 2))
                 {
-                    return ubB[eef_id * 6 + index_e - (3 * 7 + 6)];
+                    return ubB[eef_id * 6 + index_e - (2 * 7 + 6)];
                 }
                 else
                     return q[0];

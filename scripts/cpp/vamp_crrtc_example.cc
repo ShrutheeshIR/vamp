@@ -86,11 +86,11 @@ auto main(int, char **) -> int
     // Setup RRTC and plan
     vamp::planning::RRTCSettings rrtc_settings;
 
-    // float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
-    float ranges[] = {0.5, 0.75};
+    float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
+    // float ranges[] = {0.5, 0.75};
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
-    bool dd[] = {false};
-    // bool dd[] = {false, true};
+    // bool dd[] = {false};
+    bool dd[] = {false, true};
     vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};
 
     // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
@@ -130,7 +130,7 @@ auto main(int, char **) -> int
             continue;
         }
         // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
-        environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x + 0.1, y + 1.0, z + 0.0}, {0.0, 0.0, 0.0}, {dx, dy, dz}));
+        environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x + 0.1, y + 1.0, z + 0.1}, {0.0, 0.0, 0.0}, {dx, dy, dz}));
     }        
     infile.close();
 
@@ -144,7 +144,7 @@ auto main(int, char **) -> int
     // attachment.add_
     std::vector<vamp::collision::Sphere<float>> spheres = {vamp::collision::Sphere<float>(0.0, 0.0, 0.0, 0.03), vamp::collision::Sphere<float>(0.0, 0.0, 0.05, 0.03), vamp::collision::Sphere<float>(0.0, 0.0, 0.09, 0.03)};
     attachment.spheres.insert(attachment.spheres.end(), spheres.cbegin(), spheres.cend());
-    environment.attach(attachment, 0);
+    // environment.attach(attachment, 0);
 
 
     auto env_v = EnvironmentVector(environment);
