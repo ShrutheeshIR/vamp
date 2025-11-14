@@ -185,6 +185,43 @@ namespace vamp::planning
             }
         };
 
+
+        struct ErrorAndGrad {
+            ConfigurationBlock grad; // jacobian
+            vamp::FloatVector<rake, 6 * Robot::n_eef> err; // error vector
+
+            auto &operator[](size_t index) {
+                if (index < 6 * Robot::n_eef)
+                    return err[index];
+                else if (index >= 6 * Robot::n_eef && index <= Robot::dimension + 6 * Robot::n_eef)
+                    return grad[index - 6 * Robot::n_eef];
+                else
+                    return grad[0];
+            }
+
+            const auto operator[](size_t index) const {
+                if (index < 6 * Robot::n_eef)
+                    return err[index];
+                else if (index >= 6 * Robot::n_eef && index <= Robot::dimension + 6 * Robot::n_eef)
+                    return grad[index - 6 * Robot::n_eef];
+                else
+                    return grad[0];
+            }
+
+
+            ErrorAndGrad& operator=(vamp::FloatVector<rake, 6 * Robot::n_eef + Robot::dimension> y) {
+                for(auto i=0U; i < 6 * Robot::n_eef; i++)
+                    err[i] = y[i];
+                for(auto i=0U; i < Robot::dimension; i++)
+                    grad[i] = y[i + 6 * Robot::n_eef];
+                return *this;
+            }
+
+
+        };
+        ErrorAndGrad error_and_grad;
+
+
         JacobianProjectInp jac_proj_inp;
         // some housekeeping variables predefined for speed
         ConfigurationBlock q_old;
@@ -289,6 +326,39 @@ namespace vamp::planning
             }
             return dist;
         }
+
+        vamp::FloatVector<rake, 1> projectStepDirect(
+            const ConfigurationBlock &q,
+            ConfigurationBlock &q_new,
+            ProjMethod projection_method = ProjMethod::InnerLM,
+            float alpha = 1.0)
+        {
+            for (size_t i = 0; i < Robot::dimension; i++)
+            {
+                tsr_function_inp.q[i] = q[i];
+            }
+
+            if (projection_method == ProjMethod::InnerLM)
+            {
+                Robot::template compute_and_project_tsr_error_lm_inner<rake>(tsr_function_inp, error_and_grad);
+            }
+            if (projection_method == ProjMethod::OuterLM)
+            {
+                Robot::template compute_and_project_tsr_error_lm_outer<rake>(tsr_function_inp, error_and_grad);
+            }
+            if (projection_method == ProjMethod::GradDesc)
+            {
+                Robot::template compute_and_project_tsr_error_gradient_descent<rake>(tsr_function_inp, error_and_grad);
+            }
+            RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, error_and_grad.grad, alpha);
+            auto d = error_and_grad.err[0] * error_and_grad.err[0];
+            for (size_t i = 1; i < 6 * Robot::n_eef; i++)
+            {
+                d = d + error_and_grad.err[i] * error_and_grad.err[i];
+            }
+            return d;
+        }
+
         bool projectConfiguration(
             const ConfigurationBlock &q,
             ConfigurationBlock &q_new,

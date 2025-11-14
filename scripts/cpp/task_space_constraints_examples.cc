@@ -83,9 +83,9 @@ auto main(int, char **) -> int
 
     for(auto del_ind = 0U; del_ind < 17; del_ind++){
         ;
-        // typename Robot::template ConfigurationBlock<rake> block;
-        // for (auto i = 0U; i < Robot::dimension; ++i)
-        //     block[i] = Robot::Configuration(goal).broadcast(i) + delta[del_ind];
+        typename Robot::template ConfigurationBlock<rake> block;
+        for (auto i = 0U; i < Robot::dimension; ++i)
+            block[i] = Robot::Configuration(goal).broadcast(i) + delta[del_ind];
 
         // start_time = std::chrono::steady_clock::now();
         // auto dist = task_constraint.distanceToConstraint(block);
@@ -93,16 +93,24 @@ auto main(int, char **) -> int
         // // std::cout << "From block : " << dist << std::endl;
         // // task_constraint.print_robot_tsr_error(block);
 
-        // typename Robot::template ConfigurationBlock<rake> projected_block;
+        typename Robot::template ConfigurationBlock<rake> projected_block;
         // bool success;
 
 
         // std::cout << " Output of project step inner ";
-        // start_time = std::chrono::steady_clock::now();
-        // task_constraint.projectStep(block, projected_block);
-        // // for(auto i=0U; i < Robot::dimension; i++)
-        // //     std::cout << projected_block[{i, 0}] << " ";
-        // std::cout << "->" << vamp::utils::get_elapsed_nanoseconds(start_time);
+        start_time = std::chrono::steady_clock::now();
+        task_constraint.projectStep(block, projected_block);
+        for(auto i=0U; i < Robot::dimension; i++)
+            std::cout << projected_block[{i, 0}] << " ";
+        std::cout << "->" << vamp::utils::get_elapsed_nanoseconds(start_time);
+        std::cout << std::endl;
+
+        start_time = std::chrono::steady_clock::now();
+        task_constraint.projectStepDirect(block, projected_block);
+        for(auto i=0U; i < Robot::dimension; i++)
+            std::cout << projected_block[{i, 0}] << " ";
+        std::cout << "->" << vamp::utils::get_elapsed_nanoseconds(start_time);
+        std::cout << std::endl;
 
         // std::cout << " Output of project step outer ";
         // start_time = std::chrono::steady_clock::now();
