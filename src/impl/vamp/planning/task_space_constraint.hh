@@ -631,5 +631,318 @@ namespace vamp::planning
 
     };
 
+    template <typename Robot, std::size_t rake, std::size_t num_polygons>
+    class CoMTaskSpaceConstraint : public RobotConstraint<Robot, rake>
+    {
+        /**
+         */
+    protected:
+        using ConfigurationBlock = typename Robot::ConfigurationBlock<rake>;
+
+
+        struct CoMConstraintInp
+        {
+            vamp::FloatVector<rake, 3> CoM;
+            vamp::FloatVector<rake, 3 * Robot::dimension> com_jacobian;
+
+            vamp::FloatVector<rake, 2 * num_polygons> polygon_points; // arranged as (x1, y1, x2, y2, x3, y3...)
+
+            auto &operator[](size_t index)
+            {
+
+                if (index < 3)
+                    return CoM[index];
+
+                if (index >=3 && index < 3 + 3 * Robot::dimension)  // jacobian
+                    return com_jacobian[index - 3];
+
+                if (index >=3 + 3 * Robot::dimension)  // jacobian
+                    return polygon_points[index - (3 + 3 * Robot::dimension)];
+
+                else
+                    return CoM[0];
+            }
+
+            const auto operator[](size_t index) const
+            {
+                if (index < 3)
+                    return CoM[index];
+
+                if (index >=3 && index < 3 + 3 * Robot::dimension)  // jacobian
+                    return com_jacobian[index - 3];
+
+                if (index >=3 + 3 * Robot::dimension)  // jacobian
+                    return polygon_points[index - (3 + 3 * Robot::dimension)];
+
+                else
+                    return CoM[0];
+            }
+
+            CoMConstraintInp &
+            operator=(vamp::FloatVector<rake, 3 + 3 * Robot::dimension> y)
+            {
+                for (size_t i = 0; i < 3; i++)
+                    CoM[i] = y[i];
+                for (size_t i = 0; i < 3 * Robot::dimension; i++)
+                    com_jacobian[i] = y[i + 3 * Robot::dimension];
+
+                for (size_t i = 0; i < 2 * num_polygons; i++)
+                    polygon_points[i] = y[i + 3 + 3 * Robot::dimension];
+
+
+                return *this;
+            }
+        };
+
+
+        struct JacobianProjectInp
+        {
+            vamp::FloatVector<rake, 2> err;                   // error vector
+            vamp::FloatVector<rake, 2 * Robot::dimension> J;  // jacobian
+
+            auto &operator[](size_t index)
+            {
+                if (index >= 2 && index < 2 * Robot::dimension)
+                {
+                    return J[index - 2];
+                }
+                else if (
+                    index < 2)
+                {
+                    return err[index];
+                }
+                else
+                {
+                    return err[0];
+                }
+            }
+
+            const auto operator[](size_t index) const
+            {
+                if (index >= 2 && index < 2 * Robot::dimension)
+                {
+                    return J[index - 2];
+                }
+                else if (
+                    index < 2)
+                {
+                    return err[index];
+                }
+                else
+                {
+                    return err[0];
+                }
+            }
+
+            JacobianProjectInp &
+            operator=(vamp::FloatVector<rake, 6 * Robot::n_eef + 6 * Robot::n_eef * Robot::dimension> y)
+            {
+                for (size_t i = 0; i < 2; i++)
+                {
+                    err[i] = y[i];
+                }
+                for (size_t i = 0; i < 2 * Robot::dimension; i++)
+                {
+                    J[i] = y[i + 2 * Robot::dimension];
+                }
+                return *this;
+            }
+        };
+
+        JacobianProjectInp jac_proj_inp;
+        CoMConstraintInp com_jac_polygons;
+
+        // size_t num_polygons;
+
+        // some housekeeping variables predefined for speed
+        ConfigurationBlock q_old;
+
+    public:
+        CoMTaskSpaceConstraint(
+            const std::array<float, 2 * num_polygons> polygon_points)
+        {
+            for (size_t i = 0; i < 2 * num_polygons; i++)
+                std::cout << polygon_points[i] << " ";
+            std::cout << std::endl;
+
+
+            RobotConstraint<Robot, rake>::template assignBlock<2 * num_polygons>(polygon_points, com_jac_polygons.polygon_points);
+
+
+            for (size_t i = 0; i < 2 * num_polygons; i++)
+                std::cout << com_jac_polygons[i + 45] << " ";
+            std::cout << std::endl;
+
+        }
+
+        // auto print_robot_com_constraint_error(const ConfigurationBlock &q)
+        // {
+        //     // for(auto i=0U; i < Robot::dimension + 19; i++)
+        //     //     std::cout << tsr_function_inp[i] << " ";
+
+
+        //     auto dist = distanceToConstraint(q);
+        //     for(auto i=0U; i < 6 * Robot::dimension; i++){
+        //         if (i%Robot::dimension == 0)
+        //             std::cout << std::endl;
+        //         std::cout << std::setprecision(5) << jac_proj_inp.J[{i, 0}] << " ";
+        //     }
+        //     std::cout << std::endl;
+        //     for(auto i=0U; i < 6; i++)
+        //         std::cout << jac_proj_inp.err[{i, 0}] << " ";
+        //     std::cout << std::endl;
+
+        // }
+
+        vamp::FloatVector<rake, 1> distanceToConstraint(const ConfigurationBlock &q)
+        {
+            // for (size_t i = 0; i < Robot::dimension; i++)
+            // {
+            //     tsr_function_inp.q[i] = q[i];
+            // }
+            std::cout << "Polygon points are :";
+            for(auto i=0U; i < 2 * num_polygons; i++){
+                std::cout << std::setprecision(5) << com_jac_polygons.polygon_points[{i, 0}] << " ";
+            }
+            std::cout << std::endl;
+
+            Robot::template compute_com<rake>(q, com_jac_polygons);
+            std::cout << "COM is :";
+            for(auto i=0U; i < 3; i++){
+                std::cout << std::setprecision(5) << com_jac_polygons.CoM[{i, 0}] << " ";
+            }
+            std::cout << std::endl;
+            std::cout << "COM Jac is :";
+            for(auto i=0U; i < 3 * Robot::dimension; i++){
+                if (i%Robot::dimension == 0)
+                    std::cout << std::endl;
+                std::cout << std::setprecision(5) << com_jac_polygons.com_jacobian[{i, 0}] << " ";
+            }
+            std::cout << std::endl;
+            std::cout << "Polygon points are :";
+            for(auto i=0U; i < 2 * num_polygons; i++){
+                std::cout << std::setprecision(5) << com_jac_polygons.polygon_points[{i, 0}] << " ";
+            }
+            std::cout << std::endl;
+
+
+            Robot::template com_constraint_error<rake>(com_jac_polygons, num_polygons, jac_proj_inp);
+
+            std::cout << "Error : ";
+            for(auto i=0U; i < 2; i++){
+                std::cout << std::setprecision(5) << jac_proj_inp.err[{i, 0}] << " ";
+            }
+            std::cout << std::endl;
+            std::cout << "Error Jac : ";
+            for(auto i=0U; i < 2 * Robot::dimension; i++){
+                if (i%Robot::dimension == 0)
+                    std::cout << std::endl;
+                std::cout << std::setprecision(5) << jac_proj_inp.J[{i, 0}] << " ";
+            }
+            std::cout << std::endl;
+
+
+
+
+            auto d = jac_proj_inp.err[0] * jac_proj_inp.err[0] + jac_proj_inp.err[1] * jac_proj_inp.err[1];
+
+            return d;
+        }
+
+        // vamp::FloatVector<rake, 1> projectStep(
+        //     const ConfigurationBlock &q,
+        //     ConfigurationBlock &q_new,
+        //     ProjMethod projection_method = ProjMethod::InnerLM,
+        //     bool update_q = true,
+        //     float alpha = 1.0)
+        // {
+        //     auto dist = distanceToConstraint(q);
+        //     if (update_q)
+        //     {
+        //         ConfigurationBlock grad;
+
+        //         if (projection_method == ProjMethod::InnerLM)
+        //         {
+        //             Robot::template solve_tsr_relative_error_lm_inner<rake>(jac_proj_inp, grad);
+        //         }
+        //         if (projection_method == ProjMethod::OuterLM)
+        //         {
+        //             Robot::template solve_tsr_relative_error_lm_outer<rake>(jac_proj_inp, grad);
+        //         }
+        //         if (projection_method == ProjMethod::GradDesc)
+        //         {
+        //             Robot::template solve_tsr_relative_error_gradient_descent<rake>(jac_proj_inp, grad);
+        //         }
+        //         RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
+        //     }
+        //     return dist;
+        // }
+        // bool projectConfiguration(
+        //     const ConfigurationBlock &q,
+        //     ConfigurationBlock &q_new,
+        //     ProjMethod projection_method = ProjMethod::InnerLM,
+        //     float max_q_dist = 5.0,
+        //     float descend_rate = 1.0)
+        // {
+        //     /**
+        //      * project a configuration block in parallel onto the constraint manifold
+        //      * @param q - original config
+        //      * @param q_new - projected config
+        //      * @param projection_method - something from ProjMethod
+        //      * @param max_q_dist - break out early if projected config is farther than max_q_dist away from
+        //      * start
+        //      *
+        //      * @return success of projection
+        //      */
+
+        //     bool success = false;
+        //     auto dist = distanceToConstraint(q);
+
+        //     size_t project_iter = 0;
+        //     for (size_t i = 0; i < Robot::dimension; i++)
+        //     {
+        //         q_new[i] = q[i];
+        //         q_old[i] = q[i];
+        //     }
+
+        //     while ((project_iter < 100) and (not dist.test_all_less_equal(0.0001F)))
+        //     {
+        //         dist = projectStep(q_old, q_new, projection_method, true, descend_rate);
+        //         auto q_dist_from_prev = (q_new[0] - q_old[0]) * (q_new[0] - q_old[0]);
+        //         auto q_dist_from_start = (q_new[0] - q[0]) * (q_new[0] - q[0]);
+
+        //         for (auto i = 1U; i < Robot::dimension; i++)
+        //         {
+        //             q_dist_from_prev = q_dist_from_prev + (q_new[i] - q_old[i]) * (q_new[i] - q_old[i]);
+        //             q_dist_from_start = q_dist_from_start + (q_new[i] - q[i]) * (q_new[i] - q[i]);
+        //         }
+
+        //         if (q_dist_from_prev.test_all_less_equal(0.00001F))  // if i make no forward progress
+        //         {
+        //             break;
+        //         }
+
+        //         // if (q_dist_from_prev.test_any_greater_equal(4 * max_q_dist * max_q_dist))  // from triangle
+        //         //                                                                             // inequality
+        //         // {
+        //         //     break;
+        //         // }
+        //         q_old = q_new + 0.0;
+        //         project_iter += 1;
+        //     }
+        //     if (dist.test_all_less_equal(0.0001F))
+        //     {
+        //         success = true;
+        //     }
+        //     // std::cout << "Num projection steps : " << project_iter << " ";
+        //     // std::cout << "Num steps : " << project_iter << " and success : " << success << " " << " dist " << dist << " q " << q << " q_new " << q_new << std::endl;
+
+        //     return success;
+        // }
+
+
+    };
+
+
 
 }  // namespace vamp::planning
