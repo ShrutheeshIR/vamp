@@ -11,13 +11,13 @@
 namespace vamp::planning
 {
 
-    template <typename Robot, std::size_t rake, std::size_t resolution>
+    template <typename Robot, std::size_t rake, std::size_t resolution, std::size_t num_polygons>
     inline constexpr auto project_constraint_vector(
         const typename Robot::Configuration &start,
         const typename Robot::Configuration &vector,
         float distance,
         std::vector<typename Robot::Configuration> &projected_vector,
-        BimanualTaskSpaceConstraint<Robot, rake> &constraint,
+        CoMTaskSpaceConstraint<Robot, rake, num_polygons> &constraint,
         const collision::Environment<FloatVector<rake>> &environment,
         ProjMethod projection_method = ProjMethod::GradDesc,
         float projection_descent_rate = 1.0) -> bool
