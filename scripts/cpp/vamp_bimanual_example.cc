@@ -104,6 +104,7 @@ auto main(int, char **) -> int
     auto env_v = EnvironmentVector(environment);
     // Create RNG for planning
     auto rng = std::make_shared<vamp::rng::Halton<Robot>>();
+    // auto rng = std::make_shared<vamp::rng::XORShift<Robot>>(2, 3);
 
 
     std::array<float, 6> lower_bound = {

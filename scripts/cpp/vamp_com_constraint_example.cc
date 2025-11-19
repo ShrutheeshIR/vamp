@@ -110,14 +110,24 @@ auto main(int, char **) -> int
 
 
     std::array<float, 8> polygon_points = {
-        1.0, -0.05, 1.0, 0.05, 0.0, 0.05, 0.0, -0.05
+        // 1.0, -0.05, 1.0, 0.05, 0.0, 0.05, 0.0, -0.05
+        0.3, -0.03, 0.3, 0.03, 0.0, 0.03, 0.0, -0.03
         // 0.0, 0.2, 1.0, 0.2, 1.0, 1.0, 0.0, 1.0
     };
 
+    std::array<float, 6> lower_bound = {
+        -0.00001, -0.00001, -0.00001, -0.00001, -0.00001, -0.00001
+    };
+    std::array<float, 6> upper_bound = {
+        0.00001, 0.00001, 0.00001, 0.00001, 0.00001, 0.00001
+    };
 
-    vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4> task_constraint(polygon_points);
 
-
+    // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
+    Eigen::Matrix<float, 4, 4> T;
+    T << -0.719427, 0.694568, 6.59173e-05, -2.2769e-05, 0.694568, 0.719427, -2.26738e-05, -0.000370264, -6.31774e-05, 2.94462e-05, -1, 0.171814, 0, 0, 0, 1;
+    const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
+    vamp::planning::BimanualCoMTaskSpaceConstraint<Robot, rake, 4> task_constraint(polygon_points, target_pose, std::make_pair(lower_bound, upper_bound));
 
 
     

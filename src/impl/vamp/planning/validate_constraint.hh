@@ -17,7 +17,7 @@ namespace vamp::planning
         const typename Robot::Configuration &vector,
         float distance,
         std::vector<typename Robot::Configuration> &projected_vector,
-        CoMTaskSpaceConstraint<Robot, rake, num_polygons> &constraint,
+        BimanualCoMTaskSpaceConstraint<Robot, rake, num_polygons> &constraint,
         const collision::Environment<FloatVector<rake>> &environment,
         ProjMethod projection_method = ProjMethod::GradDesc,
         float projection_descent_rate = 1.0) -> bool

@@ -1237,7 +1237,7 @@ namespace vamp::planning
 
 
             // std::cout << "Error : ";
-            // for(auto i=0U; i < 2; i++){
+            // for(auto i=0U; i < 8; i++){
             //     std::cout << std::setprecision(5) << jac_proj_inp.err[{i, 0}] << " ";
             // }
             // std::cout << std::endl;
@@ -1264,15 +1264,15 @@ namespace vamp::planning
 
                 if (projection_method == ProjMethod::InnerLM)
                 {
-                    Robot::template solve_com_function_lm_inner<rake>(jac_proj_inp, grad);
+                    Robot::template solve_bimanual_com_function_lm_inner<rake>(jac_proj_inp, grad);
                 }
                 if (projection_method == ProjMethod::OuterLM)
                 {
-                    Robot::template solve_com_function_lm_outer<rake>(jac_proj_inp, grad);
+                    Robot::template solve_bimanual_com_function_lm_outer<rake>(jac_proj_inp, grad);
                 }
                 if (projection_method == ProjMethod::GradDesc)
                 {
-                    Robot::template solve_com_function_gradient_descent<rake>(jac_proj_inp, grad);
+                    Robot::template solve_bimanual_com_function_gradient_descent<rake>(jac_proj_inp, grad);
                 }
                 RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
             }
