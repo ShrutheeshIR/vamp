@@ -133,12 +133,13 @@ namespace vamp::planning
                 }
 
                 const auto nearest_configuration = nearest_node.as_vector();
-
+                //std::cout << "temp is " << temp << " and nearest config is " << nearest_configuration << "\n";
                 auto nearest_vector = temp - nearest_configuration;
 
                 bool reach = nearest_distance < settings.range;
                 auto extension_vector =
                     (reach) ? nearest_vector : nearest_vector * (settings.range / nearest_distance);
+                //std::cout << extension_vector << "\n";
                 if (project_constraint_vector<Robot, rake, resolution>(
                         nearest_configuration,
                         extension_vector,
@@ -183,11 +184,22 @@ namespace vamp::planning
 
                     auto counter = 0U;
 
+                    // Added new feature to upper bound the number of iterations connecting tree A with tree B
+                    const auto other_nearest =
+                        tree_b->nearest(NNFloatArray<dimension>{new_configuration_index});
+                    if (not other_nearest)
+                    {
+                        continue;
+                    }
+                    const auto &[other_nearest_node, other_nearest_distance] = *other_nearest;
+                    const std::size_t n_extensions = std::ceil(other_nearest_distance / settings.range);
+                    auto max_iterations = 2 * n_extensions;
+                    //auto max_iterations = 2;
                     // try to connect to goal directly
                     while (not connected)
                     {   
                         counter++;
-                        if (counter > 2)
+                        if (counter > max_iterations)
                             break;
                         // Extend to goal tree
                         const auto other_nearest =
@@ -198,7 +210,7 @@ namespace vamp::planning
 
                         const auto &[other_nearest_node, other_nearest_distance] = *other_nearest;
                         const auto other_nearest_configuration = other_nearest_node.as_vector();
-
+                        //std::cout << "nearest neighbor is " << other_nearest_configuration << "\n";
                         auto other_nearest_vector = other_nearest_configuration - prior;
                         bool other_reach = other_nearest_distance < settings.range;
 

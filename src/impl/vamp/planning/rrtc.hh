@@ -126,19 +126,20 @@ namespace vamp::planning
                 }
 
                 const auto nearest_configuration = nearest_node.as_vector();
-
+                //std::cout << "temp is " << temp << " and nearest config is " << nearest_configuration << "\n";
                 auto nearest_vector = temp - nearest_configuration;
 
                 bool reach = nearest_distance < settings.range;
                 auto extension_vector =
                     (reach) ? nearest_vector : nearest_vector * (settings.range / nearest_distance);
-
+                //std::cout << extension_vector << "\n";
                 if (validate_vector<Robot, rake, resolution>(
                         nearest_configuration,
                         extension_vector,
                         (reach) ? nearest_distance : settings.range,
                         environment))
                 {
+
                     float *new_configuration_index = buffer_index(free_index);
                     auto new_configuration = nearest_configuration + extension_vector;
                     new_configuration.to_array(new_configuration_index);
@@ -163,7 +164,9 @@ namespace vamp::planning
                     }
 
                     const auto &[other_nearest_node, other_nearest_distance] = *other_nearest;
+      
                     const auto other_nearest_configuration = other_nearest_node.as_vector();
+                    //std::cout << "nearest neighbor is " << other_nearest_configuration << "\n";
                     auto other_nearest_vector = other_nearest_configuration - new_configuration;
 
                     const std::size_t n_extensions = std::ceil(other_nearest_distance / settings.range);

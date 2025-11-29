@@ -22,15 +22,17 @@ using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution>;
 
 
-static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
+/*static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
 static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
+*/
 
-
+//static constexpr Robot::ConfigurationArray start = {0., -0.785, 0., -2.356, 0., 1.571, 0.785};
+//static constexpr Robot::ConfigurationArray goal = {2.35, 1., 0., -0.8, 0, 2.5, 0.785};
 
 // static constexpr Robot::ConfigurationArray goal = {-0.839708,  0.496555, -0.630832, -0.573204,  0.232247,  1.8259,   -0.467584};
 
 // Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
-static const std::vector<std::array<float, 3>> problem = {
+/*static const std::vector<std::array<float, 3>> problem = {
     // {0.55, 0, 0.25},
     // {0.55, 0, 0.50},
     {0.55, 0, 0.60},
@@ -49,10 +51,57 @@ static const std::vector<std::array<float, 3>> problem = {
     {-0.35, -0.35, 0.8},
     {0, -0.55, 0.8},
     {0.35, -0.35, 0.8},
+};*/
+
+/*static const std::vector<std::array<float, 3>> problem = {
+    {0.55, 0, 0.25},
+    {0.35, 0.35, 0.25},
+    {0, 0.55, 0.25},
+    {-0.55, 0, 0.25},
+    {-0.35, -0.35, 0.25},
+    {0, -0.55, 0.25},
+    {0.35, -0.35, 0.25},
+    {0.35, 0.35, 0.8},
+    {0, 0.55, 0.8},
+    {-0.35, 0.35, 0.8},
+    {-0.55, 0, 0.8},
+    {-0.35, -0.35, 0.8},
+    {0, -0.55, 0.8},
+    {0.35, -0.35, 0.8},
+};*/
+
+static constexpr Robot::ConfigurationArray goal = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
+static constexpr Robot::ConfigurationArray start = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
+
+//The following pair will have straight forward motion, rrtc terminates early
+//static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
+//static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
+
+
+
+// static constexpr Robot::ConfigurationArray goal = {-0.839708,  0.496555, -0.630832, -0.573204,  0.232247,  1.8259,   -0.467584};
+
+// Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
+static const std::vector<std::array<float, 3>> problem = {
+    // {0.55, 0, 0.25},
+    // {0.55, 0, 0.50},
+    // {0.35, 0.35, 0.25},
+    {0, 0.55, 0.25},
+    {-0.55, 0, 0.25},
+    {-0.35, -0.35, 0.25},
+    // {0, -0.55, 0.25},
+    // {0.35, -0.35, 0.25},
+    // {0.35, 0.35, 0.8},
+    // {0, 0.55, 0.8},
+    // {-0.35, 0.35, 0.8},
+    // {-0.55, 0, 0.8},
+    {-0.35, -0.35, 0.8},
+    {0, -0.55, 0.8},
+    {0.35, -0.35, 0.8},
 };
 // Radius for obstacle spheres
-static constexpr float radius = 0.15;
-
+//static constexpr float radius = 0.15;
+static constexpr float radius = 0.1;
 struct Attempt {
     float range;
     bool dynamic_domain;
@@ -79,15 +128,15 @@ auto main(int, char **) -> int
 
     // Setup RRTC and plan
     vamp::planning::RRTCSettings rrtc_settings;
-
-    float ranges[] = {0.5, 1.0, 1.5, 2.0};
+    float ranges[] = {1.0};
+    //float ranges[] = {0.5, 1.0, 1.5, 2.0};
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
-    bool dd[] = {false, true};
-    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM};
+    bool dd[] = {false};
+    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::GradDesc};
 
     // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
-    float descend_rates[] = {0.75, 1.0};
-    // float descend_rates[] = {1.0};
+    //float descend_rates[] = {0.75, 1.0};
+    float descend_rates[] = {1.0};
 
 
     std::vector<Attempt> succ_attempts;
@@ -115,12 +164,20 @@ auto main(int, char **) -> int
     auto rng = std::make_shared<vamp::rng::Halton<Robot>>();
 
 
+    /*std::array<float, 6> lower_bound = {
+        -100.0, -100.0, -100.0, -100.0, -100.0, -100.0
+    };
+    std::array<float, 6> upper_bound = {
+        100.0, 100.0, 100.0, 100.0, 100.0, 100.0
+    };*/
+
     std::array<float, 6> lower_bound = {
         -0.01, -10.01, -0.03, -0.1, -0.1, -3.14
     };
     std::array<float, 6> upper_bound = {
         0.03, 10.01, 0.03, 0.1, 0.1, 3.14
     };
+
 
     Eigen::Matrix<float, 4, 4> T;
     T << 1,0,0,   0.543325,   0,-1,0,      0.570738,   0,0,-1,    0.121557,          0,           0,           0,           1;
