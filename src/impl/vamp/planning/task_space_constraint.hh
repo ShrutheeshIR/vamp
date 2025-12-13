@@ -355,4 +355,281 @@ namespace vamp::planning
 
     };
 
+    template <typename Robot, std::size_t rake>
+    class BimanualTaskSpaceConstraint : public RobotConstraint<Robot, rake>
+    {
+        /**
+         * A TSR constraint is expressed as 2 transformation matrices
+         * with a lower and upper bound, as per
+         * https://personalrobotics.cs.washington.edu/publications/berenson2011task.pdf
+         *
+         *
+         */
+    protected:
+        using ConfigurationBlock = typename Robot::ConfigurationBlock<rake>;
+
+        std::pair<std::array<float, 6>, std::array<float, 6>> bounds;  // error bounds in se3
+
+        Eigen::Transform<float, 3, Eigen::Isometry> right_eef_pose_w_ref_left_eef;
+
+        struct TSRComputeInput
+        {
+            ConfigurationBlock q;
+            vamp::FloatVector<rake, 7> rTlB;
+            vamp::FloatVector<rake, 6> lbB;
+            vamp::FloatVector<rake, 6> ubB;
+            const size_t size_per_eef = 7 + 7 + 6 + 6;
+
+            auto operator[](size_t index) const
+            {
+                if (index < Robot::dimension)  // q
+                {
+                    return q[index];
+                }
+
+                size_t index_e = (index - Robot::dimension);
+
+                if (index_e < 7)  // rTl
+                {
+                    return rTlB[index_e];
+                }
+
+                else if (index_e >= 7 && index_e < (1 * 7 + 6))
+                {
+                    return lbB[index_e - 7];
+                }
+
+                else if (index_e >= (1 * 7 + 6) && index_e < (1 * 7 + 6 * 2))
+                {
+                    return ubB[index_e - (7 + 6)];
+                }
+                else
+                    return q[0];
+            }
+        };
+
+        TSRComputeInput tsr_function_inp;
+
+        struct JacobianProjectInp
+        {
+            vamp::FloatVector<rake, 6 * Robot::dimension> J;  // jacobian
+            vamp::FloatVector<rake, 6> err;                   // error vector
+
+            auto &operator[](size_t index)
+            {
+                if (index < 6 * Robot::dimension)
+                {
+                    return J[index];
+                }
+                else if (
+                    index >= 6 *  Robot::dimension &&
+                    index < 6 * Robot::dimension + 6 * Robot::n_eef)
+                {
+                    return err[index - 6 * Robot::dimension];
+                }
+                else
+                {
+                    return err[0];
+                }
+            }
+
+            const auto operator[](size_t index) const
+            {
+                if (index < 6 * Robot::dimension)
+                {
+                    return J[index];
+                }
+                else if (
+                    index >= 6 * Robot::dimension &&
+                    index < 6 * Robot::dimension + 6 * Robot::n_eef)
+                {
+                    return err[index - 6 * Robot::dimension];
+                }
+                else
+                {
+                    return err[0];
+                }
+            }
+
+            JacobianProjectInp &
+            operator=(vamp::FloatVector<rake, 6 * Robot::n_eef + 6 * Robot::n_eef * Robot::dimension> y)
+            {
+                for (size_t i = 0; i < 6; i++)
+                {
+                    err[i] = y[6 * Robot::dimension + i];
+                }
+                for (size_t i = 0; i < 6 * Robot::dimension; i++)
+                {
+                    J[i] = y[i];
+                }
+                return *this;
+            }
+        };
+
+        JacobianProjectInp jac_proj_inp;
+        // some housekeeping variables predefined for speed
+        ConfigurationBlock q_old;
+
+    public:
+        BimanualTaskSpaceConstraint(
+            const Eigen::Transform<float, 3, Eigen::Isometry> right_eef_pose_w_ref_left_eef,  // rTl
+            const std::pair<std::array<float, 6>, std::array<float, 6>> bounds)
+          : right_eef_pose_w_ref_left_eef(right_eef_pose_w_ref_left_eef)
+          , bounds(bounds)
+        {
+            Eigen::Quaternion<float> q1(right_eef_pose_w_ref_left_eef.linear());
+            std::array<float, 7> transform1 = {
+                q1.w(),
+                q1.x(),
+                q1.y(),
+                q1.z(),
+                right_eef_pose_w_ref_left_eef.translation().x(),
+                right_eef_pose_w_ref_left_eef.translation().y(),
+                right_eef_pose_w_ref_left_eef.translation().z()};
+
+            RobotConstraint<Robot, rake>::template assignBlock<7>(transform1, tsr_function_inp.rTlB);
+            RobotConstraint<Robot, rake>::template assignBlock<6>(bounds.first, tsr_function_inp.lbB);
+            RobotConstraint<Robot, rake>::template assignBlock<6>(bounds.second, tsr_function_inp.ubB);
+        }
+
+        auto print_robot_tsr_error(const ConfigurationBlock &q)
+        {
+            // for(auto i=0U; i < Robot::dimension + 19; i++)
+            //     std::cout << tsr_function_inp[i] << " ";
+
+
+            auto dist = distanceToConstraint(q);
+            for(auto i=0U; i < 6 * Robot::dimension; i++){
+                if (i%Robot::dimension == 0)
+                    std::cout << std::endl;
+                std::cout << std::setprecision(5) << jac_proj_inp.J[{i, 0}] << " ";
+            }
+            std::cout << std::endl;
+            for(auto i=0U; i < 6; i++)
+                std::cout << jac_proj_inp.err[{i, 0}] << " ";
+            std::cout << std::endl;
+
+        }
+
+        vamp::FloatVector<rake, 1> distanceToConstraint(const ConfigurationBlock &q)
+        {
+            for (size_t i = 0; i < Robot::dimension; i++)
+            {
+                tsr_function_inp.q[i] = q[i];
+            }
+
+            Robot::template tsr_bimanual_error<rake>(tsr_function_inp, jac_proj_inp);
+
+
+            const size_t jac_offset = 6 * Robot::dimension;
+            for (size_t i = 0; i < 6; i++)
+            {
+                jac_proj_inp[i + jac_offset] =
+                    (jac_proj_inp[i + jac_offset] - tsr_function_inp.lbB[i]).min(0.F) +
+                    (jac_proj_inp[i + jac_offset] - tsr_function_inp.ubB[i]).max(0.F);
+            }
+            auto d = jac_proj_inp.err[0] * jac_proj_inp.err[0];
+            for (size_t i = 1; i < 6; i++)
+            {
+                d = d + jac_proj_inp.err[i] * jac_proj_inp.err[i];
+            }
+
+            return d;
+        }
+
+        vamp::FloatVector<rake, 1> projectStep(
+            const ConfigurationBlock &q,
+            ConfigurationBlock &q_new,
+            ProjMethod projection_method = ProjMethod::InnerLM,
+            bool update_q = true,
+            float alpha = 1.0)
+        {
+            auto dist = distanceToConstraint(q);
+            if (update_q)
+            {
+                ConfigurationBlock grad;
+
+                if (projection_method == ProjMethod::InnerLM)
+                {
+                    Robot::template solve_tsr_relative_error_lm_inner<rake>(jac_proj_inp, grad);
+                }
+                if (projection_method == ProjMethod::OuterLM)
+                {
+                    Robot::template solve_tsr_relative_error_lm_outer<rake>(jac_proj_inp, grad);
+                }
+                if (projection_method == ProjMethod::GradDesc)
+                {
+                    Robot::template solve_tsr_relative_error_gradient_descent<rake>(jac_proj_inp, grad);
+                }
+                RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
+            }
+            return dist;
+        }
+        bool projectConfiguration(
+            const ConfigurationBlock &q,
+            ConfigurationBlock &q_new,
+            ProjMethod projection_method = ProjMethod::InnerLM,
+            float max_q_dist = 5.0,
+            float descend_rate = 1.0)
+        {
+            /**
+             * project a configuration block in parallel onto the constraint manifold
+             * @param q - original config
+             * @param q_new - projected config
+             * @param projection_method - something from ProjMethod
+             * @param max_q_dist - break out early if projected config is farther than max_q_dist away from
+             * start
+             *
+             * @return success of projection
+             */
+
+            bool success = false;
+            auto dist = distanceToConstraint(q);
+
+            size_t project_iter = 0;
+            for (size_t i = 0; i < Robot::dimension; i++)
+            {
+                q_new[i] = q[i];
+                q_old[i] = q[i];
+            }
+
+            while ((project_iter < 100) and (not dist.test_all_less_equal(0.0001F)))
+            {
+                dist = projectStep(q_old, q_new, projection_method, true, descend_rate);
+                auto q_dist_from_prev = (q_new[0] - q_old[0]) * (q_new[0] - q_old[0]);
+                auto q_dist_from_start = (q_new[0] - q[0]) * (q_new[0] - q[0]);
+
+                for (auto i = 1U; i < Robot::dimension; i++)
+                {
+                    q_dist_from_prev = q_dist_from_prev + (q_new[i] - q_old[i]) * (q_new[i] - q_old[i]);
+                    q_dist_from_start = q_dist_from_start + (q_new[i] - q[i]) * (q_new[i] - q[i]);
+                }
+
+                if (q_dist_from_prev.test_all_less_equal(0.00001F))  // if i make no forward progress
+                {
+                    break;
+                }
+
+                // if (q_dist_from_prev.test_any_greater_equal(4 * max_q_dist * max_q_dist))  // from triangle
+                //                                                                             // inequality
+                // {
+                //     break;
+                // }
+                q_old = q_new + 0.0;
+                project_iter += 1;
+            }
+            if (dist.test_all_less_equal(0.0001F))
+            {
+                success = true;
+            }
+            // std::cout << "Num projection steps : " << project_iter << " ";
+            // std::cout << "Num steps : " << project_iter << " and success : " << success << " " << " dist " << dist << " q " << q << " q_new " << q_new << std::endl;
+
+            return success;
+        }
+
+
+    };
+
+
 }  // namespace vamp::planning

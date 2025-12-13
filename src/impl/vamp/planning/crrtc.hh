@@ -26,7 +26,7 @@ namespace vamp::planning
             const Configuration &goal,
             const collision::Environment<FloatVector<rake>> &environment,
             const RRTCSettings &settings,
-            TaskSpaceConstraint<Robot, rake> &constraint,
+            BimanualTaskSpaceConstraint<Robot, rake> &constraint,
             typename RNG::Ptr rng) noexcept -> PlanningResult<Robot>
         {
             return solve(start, std::vector<Configuration>{goal}, environment, settings, constraint, rng);
@@ -37,7 +37,7 @@ namespace vamp::planning
             const std::vector<Configuration> &goals,
             const collision::Environment<FloatVector<rake>> &environment,
             const RRTCSettings &settings,
-            TaskSpaceConstraint<Robot, rake> &constraint,
+            BimanualTaskSpaceConstraint<Robot, rake> &constraint,
             typename RNG::Ptr rng) noexcept -> PlanningResult<Robot>
         {
             PlanningResult<Robot> result;
