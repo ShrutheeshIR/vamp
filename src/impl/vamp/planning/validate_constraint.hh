@@ -44,6 +44,7 @@ namespace vamp::planning
         bool ableToProject = constraint.projectConfiguration(block, initial_projected_block, projection_method, distance, projection_descent_rate);
         if (not ableToProject)
         {
+            std::cout << "Unable to project" << std::endl;
             return ableToProject;
         }
 

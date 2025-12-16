@@ -102,8 +102,8 @@ namespace vamp::planning
             bool connected = false;
             while (iter++ < settings.max_iterations and free_index < settings.max_samples and not connected)
             {
-                // if (iter % 1 == 0)
-                    // std::cout << "Starting iteration : " << iter << ", " << free_index << ", " <<connected << " , " << settings.max_samples << std::endl;
+                if (iter % 1 == 0)
+                    std::cout << "Starting iteration : " << iter << ", " << free_index << ", " <<connected << " , " << settings.max_samples << std::endl;
                 float asize = tree_a->size();
                 float bsize = tree_b->size();
                 float ratio = std::abs(asize - bsize) / asize;
@@ -121,6 +121,7 @@ namespace vamp::planning
                 const auto nearest = tree_a->nearest(NNFloatArray<dimension>{temp_array.data()});
                 if (not nearest)
                 {
+                    std::cout << "No nearest " << std::endl;
                     continue;
                 }
 
@@ -129,6 +130,7 @@ namespace vamp::planning
 
                 if (settings.dynamic_domain and nearest_radius < nearest_distance)
                 {
+                    std::cout << "No dd " << std::endl;
                     continue;
                 }
 

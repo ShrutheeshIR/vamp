@@ -11,11 +11,11 @@
 #include <vamp/planning/validate_constraint.hh>
 
 // #include <vamp/planning/simplify.hh>
-#include <vamp/robots/bimanual_panda.hh>
+#include <vamp/robots/g1_unitree.hh>
 #include <vamp/random/halton.hh>
 #include <fstream>
 
-using Robot = vamp::robots::BimanualPanda;
+using Robot = vamp::robots::G1Unitree;
 static constexpr const std::size_t rake = vamp::FloatVectorWidth;
 using EnvironmentInput = vamp::collision::Environment<float>;
 using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
@@ -23,8 +23,8 @@ using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution>;
 using AttachmentInput = vamp::collision::Attachment<float>;
 
 // Start and goal configurations
-static constexpr Robot::ConfigurationArray start = {-1.3238,  1.358 ,  1.0783, -2.4974,  0.5572,  2.5477, -1.4485, 1.2848,  1.2911, -1.0714, -2.4884, -0.6705,  2.5082,  0.7243 };
-static constexpr Robot::ConfigurationArray goal = {-1.997 ,  0.385 ,  2.1832, -2.0013,  1.3083,  1.8498, -0.7243, 1.2835,  1.3097, -2.0683, -2.1051, -0.1333,  2.4786, -0.7243 };
+static constexpr Robot::ConfigurationArray start = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.68,0.0,0.0,0.0,0.0,0.0,0.0,-0.845,0.0,0.0,0.0,0.0,0.0};
+static constexpr Robot::ConfigurationArray goal = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-0.006,0.0,0.0,0.0,1.275,-0.415,0.444,1.018,0.68,0.0,0.0,0.0,0.0,0.0,-1.214,-0.492,0.315,0.04,1.082,0.227,-0.694};
 
 
 struct Attempt {
@@ -91,8 +91,9 @@ auto main(int, char **) -> int
             std::cerr << "Error reading line: " << line << std::endl;
             continue;
         }
+        ;
         // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
-        environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x, y, z}, {0.0, 0.0, 0.0}, {dx/2, dy/2, dz/2}));
+        // environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x, y, z}, {0.0, 0.0, 0.0}, {dx/2, dy/2, dz/2}));
     }        
     infile.close();
 
@@ -107,10 +108,10 @@ auto main(int, char **) -> int
 
 
     std::array<float, 6> lower_bound = {
-        -0.02, -0.02, -0.02, -0.1, -0.1, -0.1
+        -10.02, -10.02, -10.02, -10.1, -10.1, -10.1
     };
     std::array<float, 6> upper_bound = {
-        0.02, 0.02, 0.02, 0.1, 0.1, 0.1
+        10.02, 10.02, 10.02, 10.1, 10.1, 10.1
     };
 
 
