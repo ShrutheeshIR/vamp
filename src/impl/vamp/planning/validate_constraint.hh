@@ -17,7 +17,7 @@ namespace vamp::planning
         const typename Robot::Configuration &vector,
         float distance,
         std::vector<typename Robot::Configuration> &projected_vector,
-        BimanualCoMTaskSpaceConstraint<Robot, rake, num_polygons> &constraint,
+        BimanualCoMTSRTaskSpaceConstraint<Robot, rake, num_polygons> &constraint,
         const collision::Environment<FloatVector<rake>> &environment,
         ProjMethod projection_method = ProjMethod::GradDesc,
         float projection_descent_rate = 1.0) -> bool
@@ -44,6 +44,7 @@ namespace vamp::planning
         bool ableToProject = constraint.projectConfiguration(block, initial_projected_block, projection_method, distance, projection_descent_rate);
         if (not ableToProject)
         {
+            // std::cout << "Unable to project " << std::endl;
             return ableToProject;
         }
 
@@ -52,7 +53,7 @@ namespace vamp::planning
                          Robot::template fkcc<rake>(environment, initial_projected_block);
 
         typename Robot::ConfigurationArray last_projected;
-        for (auto i = 0; i < rake; i++)
+        for (auto i = rake-1; i < rake; i++)
         {
             for (auto j = 0U; j < Robot::dimension; j++)
             {
@@ -110,12 +111,12 @@ namespace vamp::planning
         return true;
     }
 
-    template <typename Robot, std::size_t rake, std::size_t resolution>
+    template <typename Robot, std::size_t rake, std::size_t resolution, std::size_t num_polygons>
     inline constexpr auto project_constraint_motion(
         const typename Robot::Configuration &start,
         const typename Robot::Configuration &goal,
         std::vector<typename Robot::Configuration> &projected_vector,
-        BimanualTaskSpaceConstraint<Robot, rake> &constraint,
+        BimanualCoMTSRTaskSpaceConstraint<Robot, rake, num_polygons> &constraint,
         const collision::Environment<FloatVector<rake>> &environment) -> bool
     {
         auto vector = goal - start;

@@ -11,11 +11,11 @@
 #include <vamp/planning/validate_constraint.hh>
 
 // #include <vamp/planning/simplify.hh>
-#include <vamp/robots/bimanual_panda.hh>
+#include <vamp/robots/g1_unitree.hh>
 #include <vamp/random/halton.hh>
 #include <fstream>
 
-using Robot = vamp::robots::BimanualPanda;
+using Robot = vamp::robots::G1Unitree;
 static constexpr const std::size_t rake = vamp::FloatVectorWidth;
 using EnvironmentInput = vamp::collision::Environment<float>;
 using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
@@ -23,8 +23,8 @@ using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution, 4>;
 using AttachmentInput = vamp::collision::Attachment<float>;
 
 // Start and goal configurations
-static constexpr Robot::ConfigurationArray start = {-1.3238,  1.358 ,  1.0783, -2.4974,  0.5572,  2.5477, -1.4485, 1.2848,  1.2911, -1.0714, -2.4884, -0.6705,  2.5082,  0.7243 };
-static constexpr Robot::ConfigurationArray goal = {-1.997 ,  0.385 ,  2.1832, -2.0013,  1.3083,  1.8498, -0.7243, 1.2835,  1.3097, -2.0683, -2.1051, -0.1333,  2.4786, -0.7243 };
+static constexpr Robot::ConfigurationArray start = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.767,-0.16,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+static constexpr Robot::ConfigurationArray goal = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.702,-0.16,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
 // static constexpr Robot::ConfigurationArray start = {-0.148774,1.59886,1.36434,-2.75007,0.544898,2.51704,-1.4485,2.07773,1.0024,-0.823622,-1.69743,-0.625681,2.59153,0.7243};
 // static constexpr Robot::ConfigurationArray goal = {-1.62706,-0.100903,2.59477,-2.09287,1.2912,1.8256,-0.7243,1.75215,1.5907,-2.0261,-1.8123,-0.119768,2.50718,-0.7243};
@@ -55,7 +55,7 @@ auto main(int, char **) -> int
     // float ranges[] = {0.5, 0.75};
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     // bool dd[] = {false};
-    bool dd[] = {false, true};
+    bool dd[] = {true};
     vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};
 
     // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
@@ -122,12 +122,52 @@ auto main(int, char **) -> int
         0.00001, 0.00001, 0.00001, 0.00001, 0.00001, 0.00001
     };
 
+    std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
+        -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -0.01, -0.01, -0.01, -10.0, -10.0, -10.0, -0.01, -0.01, -0.01, -10.0, -10.0, -10.0
+    };
+
+    std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
+        10.0, 10.0, 10.0, 10.0, 10.0, 10.0,
+        10.0, 10.0, 10.0, 10.0, 10.0, 10.0,
+        0.01, 0.01, 0.01,
+        10.0, 10.0, 10.0,
+        0.01, 0.01, 0.01,
+        10.0, 10.0, 10.0
+    };
 
     // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
     Eigen::Matrix<float, 4, 4> T;
-    T << -0.719427, 0.694568, 6.59173e-05, -2.2769e-05, 0.694568, 0.719427, -2.26738e-05, -0.000370264, -6.31774e-05, 2.94462e-05, -1, 0.171814, 0, 0, 0, 1;
+    T << 1, 0, 0, 0, 0, 1, 0, -0.3, 0, 0, 1, 0, 0, 0, 0, 1;
     const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
-    vamp::planning::BimanualCoMTaskSpaceConstraint<Robot, rake, 4> task_constraint(polygon_points, target_pose, std::make_pair(lower_bound, upper_bound));
+
+    std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
+
+    T << 1, 0, 0, 0.09, 0, 1, 0, 0.11, 0, 0, 1, -0.75, 0, 0, 0, 1;
+    eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    T << 1, 0, 0, 0.09, 0, 1, 0, 0.11, 0, 0, 1, -0.75, 0, 0, 0, 1;
+    eef_transforms[1] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    T << 1, 0, 0, 0.09, 0, 1, 0, 0.11, 0, 0, 1, -0.75, 0, 0, 0, 1;
+    eef_transforms[2] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    T << 1, 0, 0, 0.09, 0, 1, 0, -0.11, 0, 0, 1, -0.75, 0, 0, 0, 1;
+    eef_transforms[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+
+    std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
+    T << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
+    eef_transforms_ref_frame_w_world[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    eef_transforms_ref_frame_w_world[1] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    eef_transforms_ref_frame_w_world[2] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    eef_transforms_ref_frame_w_world[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+
+
+
+    vamp::planning::BimanualCoMTSRTaskSpaceConstraint<Robot, rake, 4> task_constraint(
+        polygon_points, 
+        target_pose, 
+        std::make_pair(lower_bound, upper_bound), 
+        eef_transforms_ref_frame_w_world,
+        eef_transforms, 
+        std::make_pair(tsr_lower_bound, tsr_upper_bound)
+    );
 
 
     
@@ -136,7 +176,7 @@ auto main(int, char **) -> int
     rrtc_settings.dynamic_domain = dyndom;
     rrtc_settings.projection_method = pm;
     rrtc_settings.descend_rate = descent_rate;
-    // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
+    std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
     auto result =
         CRRTC::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
