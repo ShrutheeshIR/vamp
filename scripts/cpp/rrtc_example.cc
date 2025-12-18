@@ -26,11 +26,11 @@ static const std::vector<std::array<float, 3>> problem = {
     // {0.55, 0, 0.25},
     // {0.35, 0.35, 0.25},
     // {0, 0.55, 0.25},
-    // {-0.55, 0, 0.25},
+    {-0.55, 0, 0.25},
     // {-0.35, -0.35, 0.25},
-    // {0, -0.55, 0.25},
+    {0, -0.55, 0.25},
     // {0.35, -0.35, 0.25},
-    // {0.35, 0.35, 0.8},
+    {0.35, 0.35, 0.8},
     // {0, 0.55, 0.8},
     // {-0.35, 0.35, 0.8},
     // {-0.55, 0, 0.8},
@@ -59,7 +59,8 @@ auto main(int, char **) -> int
 
     // Setup RRTC and plan
     vamp::planning::RRTCSettings rrtc_settings;
-    rrtc_settings.range = 1.0;
+    rrtc_settings.range = 0.1;
+    rrtc_settings.dynamic_domain = false;
 
     auto result =
         RRTC::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, rng);

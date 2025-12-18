@@ -23,8 +23,8 @@ using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution>;
 using AttachmentInput = vamp::collision::Attachment<float>;
 
 // Start and goal configurations
-static constexpr Robot::ConfigurationArray start = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.68,0.0,0.0,0.0,0.0,0.0,0.0,-0.845,0.0,0.0,0.0,0.0,0.0};
-static constexpr Robot::ConfigurationArray goal = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-0.006,0.0,0.0,0.0,1.275,-0.415,0.444,1.018,0.68,0.0,0.0,0.0,0.0,0.0,-1.214,-0.492,0.315,0.04,1.082,0.227,-0.694};
+static constexpr Robot::ConfigurationArray start = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.767,-0.16,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+static constexpr Robot::ConfigurationArray goal = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.702,-0.16,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
 
 struct Attempt {
@@ -93,7 +93,7 @@ auto main(int, char **) -> int
         }
         ;
         // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
-        // environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x, y, z}, {0.0, 0.0, 0.0}, {dx/2, dy/2, dz/2}));
+        environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x, y, z}, {0.0, 0.0, 0.0}, {dx/2, dy/2, dz/2}));
     }        
     infile.close();
 
@@ -108,16 +108,16 @@ auto main(int, char **) -> int
 
 
     std::array<float, 6> lower_bound = {
-        -10.02, -10.02, -10.02, -10.1, -10.1, -10.1
+        -0.02, -0.02, -0.02, -0.1, -0.1, -0.1
     };
     std::array<float, 6> upper_bound = {
-        10.02, 10.02, 10.02, 10.1, 10.1, 10.1
+        0.02, 0.02, 0.02, 0.1, 0.1, 0.1
     };
 
 
     // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
     Eigen::Matrix<float, 4, 4> T;
-    T << -0.719427, 0.694568, 6.59173e-05, -2.2769e-05, 0.694568, 0.719427, -2.26738e-05, -0.000370264, -6.31774e-05, 2.94462e-05, -1, 0.171814, 0, 0, 0, 1;
+    T << 1, 0, 0, 0, 0, 1, 0, -0.3, 0, 0, 1, 0, 0, 0, 0, 1;
     const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
     vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> task_constraint(target_pose, std::make_pair(lower_bound, upper_bound));
 
