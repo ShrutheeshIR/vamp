@@ -128,6 +128,7 @@ namespace vamp::planning
                 const auto &[nearest_node, nearest_distance] = *nearest;
                 const auto nearest_radius = radii[nearest_node.index];
 
+                // std::cout << nearest_radius << ", " << nearest_distance << ", " <<  nearest_node.index << std::endl;
                 if (settings.dynamic_domain and nearest_radius < nearest_distance)
                 {
                     continue;

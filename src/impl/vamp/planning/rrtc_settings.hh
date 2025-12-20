@@ -7,7 +7,7 @@ namespace vamp::planning
         float range = 2.;
 
         bool dynamic_domain = true;
-        float radius = 4.;
+        float radius = 0.5 * 35;
         float alpha = 0.0001;
         float min_radius = 1.;
 

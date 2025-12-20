@@ -65,6 +65,7 @@ namespace vamp::planning
 
         if (not valid or n == 1)
         {
+            // std::cout << "Invalid config " << valid << std::endl;
             return valid;
         }
 

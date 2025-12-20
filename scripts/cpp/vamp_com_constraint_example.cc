@@ -54,12 +54,12 @@ auto main(int, char **) -> int
     float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
     // float ranges[] = {0.5, 0.75};
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
-    // bool dd[] = {false};
-    bool dd[] = {true};
+    // bool dd[] = {true};
+    bool dd[] = {false, true};
     vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};
 
-    // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
-    float descend_rates[] = {0.75, 1.0};
+    float descend_rates[] = {0.25, 0.5, 0.75, 1.0};
+    // float descend_rates[] = {0.75, 1.0};
     // float descend_rates[] = {1.0};
     std::vector<Attempt> succ_attempts;
     for(const auto range: ranges){
@@ -111,7 +111,7 @@ auto main(int, char **) -> int
 
     std::array<float, 8> polygon_points = {
         // 1.0, -0.05, 1.0, 0.05, 0.0, 0.05, 0.0, -0.05
-        0.3, -0.03, 0.3, 0.03, 0.0, 0.03, 0.0, -0.03
+        0.10, -0.15, 0.10, 0.15, -0.10, 0.15, -0.10, -0.15
         // 0.0, 0.2, 1.0, 0.2, 1.0, 1.0, 0.0, 1.0
     };
 
@@ -135,6 +135,15 @@ auto main(int, char **) -> int
         10.0, 10.0, 10.0
     };
 
+
+    std::array<float, 6> slower_bound = {
+        -0.01, -0.01, -0.01, -10.0, -10.0, -10.0
+    };
+    std::array<float, 6> supper_bound = {
+        0.01, 0.01, 0.01, 10.0, 10.0, 10.0
+    };
+
+
     // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
     Eigen::Matrix<float, 4, 4> T;
     T << 1, 0, 0, 0, 0, 1, 0, -0.3, 0, 0, 1, 0, 0, 0, 0, 1;
@@ -157,7 +166,6 @@ auto main(int, char **) -> int
     eef_transforms_ref_frame_w_world[1] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
     eef_transforms_ref_frame_w_world[2] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
     eef_transforms_ref_frame_w_world[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-
 
 
     vamp::planning::BimanualCoMTSRTaskSpaceConstraint<Robot, rake, 4> task_constraint(
