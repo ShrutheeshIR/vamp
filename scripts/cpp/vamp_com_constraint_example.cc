@@ -23,8 +23,8 @@ using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution, 4>;
 using AttachmentInput = vamp::collision::Attachment<float>;
 
 // Start and goal configurations
-static constexpr Robot::ConfigurationArray start = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.767,-0.16,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
-static constexpr Robot::ConfigurationArray goal = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.702,-0.16,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+static constexpr Robot::ConfigurationArray start = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.767,-0.16,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+static constexpr Robot::ConfigurationArray goal = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.702,-0.16,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
 // static constexpr Robot::ConfigurationArray start = {-0.148774,1.59886,1.36434,-2.75007,0.544898,2.51704,-1.4485,2.07773,1.0024,-0.823622,-1.69743,-0.625681,2.59153,0.7243};
 // static constexpr Robot::ConfigurationArray goal = {-1.62706,-0.100903,2.59477,-2.09287,1.2912,1.8256,-0.7243,1.75215,1.5907,-2.0261,-1.8123,-0.119768,2.50718,-0.7243};
@@ -95,7 +95,7 @@ auto main(int, char **) -> int
             continue;
         }
         // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
-        // environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x, y, z}, {0.0, 0.0, 0.0}, {dx/2, dy/2, dz/2}));
+        environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x, y, z}, {0.0, 0.0, 0.0}, {dx/2, dy/2, dz/2}));
     }        
     infile.close();
 
@@ -168,15 +168,20 @@ auto main(int, char **) -> int
     eef_transforms_ref_frame_w_world[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
 
 
-    vamp::planning::BimanualCoMTSRTaskSpaceConstraint<Robot, rake, 4> task_constraint(
-        polygon_points, 
-        target_pose, 
-        std::make_pair(lower_bound, upper_bound), 
-        eef_transforms_ref_frame_w_world,
-        eef_transforms, 
-        std::make_pair(tsr_lower_bound, tsr_upper_bound)
-    );
+    // vamp::planning::BimanualCoMTSRTaskSpaceConstraint<Robot, rake, 4> task_constraint(
+    //     polygon_points, 
+    //     target_pose, 
+    //     std::make_pair(lower_bound, upper_bound), 
+    //     eef_transforms_ref_frame_w_world,
+    //     eef_transforms, 
+    //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
+    // );
 
+    vamp::planning::BimanualCoMTaskSpaceConstraint<Robot, rake, 4> task_constraint(
+        polygon_points,
+        target_pose, 
+        std::make_pair(lower_bound, upper_bound)
+    );
 
     
     rrtc_settings.range = range;
