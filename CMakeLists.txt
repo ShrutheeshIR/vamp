@@ -158,11 +158,11 @@ if(VAMP_BUILD_CPP_DEMO)
   add_executable(com_constraint scripts/cpp/com_constraint.cc)
   target_link_libraries(com_constraint PRIVATE vamp_cpp)
   
-  # add_executable(vamp_bimanual_planner_example scripts/cpp/vamp_bimanual_example.cc)
-  # target_link_libraries(vamp_bimanual_planner_example PRIVATE vamp_cpp)
+  add_executable(vamp_bimanual_planner_example scripts/cpp/vamp_bimanual_example.cc)
+  target_link_libraries(vamp_bimanual_planner_example PRIVATE vamp_cpp)
 
-  add_executable(vamp_com_constraint_example scripts/cpp/vamp_com_constraint_example.cc)
-  target_link_libraries(vamp_com_constraint_example PRIVATE vamp_cpp)
+  # add_executable(vamp_com_constraint_example scripts/cpp/vamp_com_constraint_example.cc)
+  # target_link_libraries(vamp_com_constraint_example PRIVATE vamp_cpp)
 
   # Disable strict warnings for demos to maintain compatibility
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -172,8 +172,8 @@ if(VAMP_BUILD_CPP_DEMO)
     # target_compile_options(vamp_crrtc_spheres PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
     target_compile_options(com_constraint PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
     # target_compile_options(vamp_bimanual_constraint PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
-    # target_compile_options(vamp_bimanual_planner_example PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
-    target_compile_options(vamp_com_constraint_example PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
+    target_compile_options(vamp_bimanual_planner_example PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
+    # target_compile_options(vamp_com_constraint_example PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
   endif()
 endif()
 

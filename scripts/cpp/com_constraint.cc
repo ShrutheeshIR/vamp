@@ -19,14 +19,14 @@ using Robot = vamp::robots::G1Unitree;
 static constexpr const std::size_t rake = vamp::FloatVectorWidth;
 using EnvironmentInput = vamp::collision::Environment<float>;
 using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
-using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution, 4>;
+// using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution, 4>;
 using AttachmentInput = vamp::collision::Attachment<float>;
 
 // Start and goal configurations
 // static constexpr Robot::ConfigurationArray start = {0.697778, -0.5024, -1.256, -1.94109, -2.12554, -2.36424, -2.44589, -0.204884, -2.35822, 0.113728, -0.793422, -0.234981, -2.26647, -2.81113, -2.53907, 0.0183405, -0.824602, -0.245389, -2.46313, -0.490082, -0.492354, -2.94348, -1.4976, -2.50464, -0.98188, -1.8918, -1.55106, -1.55222, -2.98216, -2.18801, -2.53406, -0.999044, -1.91263, -1.56892, -1.56953};
 
-static constexpr Robot::ConfigurationArray start = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.767,-0.16,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
-static constexpr Robot::ConfigurationArray goal = {-2.14842, -0.0682913, -2.18706, 0.199869, -0.759459, -0.223488, -2.15322, -2.74429, -2.44542, 0.0636008, -0.804001, -0.238355, -2.39676, -0.47726, -0.480506, -2.88102, -1.45877, -2.45606, -0.953885, -1.85734, -1.5239, -1.52556, -2.93629, -2.1608, -2.49809, -0.978406, -1.88709, -1.54942, -1.55028};
+static constexpr Robot::ConfigurationArray start = {0.0, 0.0, 0.0, 0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.767,-0.16,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+static constexpr Robot::ConfigurationArray goal = {0.0, 0.0, 0.0, -2.14842, -0.0682913, -2.18706, 0.199869, -0.759459, -0.223488, -2.15322, -2.74429, -2.44542, 0.0636008, -0.804001, -0.238355, -2.39676, -0.47726, -0.480506, -2.88102, -1.45877, -2.45606, -0.953885, -1.85734, -1.5239, -1.52556, -2.93629, -2.1608, -2.49809, -0.978406, -1.88709, -1.54942, -1.55028};
 // static constexpr Robot::ConfigurationArray goal = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.702,-0.16,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
 
@@ -178,16 +178,16 @@ auto main(int, char **) -> int
     //     std::make_pair(slower_bound, supper_bound)
     // );
 
-    vamp::planning::BimanualCoMTaskSpaceConstraint<Robot, rake, 4> task_constraint(
-        polygon_points, 
-        target_pose, 
-        std::make_pair(lower_bound, upper_bound)
-    );
-
-    // vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> task_constraint(
+    // vamp::planning::BimanualCoMTaskSpaceConstraint<Robot, rake, 4> task_constraint(
+    //     polygon_points, 
     //     target_pose, 
     //     std::make_pair(lower_bound, upper_bound)
     // );
+
+    vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> task_constraint(
+        target_pose, 
+        std::make_pair(lower_bound, upper_bound)
+    );
 
 
     // // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
