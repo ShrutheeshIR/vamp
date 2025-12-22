@@ -23,8 +23,8 @@ using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution, 4>;
 using AttachmentInput = vamp::collision::Attachment<float>;
 
 // Start and goal configurations
-static constexpr Robot::ConfigurationArray start = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.767,-0.16,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
-static constexpr Robot::ConfigurationArray goal = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.702,-0.16,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+static constexpr Robot::ConfigurationArray start = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.767,-0.16,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+static constexpr Robot::ConfigurationArray goal = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.702,-0.16,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
 // static constexpr Robot::ConfigurationArray start = {-0.148774,1.59886,1.36434,-2.75007,0.544898,2.51704,-1.4485,2.07773,1.0024,-0.823622,-1.69743,-0.625681,2.59153,0.7243};
 // static constexpr Robot::ConfigurationArray goal = {-1.62706,-0.100903,2.59477,-2.09287,1.2912,1.8256,-0.7243,1.75215,1.5907,-2.0261,-1.8123,-0.119768,2.50718,-0.7243};
@@ -56,7 +56,7 @@ auto main(int, char **) -> int
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     // bool dd[] = {true};
     bool dd[] = {false, true};
-    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};
+    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM}; //, vamp::planning::ProjMethod::GradDesc};
 
     float descend_rates[] = {0.25, 0.5, 0.75, 1.0};
     // float descend_rates[] = {0.75, 1.0};
@@ -95,7 +95,7 @@ auto main(int, char **) -> int
             continue;
         }
         // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
-        environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x, y, z}, {0.0, 0.0, 0.0}, {dx/2, dy/2, dz/2}));
+        // environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x, y, z}, {0.0, 0.0, 0.0}, {dx/2, dy/2, dz/2}));
     }        
     infile.close();
 
@@ -111,7 +111,7 @@ auto main(int, char **) -> int
 
     std::array<float, 8> polygon_points = {
         // 1.0, -0.05, 1.0, 0.05, 0.0, 0.05, 0.0, -0.05
-        0.10, -0.15, 0.10, 0.15, -0.10, 0.15, -0.10, -0.15
+        0.10, -0.15, 0.1, 0.15, -0.1, 0.15, -0.1, -0.15
         // 0.0, 0.2, 1.0, 0.2, 1.0, 1.0, 0.0, 1.0
     };
 
@@ -137,10 +137,10 @@ auto main(int, char **) -> int
 
 
     std::array<float, 6> slower_bound = {
-        -0.01, -0.01, -0.01, -10.0, -10.0, -10.0
+        -0.01, -0.01, -0.001, -10.0, -10.0, -10.0
     };
     std::array<float, 6> supper_bound = {
-        0.01, 0.01, 0.01, 10.0, 10.0, 10.0
+        0.01, 0.01, 0.001, 10.0, 10.0, 10.0
     };
 
 
@@ -155,9 +155,9 @@ auto main(int, char **) -> int
     eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
     T << 1, 0, 0, 0.09, 0, 1, 0, 0.11, 0, 0, 1, -0.75, 0, 0, 0, 1;
     eef_transforms[1] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    T << 1, 0, 0, 0.09, 0, 1, 0, 0.11, 0, 0, 1, -0.75, 0, 0, 0, 1;
+    T << 1, 0, 0, 0.0999977, 0, 1, 0, 0.118506, 0, 0, 1, -0.756864, 0, 0, 0, 1;
     eef_transforms[2] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    T << 1, 0, 0, 0.09, 0, 1, 0, -0.11, 0, 0, 1, -0.75, 0, 0, 0, 1;
+    T << 1, 0, 0, 0.0999977, 0, 1, 0, -0.118506, 0, 0, 1, -0.756864, 0, 0, 0, 1;
     eef_transforms[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
 
     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;

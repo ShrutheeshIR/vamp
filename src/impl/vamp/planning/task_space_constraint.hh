@@ -491,11 +491,11 @@ namespace vamp::planning
                     break;
                 }
 
-                if (q_dist_from_prev.test_any_greater_equal(4 * max_q_dist * max_q_dist))  // from triangle
-                                                                                            // inequality
-                {
-                    break;
-                }
+                // if (q_dist_from_prev.test_any_greater_equal(4 * max_q_dist * max_q_dist))  // from triangle
+                //                                                                             // inequality
+                // {
+                //     break;
+                // }
                 q_old = q_new + 0.0;
                 project_iter += 1;
             }
@@ -773,11 +773,11 @@ namespace vamp::planning
                 //     break;
                 // }
 
-                // if (q_dist_from_prev.test_any_greater_equal(4 * max_q_dist * max_q_dist))  // from triangle
-                //                                                                             // inequality
-                // {
-                //     break;
-                // }
+                if (q_dist_from_prev.test_any_greater_equal(4 * max_q_dist * max_q_dist))  // from triangle
+                                                                                            // inequality
+                {
+                    break;
+                }
                 q_old = q_new + 0.0;
                 project_iter += 1;
             }
@@ -1430,14 +1430,6 @@ namespace vamp::planning
             std::cout << std::endl;
 
         }
-
-
-        void extract_simd_element(double* __restrict B,
-                                const double* __restrict A)
-        {
-
-        }
-
 
         vamp::FloatVector<rake, 1> distanceToConstraint(const ConfigurationBlock &q)
         {
