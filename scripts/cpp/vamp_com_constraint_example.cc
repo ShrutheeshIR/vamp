@@ -19,7 +19,7 @@ using Robot = vamp::robots::G1Unitree;
 static constexpr const std::size_t rake = vamp::FloatVectorWidth;
 using EnvironmentInput = vamp::collision::Environment<float>;
 using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
-using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution, 4>;
+// using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution, 4>;
 using AttachmentInput = vamp::collision::Attachment<float>;
 
 // Start and goal configurations
@@ -39,7 +39,7 @@ struct Attempt {
     std::size_t planning_time;
     std::size_t planning_iterations;
     std::size_t path_length;
-    
+
     bool operator<(const Attempt& other) const {
         return planning_time < other.planning_time;
     }
@@ -56,7 +56,7 @@ auto main(int, char **) -> int
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     // bool dd[] = {true};
     bool dd[] = {false, true};
-    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM}; //, vamp::planning::ProjMethod::GradDesc};
+    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};
 
     float descend_rates[] = {0.25, 0.5, 0.75, 1.0};
     // float descend_rates[] = {0.75, 1.0};
@@ -96,7 +96,7 @@ auto main(int, char **) -> int
         }
         // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
         environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x, y, z}, {0.0, 0.0, 0.0}, {dx/2, dy/2, dz/2}));
-    }        
+    }
     infile.close();
 
 
@@ -136,14 +136,6 @@ auto main(int, char **) -> int
     };
 
 
-    std::array<float, 6> slower_bound = {
-        -0.01, -0.01, -0.001, -10.0, -10.0, -10.0
-    };
-    std::array<float, 6> supper_bound = {
-        0.01, 0.01, 0.001, 10.0, 10.0, 10.0
-    };
-
-
     // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
     Eigen::Matrix<float, 4, 4> T;
     T << 1, 0, 0, 0, 0, 1, 0, -0.3, 0, 0, 1, 0, 0, 0, 0, 1;
@@ -168,31 +160,37 @@ auto main(int, char **) -> int
     eef_transforms_ref_frame_w_world[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
 
 
-    // vamp::planning::BimanualCoMTSRTaskSpaceConstraint<Robot, rake, 4> task_constraint(
-    //     polygon_points, 
-    //     target_pose, 
-    //     std::make_pair(lower_bound, upper_bound), 
-    //     eef_transforms_ref_frame_w_world,
-    //     eef_transforms, 
-    //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
-    // );
-
-    vamp::planning::BimanualCoMTaskSpaceConstraint<Robot, rake, 4> task_constraint(
-        polygon_points,
-        target_pose, 
-        std::make_pair(lower_bound, upper_bound)
+    vamp::planning::TaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
+        eef_transforms_ref_frame_w_world,
+        eef_transforms,
+        std::make_pair(tsr_lower_bound, tsr_upper_bound)
     );
 
-    
+    vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_constraint(
+        target_pose,
+        std::make_pair(lower_bound, upper_bound)
+    );
+    vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4> com_constraint(
+        polygon_points
+    );
+    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(bimanual_constraint), decltype(com_constraint)> task_constraint(
+        feet_tsr_constraint,
+        bimanual_constraint,
+        com_constraint
+    );
+    // vamp::planning::ComposableConstraints<Robot, rake, decltype(bimanual_constraint)> task_constraint(
+    //     bimanual_constraint
+    // );
+
     rrtc_settings.range = range;
     rrtc_settings.max_iterations = 100000;
     rrtc_settings.dynamic_domain = dyndom;
     rrtc_settings.projection_method = pm;
     rrtc_settings.descend_rate = descent_rate;
-    std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
+    // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
     auto result =
-        CRRTC::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
+        vamp::planning::CRRTC<Robot, rake, Robot::resolution, decltype(feet_tsr_constraint), decltype(bimanual_constraint), decltype(com_constraint)>::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
 
     if(result.path.size() > 0)
     {
@@ -239,7 +237,7 @@ auto main(int, char **) -> int
         // std::cin.ignore();
         succ_attempts.push_back(a);
         std::sort(succ_attempts.begin(), succ_attempts.end());
-        
+
 
 
     }

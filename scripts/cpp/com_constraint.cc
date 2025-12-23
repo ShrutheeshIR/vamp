@@ -25,7 +25,7 @@ using AttachmentInput = vamp::collision::Attachment<float>;
 // Start and goal configurations
 // static constexpr Robot::ConfigurationArray start = {0.697778, -0.5024, -1.256, -1.94109, -2.12554, -2.36424, -2.44589, -0.204884, -2.35822, 0.113728, -0.793422, -0.234981, -2.26647, -2.81113, -2.53907, 0.0183405, -0.824602, -0.245389, -2.46313, -0.490082, -0.492354, -2.94348, -1.4976, -2.50464, -0.98188, -1.8918, -1.55106, -1.55222, -2.98216, -2.18801, -2.53406, -0.999044, -1.91263, -1.56892, -1.56953};
 
-static constexpr Robot::ConfigurationArray start = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.767,-0.16,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+static constexpr Robot::ConfigurationArray start = {-0.191091,0.0383208,0.00319683,0.0253964,-0.0452831,-0.136751,-0.120588,0.0497318,-0.228009,0.0649251,-0.0902099,-0.0258969,-0.248422,-0.350178,-0.297275,0.0283916,-0.102152,-0.0298829,0.626001,-0.198276,0.386909,-0.370969,-0.184715,-0.318269,-0.119656,-0.241667,-0.198767,-0.199213,-0.385787,-0.286734,-0.329537,-0.12623,-0.249644,-0.205609,-0.20584};
 static constexpr Robot::ConfigurationArray goal = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -2.14842, -0.0682913, -2.18706, 0.199869, -0.759459, -0.223488, -2.15322, -2.74429, -2.44542, 0.0636008, -0.804001, -0.238355, -2.39676, -0.47726, -0.480506, -2.88102, -1.45877, -2.45606, -0.953885, -1.85734, -1.5239, -1.52556, -2.93629, -2.1608, -2.49809, -0.978406, -1.88709, -1.54942, -1.55028};
 // static constexpr Robot::ConfigurationArray goal = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.702,-0.16,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
@@ -39,7 +39,7 @@ struct Attempt {
     std::size_t planning_time;
     std::size_t planning_iterations;
     std::size_t path_length;
-    
+
     bool operator<(const Attempt& other) const {
         return planning_time < other.planning_time;
     }
@@ -72,7 +72,7 @@ auto main(int, char **) -> int
         }
         // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
         // environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x, y, z}, {0.0, 0.0, 0.0}, {dx/2, dy/2, dz/2}));
-    }        
+    }
     infile.close();
 
 
@@ -82,9 +82,10 @@ auto main(int, char **) -> int
     // Create RNG for planning
     auto rng = std::make_shared<vamp::rng::Halton<Robot>>();
 
-    // auto isometries = Robot::eefk(start);
-    // std::cout << isometries[0].matrix() << std::endl<< isometries[1].matrix() << std::endl<< isometries[2].matrix() << std::endl<< isometries[3].matrix() << std::endl;
+    auto isometries = Robot::eefk(start);
+    std::cout << isometries[0].matrix() << std::endl<< isometries[1].matrix() << std::endl<< isometries[2].matrix() << std::endl<< isometries[3].matrix() << std::endl;
 
+    std::cout << (isometries[2].inverse() * isometries[3]).matrix() << std::endl;
 
     // std::array<float, 8> polygon_points = {
     //     // 1.0, -0.3, 1.0, 0.3, 0.0, 0.3, 0.0, -0.3
@@ -125,14 +126,6 @@ auto main(int, char **) -> int
     };
 
 
-    std::array<float, 6> slower_bound = {
-        -0.01, -0.01, -0.01, -10.0, -10.0, -10.0
-    };
-    std::array<float, 6> supper_bound = {
-        0.01, 0.01, 0.01, 10.0, 10.0, 10.0
-    };
-
-
     // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
     Eigen::Matrix<float, 4, 4> T;
     T << 1, 0, 0, 0, 0, 1, 0, -0.3, 0, 0, 1, 0, 0, 0, 0, 1;
@@ -157,35 +150,46 @@ auto main(int, char **) -> int
     eef_transforms_ref_frame_w_world[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
 
 
-    vamp::planning::BimanualCoMTSRTaskSpaceConstraint<Robot, rake, 4> task_constraint(
-        polygon_points, 
-        target_pose, 
-        std::make_pair(lower_bound, upper_bound), 
+
+    vamp::planning::TaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
         eef_transforms_ref_frame_w_world,
-        eef_transforms, 
+        eef_transforms,
         std::make_pair(tsr_lower_bound, tsr_upper_bound)
+    );
+
+    vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_constraint(
+        target_pose,
+        std::make_pair(lower_bound, upper_bound)
+    );
+    vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4> com_constraint(
+        polygon_points
+    );
+    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(bimanual_constraint), decltype(com_constraint)> task_constraint(
+        feet_tsr_constraint,
+        bimanual_constraint,
+        com_constraint
     );
 
     // vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(
     //     eef_transforms_ref_frame_w_world,
-    //     eef_transforms, 
+    //     eef_transforms,
     //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
     // );
 
     // vamp::planning::SETaskSpaceConstraint<Robot, rake> task_constraint2(
     //     eef_transforms_ref_frame_w_world[2],
-    //     eef_transforms[2], 
+    //     eef_transforms[2],
     //     std::make_pair(slower_bound, supper_bound)
     // );
 
     // vamp::planning::BimanualCoMTaskSpaceConstraint<Robot, rake, 4> task_constraint(
-    //     polygon_points, 
-    //     target_pose, 
+    //     polygon_points,
+    //     target_pose,
     //     std::make_pair(lower_bound, upper_bound)
     // );
 
     // vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> task_constraint(
-    //     target_pose, 
+    //     target_pose,
     //     std::make_pair(lower_bound, upper_bound)
     // );
 
@@ -205,35 +209,15 @@ auto main(int, char **) -> int
     for (auto i = 0U; i < Robot::dimension; ++i)
         block[i] = Robot::Configuration(start).broadcast(i);
 
-    // task_constraint.print_robot_tsr_error(block);
-
-    // // Robot::ConfigurationArray test = {-0.894,  0.391, -0.591, -1.742, -0.776,  1.65,  -0.978,  0.596,  0.49,  -0.002, -1.672,  0.039,  1.981, -0.502};
-    // // for (auto i = 0U; i < Robot::dimension; ++i)
-    // //     block[i] = Robot::Configuration(test).broadcast(i);
-
-    // task_constraint.distanceToConstraint(block);
-    // task_constraint2.print_robot_tsr_error(block);
+    task_constraint.distanceToConstraint(block);
+    task_constraint.print_robot_tsr_error(block);
 
     std::cout << "----Projecting ----" << std::endl;
     typename Robot::template ConfigurationBlock<rake> projected_block;
-    typename Robot::template ConfigurationBlock<rake> projected_block2;
-
-    // task_constraint2.projectStep(block, projected_block2);
-    // for(auto i=0U; i < Robot::dimension; i++)
-    //     std::cout << projected_block2[{i, 0}] << " ";
-    // std::cout << std::endl;
 
     // task_constraint.projectStep(block, projected_block);
     // for(auto i=0U; i < Robot::dimension; i++)
     //     std::cout << projected_block[{i, 0}] << " ";
-    // std::cout << std::endl;
-    // task_constraint.projectStep(projected_block, projected_block);
-    // for(auto i=0U; i < Robot::dimension; i++)
-    //     std::cout << projected_block[{i, 0}] << " ";
-    // std::cout << std::endl;
-    // success = task_constraint2.projectConfiguration(block, projected_block2);
-    // for(auto i=0U; i < Robot::dimension; i++)
-    //     std::cout << projected_block2[{i, 0}] << ",";
     // std::cout << std::endl;
 
 
@@ -281,21 +265,6 @@ auto main(int, char **) -> int
         for(auto i=0U; i < Robot::dimension; i++)
             std::cout << block[{i, 0}] << ", ";
         std::cout << std::endl;
-        // for(auto i=0U; i < Robot::dimension; i++)
-        //     std::cout << block[{i, 0}] << " ";
-        // std::cout << " --> " ;
-
-        // task_constraint.distanceToConstraint(block);
-
-        // typename Robot::template ConfigurationBlock<rake> projected_block2;
-
-        // success = task_constraint2.projectConfiguration(block, projected_block2, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0);
-        // for(auto i=0U; i < Robot::dimension; i++)
-        //     std::cout << projected_block2[{i, 0}] << " ";
-        // std::cout << " --> " << success << " -- "<< std::endl;
-
-        // for (auto i = 0U; i < Robot::dimension; ++i)
-        //     block[i] = cfg.broadcast(i) + 0.0;
 
         typename Robot::template ConfigurationBlock<rake> projected_block;
         success = task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0);

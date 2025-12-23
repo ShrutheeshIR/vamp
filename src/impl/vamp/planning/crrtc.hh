@@ -13,7 +13,7 @@
 
 namespace vamp::planning
 {
-    template <typename Robot, std::size_t rake, std::size_t resolution, std::size_t num_polygons>
+    template <typename Robot, std::size_t rake, std::size_t resolution, typename... Constraints>
     struct CRRTC
     {
         using Configuration = typename Robot::Configuration;
@@ -26,7 +26,7 @@ namespace vamp::planning
             const Configuration &goal,
             const collision::Environment<FloatVector<rake>> &environment,
             const RRTCSettings &settings,
-            BimanualCoMTaskSpaceConstraint<Robot, rake, num_polygons> &constraint,
+            ComposableConstraints<Robot, rake, Constraints...> &constraint,
             typename RNG::Ptr rng) noexcept -> PlanningResult<Robot>
         {
             return solve(start, std::vector<Configuration>{goal}, environment, settings, constraint, rng);
@@ -37,7 +37,7 @@ namespace vamp::planning
             const std::vector<Configuration> &goals,
             const collision::Environment<FloatVector<rake>> &environment,
             const RRTCSettings &settings,
-            BimanualCoMTaskSpaceConstraint<Robot, rake, num_polygons> &constraint,
+            ComposableConstraints<Robot, rake, Constraints...> &constraint,
             typename RNG::Ptr rng) noexcept -> PlanningResult<Robot>
         {
             PlanningResult<Robot> result;
@@ -187,7 +187,7 @@ namespace vamp::planning
 
                     // try to connect to goal directly
                     while (not connected)
-                    {   
+                    {
                         counter++;
                         if (counter > 2)
                             break;
