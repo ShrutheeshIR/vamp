@@ -23,8 +23,8 @@ using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 using AttachmentInput = vamp::collision::Attachment<float>;
 
 // Start and goal configurations
-static constexpr Robot::ConfigurationArray start = {0.0,0.0,-0.086,0.0,-0.648,0.0,0.0,0.0,0.0,1.5,0.0,0.0,0.0,0.0,0.0,1.5,0.0,0.0,1.542,-0.245,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
-static constexpr Robot::ConfigurationArray goal = {0.0,0.0,-0.086,0.0,-0.648,0.0,0.0,0.0,0.0,1.5,0.0,0.0,0.0,0.0,0.0,1.5,0.0,0.0,-1.713,-0.245,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+static constexpr Robot::ConfigurationArray start = {0.0,0.0,-0.086,0.0,-0.648,0.0,0.0,0.0,0.0,1.5,-0.87267,0.0,0.0,0.0,0.0,1.5,-0.87267,0.0,1.542,-0.245,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+static constexpr Robot::ConfigurationArray goal = {0.0,0.0,-0.086,0.0,-0.648,0.0,0.0,0.0,0.0,1.5,-0.87267,0.0,0.0,0.0,0.0,1.5,-0.87267,0.0,-1.713,-0.245,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
 // static constexpr Robot::ConfigurationArray start = {-0.148774,1.59886,1.36434,-2.75007,0.544898,2.51704,-1.4485,2.07773,1.0024,-0.823622,-1.69743,-0.625681,2.59153,0.7243};
 // static constexpr Robot::ConfigurationArray goal = {-1.62706,-0.100903,2.59477,-2.09287,1.2912,1.8256,-0.7243,1.75215,1.5907,-2.0261,-1.8123,-0.119768,2.50718,-0.7243};
@@ -143,13 +143,13 @@ auto main(int, char **) -> int
 
     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
 
-    T << 1, 0, 0, 0.09, 0, 1, 0, 0.11, 0, 0, 1, -0.75, 0, 0, 0, 1;
+    T << 1, 0, 0, 0.09, 0, 1, 0, 0.11, 0, 0, 1, -0.65, 0, 0, 0, 1;
     eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    T << 1, 0, 0, 0.09, 0, 1, 0, 0.11, 0, 0, 1, -0.75, 0, 0, 0, 1;
+    T << 1, 0, 0, 0.09, 0, 1, 0, 0.11, 0, 0, 1, -0.65, 0, 0, 0, 1;
     eef_transforms[1] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    T << 1, 0, 0, 0.0999977, 0, 1, 0, 0.118506, 0, 0, 1, -0.756864, 0, 0, 0, 1;
+    T << 1, 0, 0, 0.1397, 0, 1, 0, 0.118506, 0, 0, 1, -0.649, 0, 0, 0, 1;
     eef_transforms[2] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    T << 1, 0, 0, 0.0999977, 0, 1, 0, -0.118506, 0, 0, 1, -0.756864, 0, 0, 0, 1;
+    T << 1, 0, 0, 0.1397, 0, 1, 0, -0.118506, 0, 0, 1, -0.649, 0, 0, 0, 1;
     eef_transforms[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
 
     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
