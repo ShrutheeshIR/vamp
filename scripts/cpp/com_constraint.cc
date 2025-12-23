@@ -25,8 +25,8 @@ using AttachmentInput = vamp::collision::Attachment<float>;
 // Start and goal configurations
 // static constexpr Robot::ConfigurationArray start = {0.697778, -0.5024, -1.256, -1.94109, -2.12554, -2.36424, -2.44589, -0.204884, -2.35822, 0.113728, -0.793422, -0.234981, -2.26647, -2.81113, -2.53907, 0.0183405, -0.824602, -0.245389, -2.46313, -0.490082, -0.492354, -2.94348, -1.4976, -2.50464, -0.98188, -1.8918, -1.55106, -1.55222, -2.98216, -2.18801, -2.53406, -0.999044, -1.91263, -1.56892, -1.56953};
 
-static constexpr Robot::ConfigurationArray start = {0.0,0.0,-0.086,0.0,-0.648,0.0,0.0,0.0,0.0,1.5,-0.87267,0.0,0.0,0.0,0.0,1.5,-0.87267,0.0,1.542,-0.245,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
-static constexpr Robot::ConfigurationArray goal = {0.0,0.0,-0.086,0.0,-0.648,0.0,0.0,0.0,0.0,1.5,-0.87267,0.0,0.0,0.0,0.0,1.5,-0.87267,0.0,-1.713,-0.245,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+static constexpr Robot::ConfigurationArray start = {0.0,0.0,-0.2,0.0,0.0,0.0,-0.9,0.0,0.0,1.75,-0.87267,0.0,-0.9,0.0,0.0,1.75,-0.87267,0.0,1.595,-0.277,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+static constexpr Robot::ConfigurationArray goal = {0.035,0.0,0.031,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 // static constexpr Robot::ConfigurationArray goal = {-0.045,0.0,-0.03,0.0,-0.264,0.0,0.0,0.0,0.0,0.456,0.0,0.0,0.0,0.0,0.0,0.486,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
 
@@ -87,6 +87,11 @@ auto main(int, char **) -> int
 
     std::cout << (isometries[0].inverse() * isometries[1]).matrix() << std::endl;
 
+    isometries = Robot::eefk(goal);
+    std::cout << isometries[0].matrix() << std::endl<< isometries[1].matrix() << std::endl<< isometries[2].matrix() << std::endl<< isometries[3].matrix() << std::endl;
+
+    std::cout << (isometries[0].inverse() * isometries[1]).matrix() << std::endl;
+
     // std::array<float, 8> polygon_points = {
     //     // 1.0, -0.3, 1.0, 0.3, 0.0, 0.3, 0.0, -0.3
     //     // 0.0, 0.2, 1.0, 0.2, 1.0, 1.0, 0.0, 1.0
@@ -101,7 +106,7 @@ auto main(int, char **) -> int
     // };
     std::array<float, 8> polygon_points = {
         // 1.0, -0.05, 1.0, 0.05, 0.0, 0.05, 0.0, -0.05
-        0.10, -0.15, 0.10, 0.15, -0.10, 0.15, -0.10, -0.15
+        0.10, -0.15, 0.10, 0.15, 0.0, 0.15, 0.0, -0.15
         // 0.0, 0.2, 1.0, 0.2, 1.0, 1.0, 0.0, 1.0
     };
 
@@ -128,18 +133,18 @@ auto main(int, char **) -> int
 
     // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
     Eigen::Matrix<float, 4, 4> T;
-    T << 1, 0, 0, 0, 0, 1, 0, -0.3, 0, 0, 1, 0, 0, 0, 0, 1;
+    T << 1, 0, 0, 0, 0, 1, 0, -0.303, 0, 0, 1, 0, 0, 0, 0, 1;
     const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
 
     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
 
-    T << 1, 0, 0, 0.09, 0, 1, 0, 0.11, 0, 0, 1, -0.72, 0, 0, 0, 1;
+    T << 1, 0, 0, 0.13, 0, 1, 0, 0.11, 0, 0, 1, -0.725, 0, 0, 0, 1;
     eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    T << 1, 0, 0, 0.09, 0, 1, 0, 0.11, 0, 0, 1, -0.72, 0, 0, 0, 1;
+    T << 1, 0, 0, 0.13, 0, 1, 0, 0.11, 0, 0, 1, -0.725, 0, 0, 0, 1;
     eef_transforms[1] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    T << 1, 0, 0, 0.09, 0, 1, 0, 0.11, 0, 0, 1, -0.72, 0, 0, 0, 1;
+    T << 1, 0, 0, 0.13, 0, 1, 0, 0.11, 0, 0, 1, -0.725, 0, 0, 0, 1;
     eef_transforms[2] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    T << 1, 0, 0, 0.09, 0, 1, 0, -0.11, 0, 0, 1, -0.72, 0, 0, 0, 1;
+    T << 1, 0, 0, 0.13, 0, 1, 0, -0.11, 0, 0, 1, -0.725, 0, 0, 0, 1;
     eef_transforms[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
 
     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
@@ -207,7 +212,7 @@ auto main(int, char **) -> int
     bool success;
     typename Robot::template ConfigurationBlock<rake> block;
     for (auto i = 0U; i < Robot::dimension; ++i)
-        block[i] = Robot::Configuration(start).broadcast(i);
+        block[i] = Robot::Configuration(goal).broadcast(i);
 
     task_constraint.distanceToConstraint(block);
     task_constraint.print_robot_tsr_error(block);

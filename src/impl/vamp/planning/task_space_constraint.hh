@@ -947,6 +947,12 @@ namespace vamp::planning
         auto print_robot_tsr_error(const ConfigurationBlock &q) const
         {
             auto dist = distanceToConstraint(q);
+            std::cout << "COM  : ";
+            for(auto i=0U; i < 3; i++){
+                std::cout << std::setprecision(5) << com_jac_polygons.CoM[{i, 0}] << " ";
+            }
+            std::cout << std::endl;
+
             std::cout << "COM Error : ";
             for(auto i=0U; i < 2; i++){
                 std::cout << std::setprecision(5) << jac_proj_inp.err[{i, 0}] << " ";
@@ -1192,7 +1198,7 @@ namespace vamp::planning
                     if (q_dist_from_prev.test_any_greater_equal(4 * max_q_dist * max_q_dist))  // from triangle
                                                                                                 // inequality
                     {
-                        // std::cout << "Too large step " << std::endl;
+                        std::cout << "Too large step " << std::endl;
                         break;
                     }
                     q_old = q_new + 0.0;
