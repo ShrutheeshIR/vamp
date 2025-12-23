@@ -211,12 +211,13 @@ namespace vamp::planning
 
 
             auto dist = distanceToConstraint(q);
+            std::cout << "Bimanual Error : " << std::endl;
             for(auto i=0U; i < 6 * Robot::dimension; i++){
                 if (i%Robot::dimension == 0)
                     std::cout << std::endl << " J[" << i << "]: ";
                 std::cout << std::setprecision(5) << jac_proj_inp.J[{i, 0}] << " ";
             }
-            std::cout << std::endl;
+            std::cout << std::endl << "Error : ";
             for(auto i=0U; i < 6; i++)
                 std::cout << jac_proj_inp.err[{i, 0}] << " ";
             std::cout << std::endl;
@@ -583,15 +584,38 @@ namespace vamp::planning
         auto print_robot_tsr_error(const ConfigurationBlock &q) const
         {
             auto dist = distanceToConstraint(q);
-            for(auto i=0U; i < 6 * Robot::n_eef * Robot::dimension; i++){
-                if(i % Robot::dimension == 0)
-                    std::cout << std::endl << i / Robot::dimension << " : ";
-                std::cout << jac_proj_inp.J[{i, 0}] << " ";
-            }
-
+            std::cout << "Q input: ";
+            for(auto i=0U; i < Robot::dimension; i++)
+                std::cout << std::setprecision(5) << tsr_function_inp.q[{i, 0}] << " ";
             std::cout << std::endl;
-            for(auto i=0U; i < 6 * Robot::n_eef; i++)
-                std::cout << jac_proj_inp.err[{i, 0}] << " ";
+            std::cout << "Transform input1: ";
+            for(auto i=0U; i < 7; i++)
+                std::cout << std::setprecision(5) << tsr_function_inp.rTeB[{i, 0}] << " ";
+            std::cout << std::endl;
+            std::cout << "Transform input1: ";
+            for(auto i=0U; i < 7; i++)
+                std::cout << std::setprecision(5) << tsr_function_inp.wTrB[{i, 0}] << " ";
+            std::cout << std::endl;
+            std::cout << "Lower limit : ";
+            for(auto i=0U; i < 6; i++)
+                std::cout << std::setprecision(5) << tsr_function_inp.lbB[{i, 0}] << " ";
+            std::cout << std::endl;
+            std::cout << "Upper limit : ";
+            for(auto i=0U; i < 6; i++)
+                std::cout << std::setprecision(5) << tsr_function_inp.ubB[{i, 0}] << " ";
+            std::cout << std::endl;
+
+
+            std::cout << "TSR Error : " << std::endl;
+            for(auto i=0U; i < 6 * 2 * Robot::dimension; i++){
+                if(i % Robot::dimension == 0)
+                    std::cout << std::endl << "J[" << i / Robot::dimension << "] : ";
+                std::cout << short_jac_proj_inp.J[{i, 0}] << " ";
+            }
+            std::cout << std::endl;
+            std::cout << "Error : " << std::endl;
+            for(auto i=0U; i < 6 * 2; i++)
+                std::cout << short_jac_proj_inp.err[{i, 0}] << " ";
             std::cout << std::endl;
 
         }
@@ -923,7 +947,7 @@ namespace vamp::planning
         auto print_robot_tsr_error(const ConfigurationBlock &q) const
         {
             auto dist = distanceToConstraint(q);
-            std::cout << "Error : ";
+            std::cout << "COM Error : ";
             for(auto i=0U; i < 2; i++){
                 std::cout << std::setprecision(5) << jac_proj_inp.err[{i, 0}] << " ";
             }

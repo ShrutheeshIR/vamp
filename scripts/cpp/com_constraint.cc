@@ -25,8 +25,8 @@ using AttachmentInput = vamp::collision::Attachment<float>;
 // Start and goal configurations
 // static constexpr Robot::ConfigurationArray start = {0.697778, -0.5024, -1.256, -1.94109, -2.12554, -2.36424, -2.44589, -0.204884, -2.35822, 0.113728, -0.793422, -0.234981, -2.26647, -2.81113, -2.53907, 0.0183405, -0.824602, -0.245389, -2.46313, -0.490082, -0.492354, -2.94348, -1.4976, -2.50464, -0.98188, -1.8918, -1.55106, -1.55222, -2.98216, -2.18801, -2.53406, -0.999044, -1.91263, -1.56892, -1.56953};
 
-static constexpr Robot::ConfigurationArray start = {-0.191091,0.0383208,0.00319683,0.0253964,-0.0452831,-0.136751,-0.120588,0.0497318,-0.228009,0.0649251,-0.0902099,-0.0258969,-0.248422,-0.350178,-0.297275,0.0283916,-0.102152,-0.0298829,0.626001,-0.198276,0.386909,-0.370969,-0.184715,-0.318269,-0.119656,-0.241667,-0.198767,-0.199213,-0.385787,-0.286734,-0.329537,-0.12623,-0.249644,-0.205609,-0.20584};
-static constexpr Robot::ConfigurationArray goal = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -2.14842, -0.0682913, -2.18706, 0.199869, -0.759459, -0.223488, -2.15322, -2.74429, -2.44542, 0.0636008, -0.804001, -0.238355, -2.39676, -0.47726, -0.480506, -2.88102, -1.45877, -2.45606, -0.953885, -1.85734, -1.5239, -1.52556, -2.93629, -2.1608, -2.49809, -0.978406, -1.88709, -1.54942, -1.55028};
+static constexpr Robot::ConfigurationArray start = {0.0,0.0,-0.086,0.0,-0.648,0.0,0.0,0.0,0.0,1.5,0.0,0.0,0.0,0.0,0.0,1.5,0.0,0.0,1.542,-0.245,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+static constexpr Robot::ConfigurationArray goal = {0.0,0.0,-0.086,0.0,-0.648,0.0,0.0,0.0,0.0,1.5,0.0,0.0,0.0,0.0,0.0,1.5,0.0,0.0,-1.713,-0.245,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 // static constexpr Robot::ConfigurationArray goal = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.702,-0.16,0.52,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
 
@@ -85,7 +85,7 @@ auto main(int, char **) -> int
     auto isometries = Robot::eefk(start);
     std::cout << isometries[0].matrix() << std::endl<< isometries[1].matrix() << std::endl<< isometries[2].matrix() << std::endl<< isometries[3].matrix() << std::endl;
 
-    std::cout << (isometries[2].inverse() * isometries[3]).matrix() << std::endl;
+    std::cout << (isometries[0].inverse() * isometries[1]).matrix() << std::endl;
 
     // std::array<float, 8> polygon_points = {
     //     // 1.0, -0.3, 1.0, 0.3, 0.0, 0.3, 0.0, -0.3
@@ -101,7 +101,7 @@ auto main(int, char **) -> int
     // };
     std::array<float, 8> polygon_points = {
         // 1.0, -0.05, 1.0, 0.05, 0.0, 0.05, 0.0, -0.05
-        10.10, -10.15, 10.10, 10.15, -10.10, 10.15, -10.10, -10.15
+        0.10, -0.15, 0.10, 0.15, -0.10, 0.15, -0.10, -0.15
         // 0.0, 0.2, 1.0, 0.2, 1.0, 1.0, 0.0, 1.0
     };
 
@@ -133,13 +133,13 @@ auto main(int, char **) -> int
 
     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
 
-    T << 1, 0, 0, 0.09, 0, 1, 0, 0.11, 0, 0, 1, -0.75, 0, 0, 0, 1;
+    T << 1, 0, 0, 0.09, 0, 1, 0, 0.11, 0, 0, 1, -0.72, 0, 0, 0, 1;
     eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    T << 1, 0, 0, 0.09, 0, 1, 0, 0.11, 0, 0, 1, -0.75, 0, 0, 0, 1;
+    T << 1, 0, 0, 0.09, 0, 1, 0, 0.11, 0, 0, 1, -0.72, 0, 0, 0, 1;
     eef_transforms[1] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    T << 1, 0, 0, 0.09, 0, 1, 0, 0.11, 0, 0, 1, -0.75, 0, 0, 0, 1;
+    T << 1, 0, 0, 0.09, 0, 1, 0, 0.11, 0, 0, 1, -0.72, 0, 0, 0, 1;
     eef_transforms[2] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    T << 1, 0, 0, 0.09, 0, 1, 0, -0.11, 0, 0, 1, -0.75, 0, 0, 0, 1;
+    T << 1, 0, 0, 0.09, 0, 1, 0, -0.11, 0, 0, 1, -0.72, 0, 0, 0, 1;
     eef_transforms[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
 
     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
@@ -249,7 +249,7 @@ auto main(int, char **) -> int
 
     auto extension_vector = goalc - startc;
     std::cout << extension_vector << std::endl;
-    extension_vector = extension_vector / extension_vector.l2_norm();
+    // extension_vector = extension_vector / extension_vector.l2_norm();
     std::cout << extension_vector << std::endl;
 
 
