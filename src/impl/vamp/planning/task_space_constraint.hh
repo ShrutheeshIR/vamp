@@ -291,7 +291,7 @@ namespace vamp::planning
                     // for (auto i = 0U; i < Robot::dimension; i++)
                     //         std::cout << grad[{i, 0}] << " ";
                     // std::cout << std::endl;
-                    grad = grad.zero_out_nans();
+                    // grad = grad.zero_out_nans();
                     // std::cout << "Grad for bimanual constraint: "  ;
                     // for (auto i = 0U; i < Robot::dimension; i++)
                     //         std::cout << grad[{i, 0}] << " ";

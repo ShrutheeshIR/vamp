@@ -163,7 +163,6 @@ if(VAMP_BUILD_CPP_DEMO)
 
   add_executable(vamp_com_constraint_example scripts/cpp/vamp_com_constraint_example.cc)
   target_link_libraries(vamp_com_constraint_example PRIVATE vamp_cpp)
-  target_compile_options(com_constraint PRIVATE -fno-finite-math-only -fno-associative-math -ffp-contract=off)
 
   # Disable strict warnings for demos to maintain compatibility
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
