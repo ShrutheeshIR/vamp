@@ -52,11 +52,12 @@ auto main(int, char **) -> int
     vamp::planning::RRTCSettings rrtc_settings;
 
     float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
-    // float ranges[] = {0.5, 0.75};
+    // float ranges[] = {1.0};
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
-    // bool dd[] = {true};
+    // bool dd[] = {false};
     bool dd[] = {false, true};
     vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};
+    // vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM};
 
     float descend_rates[] = {0.25, 0.5, 0.75, 1.0};
     // float descend_rates[] = {0.75, 1.0};
@@ -111,15 +112,16 @@ auto main(int, char **) -> int
 
     std::array<float, 8> polygon_points = {
         // 1.0, -0.05, 1.0, 0.05, 0.0, 0.05, 0.0, -0.05
-        0.20, -0.15, 0.10, 0.20, -0.05, 0.15, -0.05, -0.15
+        0.20, -0.25, 0.20, 0.25, -0.05, 0.25, -0.05, -0.25
+        // 10.20, -10.25, 10.20, 10.25, -10.05, 10.25, -10.05, -10.25
         // 0.0, 0.2, 1.0, 0.2, 1.0, 1.0, 0.0, 1.0
     };
 
     std::array<float, 6> lower_bound = {
-        -0.00001, -0.00001, -0.00001, -0.00001, -0.00001, -0.00001
+        -0.001, -0.001, -0.001, -0.001, -0.001, -0.001
     };
     std::array<float, 6> upper_bound = {
-        0.00001, 0.00001, 0.00001, 0.00001, 0.00001, 0.00001
+        0.001, 0.001, 0.001, 0.001, 0.001, 0.001
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
@@ -138,18 +140,18 @@ auto main(int, char **) -> int
 
     // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
     Eigen::Matrix<float, 4, 4> T;
-    T << 1, 0, 0, 0, 0, 1, 0, -0.303, 0, 0, 1, 0, 0, 0, 0, 1;
+    T << 0.9999990, -0.0009995,  0.0010005, 0.0, 0.0010005,  0.9999990, -0.0009995, -0.303, -0.0009995,  0.0010005,  0.9999990, 0.0, 0.0, 0.0, 0.0, 1.0;
     const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
 
     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
 
-    T << 1, 0, 0, 0.135, 0, 1, 0, 0.11, 0, 0, 1, -0.725, 0, 0, 0, 1;
+    T << 0.9999990, -0.0009995,  0.0010005, 0.13, 0.0010005,  0.9999990, -0.0009995, 0.11, -0.0009995,  0.0010005,  0.9999990, -0.725, 0.0, 0.0, 0.0, 1.0;
     eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    T << 1, 0, 0, 0.135, 0, 1, 0, 0.11, 0, 0, 1, -0.725, 0, 0, 0, 1;
+    T << 0.9999990, -0.0009995,  0.0010005, 0.13, 0.0010005,  0.9999990, -0.0009995, 0.11, -0.0009995,  0.0010005,  0.9999990, -0.725, 0.0, 0.0, 0.0, 1.0;
     eef_transforms[1] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    T << 1, 0, 0, 0.135, 0, 1, 0, 0.118, 0, 0, 1, -0.725, 0, 0, 0, 1;
+    T << 0.9999990, -0.0009995,  0.0010005, 0.13, 0.0010005,  0.9999990, -0.0009995, 0.11, -0.0009995,  0.0010005,  0.9999990, -0.725, 0.0, 0.0, 0.0, 1.0;
     eef_transforms[2] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    T << 1, 0, 0, 0.135, 0, 1, 0, -0.118, 0, 0, 1, -0.725, 0, 0, 0, 1;
+    T << 0.9999990, -0.0009995,  0.0010005, 0.13, 0.0010005,  0.9999990, -0.0009995, -0.11, -0.0009995,  0.0010005,  0.9999990, -0.725, 0.0, 0.0, 0.0, 1.0;
     eef_transforms[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
 
     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
@@ -173,13 +175,17 @@ auto main(int, char **) -> int
     vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4> com_constraint(
         polygon_points
     );
-    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(bimanual_constraint), decltype(com_constraint)> task_constraint(
+
+    vamp::planning::SelfCollisionConstraint<Robot, rake> self_collision_constraint;
+
+    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_constraint) > task_constraint(
         feet_tsr_constraint,
-        bimanual_constraint,
-        com_constraint
+        com_constraint,
+        bimanual_constraint
     );
-    // vamp::planning::ComposableConstraints<Robot, rake, decltype(bimanual_constraint)> task_constraint(
-    //     bimanual_constraint
+    // vamp::planning::ComposableConstraints<Robot, rake, decltype(bimanual_constraint), decltype(com_constraint)> task_constraint(
+    //     bimanual_constraint,
+    //     com_constraint
     // );
 
     rrtc_settings.range = range;
@@ -190,7 +196,9 @@ auto main(int, char **) -> int
     // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
     auto result =
-        vamp::planning::CRRTC<Robot, rake, Robot::resolution, decltype(feet_tsr_constraint), decltype(bimanual_constraint), decltype(com_constraint)>::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
+        vamp::planning::CRRTC<Robot, rake, Robot::resolution, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_constraint)>::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
+    // auto result =
+    //     vamp::planning::CRRTC<Robot, rake, Robot::resolution, decltype(bimanual_constraint), decltype(com_constraint)>::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
 
     if(result.path.size() > 0)
     {

@@ -10,7 +10,7 @@ option(VAMP_INSTALL_CPP_LIBRARY "Install VAMP C++ library (disable for Python wh
 option(VAMP_BUILD_CPP_DEMO "Build VAMP C++ Demo Scripts" ON)
 option(VAMP_BUILD_OMPL_DEMO "Build VAMP C++ OMPL Integration Demo Scripts" OFF)
 option(VAMP_OMPL_PATH "Search Path for OMPL Installation - Only Needed for Demo Script" "")
-add_compile_options(-w) 
+add_compile_options(-w)
 
 if(VAMP_FORCE_CLANG)
   find_program(CLANG "clang")
@@ -151,18 +151,19 @@ if(VAMP_BUILD_CPP_DEMO)
 
   # add_executable(vamp_crrtc_spheres scripts/cpp/vamp_crrtc_spheres.cc)
   # target_link_libraries(vamp_crrtc_spheres PRIVATE vamp_cpp)
-  
+
   # add_executable(vamp_bimanual_constraint scripts/cpp/bimanual_constraint.cc)
   # target_link_libraries(vamp_bimanual_constraint PRIVATE vamp_cpp)
 
   add_executable(com_constraint scripts/cpp/com_constraint.cc)
   target_link_libraries(com_constraint PRIVATE vamp_cpp)
-  
+
   # add_executable(vamp_bimanual_planner_example scripts/cpp/vamp_bimanual_example.cc)
   # target_link_libraries(vamp_bimanual_planner_example PRIVATE vamp_cpp)
 
   add_executable(vamp_com_constraint_example scripts/cpp/vamp_com_constraint_example.cc)
   target_link_libraries(vamp_com_constraint_example PRIVATE vamp_cpp)
+  target_compile_options(com_constraint PRIVATE -fno-finite-math-only -fno-associative-math -ffp-contract=off)
 
   # Disable strict warnings for demos to maintain compatibility
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -170,10 +171,10 @@ if(VAMP_BUILD_CPP_DEMO)
     # target_compile_options(task_space_constraints_examples PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
     # target_compile_options(vamp_crrtc_example PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
     # target_compile_options(vamp_crrtc_spheres PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
-    target_compile_options(com_constraint PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
+    target_compile_options(com_constraint PRIVATE -Wno-c++11-narrowing -Wno-sign-compare -fno-finite-math-only)
     # target_compile_options(vamp_bimanual_constraint PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
     # target_compile_options(vamp_bimanual_planner_example PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
-    target_compile_options(vamp_com_constraint_example PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
+    target_compile_options(vamp_com_constraint_example PRIVATE -Wno-c++11-narrowing -Wno-sign-compare -fno-finite-math-only)
   endif()
 endif()
 
@@ -184,7 +185,7 @@ if(VAMP_BUILD_OMPL_DEMO)
   if(ompl_FOUND)
     add_executable(vamp_ompl_integration scripts/cpp/ompl_integration.cc)
     target_link_libraries(vamp_ompl_integration PRIVATE ompl::ompl vamp_cpp)
-    
+
     # Disable strict warnings for demos to maintain compatibility
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
       target_compile_options(vamp_ompl_integration PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)

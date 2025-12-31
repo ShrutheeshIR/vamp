@@ -154,6 +154,11 @@ namespace vamp
             return D(apply<S::template cmp_equal<0>>(d()->data, o));
         }
 
+        inline constexpr auto zero_out_nans() const noexcept -> D
+        {
+            return D(apply<S::template zero_out_nans<0>>(d()->data));
+        }
+
         template <typename T, typename allow_types<DataT, typename S::VectorT>::template check<T> = true>
         inline constexpr auto not_equal(T o) const noexcept -> D
         {

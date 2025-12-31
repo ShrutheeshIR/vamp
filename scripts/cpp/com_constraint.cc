@@ -48,6 +48,7 @@ struct Attempt {
 
 auto main(int, char **) -> int
 {
+    std::cout << std::fixed << std::setprecision(5);
 
     vamp::planning::RRTCSettings rrtc_settings;
 
@@ -90,61 +91,49 @@ auto main(int, char **) -> int
     isometries = Robot::eefk(goal);
     std::cout << isometries[0].matrix() << std::endl<< isometries[1].matrix() << std::endl<< isometries[2].matrix() << std::endl<< isometries[3].matrix() << std::endl;
 
-    std::cout << (isometries[0].inverse() * isometries[1]).matrix() << std::endl;
-
-    // std::array<float, 8> polygon_points = {
-    //     // 1.0, -0.3, 1.0, 0.3, 0.0, 0.3, 0.0, -0.3
-    //     // 0.0, 0.2, 1.0, 0.2, 1.0, 1.0, 0.0, 1.0
-    //     1.0, -0.05, 1.0, 0.05, 0.0, 0.05, 0.0, -0.05
-    // };
-
-    // std::array<float, 6> lower_bound = {
-    //     -0.00001, -0.00001, -0.00001, -0.00001, -0.00001, -0.00001
-    // };
-    // std::array<float, 6> upper_bound = {
-    //     0.00001, 0.00001, 0.00001, 0.00001, 0.00001, 0.00001
-    // };
+    std::cout << "Hands : " << (isometries[0].inverse() * isometries[1]).matrix() << std::endl;
     std::array<float, 8> polygon_points = {
         // 1.0, -0.05, 1.0, 0.05, 0.0, 0.05, 0.0, -0.05
-        0.10, -0.15, 0.10, 0.15, 0.0, 0.15, 0.0, -0.15
+        0.20, -0.25, 0.20, 0.25, -0.05, 0.25, -0.05, -0.25
+        // 10.20, -10.25, 10.20, 10.25, -10.05, 10.25, -10.05, -10.25
         // 0.0, 0.2, 1.0, 0.2, 1.0, 1.0, 0.0, 1.0
     };
 
     std::array<float, 6> lower_bound = {
-        -0.00001, -0.00001, -0.00001, -0.00001, -0.00001, -0.00001
+        -0.001, -0.001, -0.001, -0.001, -0.001, -0.001
     };
     std::array<float, 6> upper_bound = {
-        0.00001, 0.00001, 0.00001, 0.00001, 0.00001, 0.00001
+        0.001, 0.001, 0.001, 0.001, 0.001, 0.001
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-        -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -0.01, -0.01, -0.01, -10.0, -10.0, -10.0, -0.01, -0.01, -0.01, -10.0, -10.0, -10.0
+        -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -0.02, -0.01, -0.01, -0.5, -0.5, -0.5, -0.02, -0.01, -0.01, -0.5, -0.5, -0.5
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
         10.0, 10.0, 10.0, 10.0, 10.0, 10.0,
         10.0, 10.0, 10.0, 10.0, 10.0, 10.0,
-        0.01, 0.01, 0.01,
-        10.0, 10.0, 10.0,
-        0.01, 0.01, 0.01,
-        10.0, 10.0, 10.0
+        0.02, 0.01, 0.01,
+        0.5, 0.5, 0.5,
+        0.02, 0.01, 0.01,
+        0.5, 0.5, 0.5
     };
 
 
     // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
     Eigen::Matrix<float, 4, 4> T;
-    T << 1, 0, 0, 0, 0, 1, 0, -0.303, 0, 0, 1, 0, 0, 0, 0, 1;
+    T << 0.9999990, -0.0009995,  0.0010005, 0.0, 0.0010005,  0.9999990, -0.0009995, -0.303, -0.0009995,  0.0010005,  0.9999990, 0.0, 0.0, 0.0, 0.0, 1.0;
     const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
 
     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
 
-    T << 1, 0, 0, 0.13, 0, 1, 0, 0.11, 0, 0, 1, -0.725, 0, 0, 0, 1;
+    T << 0.9999990, -0.0009995,  0.0010005, 0.13, 0.0010005,  0.9999990, -0.0009995, 0.11, -0.0009995,  0.0010005,  0.9999990, -0.725, 0.0, 0.0, 0.0, 1.0;
     eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    T << 1, 0, 0, 0.13, 0, 1, 0, 0.11, 0, 0, 1, -0.725, 0, 0, 0, 1;
+    T << 0.9999990, -0.0009995,  0.0010005, 0.13, 0.0010005,  0.9999990, -0.0009995, 0.11, -0.0009995,  0.0010005,  0.9999990, -0.725, 0.0, 0.0, 0.0, 1.0;
     eef_transforms[1] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    T << 1, 0, 0, 0.13, 0, 1, 0, 0.11, 0, 0, 1, -0.725, 0, 0, 0, 1;
+    T << 0.9999990, -0.0009995,  0.0010005, 0.13, 0.0010005,  0.9999990, -0.0009995, 0.11, -0.0009995,  0.0010005,  0.9999990, -0.725, 0.0, 0.0, 0.0, 1.0;
     eef_transforms[2] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    T << 1, 0, 0, 0.13, 0, 1, 0, -0.11, 0, 0, 1, -0.725, 0, 0, 0, 1;
+    T << 0.9999990, -0.0009995,  0.0010005, 0.13, 0.0010005,  0.9999990, -0.0009995, -0.11, -0.0009995,  0.0010005,  0.9999990, -0.725, 0.0, 0.0, 0.0, 1.0;
     eef_transforms[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
 
     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
@@ -153,7 +142,6 @@ auto main(int, char **) -> int
     eef_transforms_ref_frame_w_world[1] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
     eef_transforms_ref_frame_w_world[2] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
     eef_transforms_ref_frame_w_world[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-
 
 
     vamp::planning::TaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
@@ -169,11 +157,15 @@ auto main(int, char **) -> int
     vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4> com_constraint(
         polygon_points
     );
-    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(bimanual_constraint), decltype(com_constraint)> task_constraint(
+
+    vamp::planning::SelfCollisionConstraint<Robot, rake> self_collision_constraint;
+
+    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_constraint) > task_constraint(
         feet_tsr_constraint,
-        bimanual_constraint,
-        com_constraint
+        com_constraint,
+        bimanual_constraint
     );
+
 
     // vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(
     //     eef_transforms_ref_frame_w_world,
@@ -210,9 +202,14 @@ auto main(int, char **) -> int
     // // vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4> task_constraint(polygon_points);
     // auto startcc = rng->next();
     bool success;
+    Robot::ConfigurationArray test = {-0.05756, -0.10361, -0.30607, -0.22192, -0.22951, -0.23933, -1.01621, -0.03210, -0.22167, 1.59964, -0.86941, -0.02150, -1.02993, -0.24976, -0.22910, 1.59571, -0.87069, -0.02193, 1.23762, -0.29675, 0.43134, -0.26073, -0.13340, -0.22137, -0.08773, -0.16697, -0.13678, -0.13683, -0.26232, -0.19178, -0.22258, -0.08843, -0.16783, -0.13752, -0.13754};
     typename Robot::template ConfigurationBlock<rake> block;
     for (auto i = 0U; i < Robot::dimension; ++i)
-        block[i] = Robot::Configuration(goal).broadcast(i);
+        block[i] = Robot::Configuration(test).broadcast(i);
+
+
+    bool goal_valid = Robot::template fkcc<rake>(env_v, block);
+    std::cout << "Goal valid: " << goal_valid << std::endl;
 
     task_constraint.distanceToConstraint(block);
     task_constraint.print_robot_tsr_error(block);
@@ -220,16 +217,49 @@ auto main(int, char **) -> int
     std::cout << "----Projecting ----" << std::endl;
     typename Robot::template ConfigurationBlock<rake> projected_block;
 
+    // for (auto i = 0U; i < Robot::dimension; ++i)
+    //     block[i] = Robot::Configuration(start).broadcast(i);
+    // goal_valid = Robot::template fkcc<rake>(env_v, block);
+    // std::cout << "Goal valid: " << goal_valid << std::endl;
+    // std::cout << "Distance to constraint: " << task_constraint.distanceToConstraint(block) << std::endl;
+
+    // for (auto i = 0U; i < Robot::dimension; ++i)
+    //     block[i] = Robot::Configuration(goal).broadcast(i);
+    // goal_valid = Robot::template fkcc<rake>(env_v, block);
+    // std::cout << "Goal valid: " << goal_valid << std::endl;
+    // std::cout << "Distance to constraint: " << task_constraint.distanceToConstraint(block) << std::endl;
+
     // task_constraint.projectStep(block, projected_block);
     // for(auto i=0U; i < Robot::dimension; i++)
     //     std::cout << projected_block[{i, 0}] << " ";
     // std::cout << std::endl;
 
 
-    success = task_constraint.projectConfiguration(block, projected_block);
+    bool first = true;
+    success = task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM, 5.0, 1.0);
     for(auto i=0U; i < Robot::dimension; i++)
         std::cout << projected_block[{i, 0}] << ",";
-    std::cout << std::endl;
+    std::cout << success <<std::endl;
+    std::ofstream outfile("/src/trajectory.txt");
+    for (auto i = 0U; i < Robot::dimension; ++i)
+    {
+        if (!first) outfile << ",";
+        outfile << block[{i, 0}];
+        first = false;
+    }
+
+    outfile << "\n";
+
+    first = true;
+    for (auto i = 0U; i < Robot::dimension; ++i)
+    {
+        if (!first) outfile << ",";
+        outfile << projected_block[{i, 0}];
+        first = false;
+    }
+
+    outfile << "\n";
+    outfile.close();
 
 
     // // std::cout << fks[0].matrix() << std::endl;
@@ -244,70 +274,69 @@ auto main(int, char **) -> int
 
     // auto startc = rng->next();
     // auto goalc = rng->next();
-    // bool success;
+    // // bool success;
+
+
+    // auto startc = Robot::Configuration(start);
+    // // auto goalc = Robot::Configuration(goal);
+
 
     // std::cout << startc << ", " << goalc << std::endl;
-
-    auto startc = Robot::Configuration(start);
-    auto goalc = Robot::Configuration(goal);
-
-
-    auto extension_vector = goalc - startc;
-    std::cout << extension_vector << std::endl;
+    // auto extension_vector = goalc - startc;
+    // std::cout << extension_vector << std::endl;
     // extension_vector = extension_vector / extension_vector.l2_norm();
-    std::cout << extension_vector << std::endl;
+    // std::cout << extension_vector << std::endl;
 
 
-    std::cout << std::fixed << std::setprecision(3);
-    std::ofstream outfile("/src/trajectory.txt");
+    // // std::cout << std::fixed << std::setprecision(3);
+    // // std::ofstream outfile("/src/trajectory.txt");
 
 
-    for(size_t ext = 0; ext < 11; ext++){
-        std::cout << "\nExtension attempt " << ext << " " << std::endl;
-        auto cfg = startc + extension_vector * ext / 10;
-        for (auto i = 0U; i < Robot::dimension; ++i)
-            block[i] = cfg.broadcast(i) + 0.0;
-        for(auto i=0U; i < Robot::dimension; i++)
-            std::cout << block[{i, 0}] << ", ";
-        std::cout << std::endl;
+    // for(size_t ext = 0; ext < 11; ext++){
+    //     std::cout << "\nExtension attempt " << ext << " " << std::endl;
+    //     auto cfg = startc + extension_vector * ext / 10;
+    //     for (auto i = 0U; i < Robot::dimension; ++i)
+    //         block[i] = cfg.broadcast(i) + 0.0;
+    //     for(auto i=0U; i < Robot::dimension; i++)
+    //         std::cout << block[{i, 0}] << ", ";
+    //     std::cout << std::endl;
 
-        typename Robot::template ConfigurationBlock<rake> projected_block;
-        success = task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0);
+    //     typename Robot::template ConfigurationBlock<rake> projected_block;
+    //     success = task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0);
 
-        bool valid = Robot::template fkcc<rake>(env_v, projected_block);
+    //     bool valid = Robot::template fkcc<rake>(env_v, projected_block);
+    //     bool valid_og = Robot::template fkcc<rake>(env_v, block);
 
-        for(auto i=0U; i < Robot::dimension; i++)
-            std::cout << projected_block[{i, 0}] << ", ";
-        std::cout << " --> " << success << " -- " << valid << std::endl;
+    //     for(auto i=0U; i < Robot::dimension; i++)
+    //         std::cout << projected_block[{i, 0}] << ", ";
+    //     std::cout << " --> " << success << " -- " << valid << "-- " << valid_og << std::endl;
 
 
-        bool first = true;
-        for (auto i = 0U; i < Robot::dimension; ++i)
-        {
-            if (!first) outfile << ",";
-            outfile << block[{i, 0}];
-            first = false;
-        }
+    //     bool first = true;
+    //     for (auto i = 0U; i < Robot::dimension; ++i)
+    //     {
+    //         if (!first) outfile << ",";
+    //         outfile << block[{i, 0}];
+    //         first = false;
+    //     }
 
-        outfile << "\n";
+    //     outfile << "\n";
 
-        first = true;
-        for (auto i = 0U; i < Robot::dimension; ++i)
-        {
-            if (!first) outfile << ",";
-            outfile << projected_block[{i, 0}];
-            first = false;
-        }
+    //     first = true;
+    //     for (auto i = 0U; i < Robot::dimension; ++i)
+    //     {
+    //         if (!first) outfile << ",";
+    //         outfile << projected_block[{i, 0}];
+    //         first = false;
+    //     }
 
-        // auto fka = Robot::eefk(soln);
-        // std::cout <<std::endl << fka.matrix() <<std::endl;
-        // std::cout << std::endl;
-        outfile << "\n";
-        // task_constraint.distanceToConstraint(projected_block);
-    }
-    outfile.close();
-
-    // Robot::eefk(start)
+    //     // auto fka = Robot::eefk(soln);
+    //     // std::cout <<std::endl << fka.matrix() <<std::endl;
+    //     // std::cout << std::endl;
+    //     outfile << "\n";
+    //     // task_constraint.distanceToConstraint(projected_block);
+    // }
+    // outfile.close();
 
 
 
