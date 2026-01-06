@@ -194,6 +194,8 @@ namespace vamp::planning
                     const auto &[other_nearest_node, other_nearest_distance] = *other_nearest;
                     const std::size_t n_extensions = std::ceil(other_nearest_distance / settings.range);
                     auto max_iterations = 2 * n_extensions;
+                    //std::cout << "distance is " << other_nearest_distance << "\n";
+                    //std::cout << "max iterations is " << max_iterations << "\n";
                     //auto max_iterations = 2;
                     // try to connect to goal directly
                     while (not connected)

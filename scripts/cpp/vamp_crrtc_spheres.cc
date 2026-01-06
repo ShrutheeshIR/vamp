@@ -20,8 +20,16 @@ static constexpr const std::size_t rake = vamp::FloatVectorWidth;
 using EnvironmentInput = vamp::collision::Environment<float>;
 using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution>;
+using ConfigurationBlock = typename Robot::template ConfigurationBlock<rake>;
+using Configuration = typename Robot::Configuration;
+ConfigurationBlock turn_configuration_into_configuration_block(const Robot::Configuration &c) {
+        typename Robot::template ConfigurationBlock<rake> block;
 
-
+        for (auto i = 0U; i < Robot::dimension; ++i) {
+            block[i] = c.broadcast(i) + 0.0;
+        }
+        return block;
+}
 /*static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
 static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
 */
@@ -73,6 +81,7 @@ static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73
 static constexpr Robot::ConfigurationArray goal = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
 static constexpr Robot::ConfigurationArray start = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
 
+
 //The following pair will have straight forward motion, rrtc terminates early
 //static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
 //static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
@@ -99,6 +108,23 @@ static const std::vector<std::array<float, 3>> problem = {
     {0, -0.55, 0.8},
     {0.35, -0.35, 0.8},
 };
+
+/*static const std::vector<std::array<float, 3>> problem = {
+    {0.55, 0, 0.25},
+    {0.35, 0.35, 0.25},
+    {0, 0.55, 0.25},
+    {-0.55, 0, 0.25},
+    {-0.35, -0.35, 0.25},
+    {0, -0.55, 0.25},
+    {0.35, -0.35, 0.25},
+    {0.35, 0.35, 0.8},
+    {0, 0.55, 0.8},
+    {-0.35, 0.35, 0.8},
+    {-0.55, 0, 0.8},
+    {-0.35, -0.35, 0.8},
+    {0, -0.55, 0.8},
+    {0.35, -0.35, 0.8},
+};*/
 // Radius for obstacle spheres
 //static constexpr float radius = 0.15;
 static constexpr float radius = 0.1;
@@ -132,7 +158,7 @@ auto main(int, char **) -> int
     //float ranges[] = {0.5, 1.0, 1.5, 2.0};
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     bool dd[] = {false};
-    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::GradDesc};
+    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM};
 
     // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
     //float descend_rates[] = {0.75, 1.0};
@@ -188,7 +214,75 @@ auto main(int, char **) -> int
     int x;
 
 
+    //attempt to project start down to the manifold.
     
+
+    std::vector<Configuration> projected_vector;
+    Robot::ConfigurationArray zero_vector = {0.0,0.0,0.0,-0.0,0.0,0.0,0.0};
+    bool success = vamp::planning::project_constraint_vector<Robot, rake, Robot::resolution>(
+        Robot::Configuration(goal),
+        Robot::Configuration(zero_vector),
+        range,
+        projected_vector,
+        task_constraint,
+        env_v
+    );
+
+    std::cout << "projection success: " << success << "\n";
+    
+    std::cout << "size of projected_vector is " << projected_vector.size();
+    /*for(auto proj_vector : projected_vector)
+    {
+
+        for (std::size_t i = 0; i < Robot::dimension; ++i) {
+            std::cout << proj_vector.broadcast(i) << " "; // extract scalar
+        }
+        std::cout << std::endl;
+    }*/
+    Robot::ConfigurationArray new_start = {-0.855292,1.12975,0.0380571,-0.69921,0.0141439,1.73613,0.0000393391};
+    Robot::ConfigurationArray new_goal = {0.841046,1.13069,-0.0242863,-0.697919,-0.00982904,1.74158,0.000353813};
+    auto block = turn_configuration_into_configuration_block(Robot::Configuration(new_start));
+    auto simd_float_vector = task_constraint.distanceToConstraint(block);
+    std::cout << "distanceToConstraint returned " << simd_float_vector << "\n";
+    std::cout << "is the start position on the manifold?? Answer: " << simd_float_vector.test_all_less_equal(0.0001F) << "\n";
+    block = turn_configuration_into_configuration_block(Robot::Configuration(new_goal));
+    simd_float_vector = task_constraint.distanceToConstraint(block);
+    std::cout << "distanceToConstraint returned " << simd_float_vector << "\n";
+    std::cout << "is the end position on the manifold?? Answer: " << simd_float_vector.test_all_less_equal(0.0001F) << "\n";
+
+    //THis is an intermediate result from ompl RRT connect
+     Robot::ConfigurationArray intermed = {0.484433, 0.275282, -0.617731, -2.3295, 0.301566, 2.64362, -0.689576};
+    block = turn_configuration_into_configuration_block(Robot::Configuration(intermed));
+    simd_float_vector = task_constraint.distanceToConstraint(block);
+    std::cout << "distanceToConstraint returned " << simd_float_vector << "\n";
+    std::cout << "is the intermediate position on the manifold?? Answer: " << simd_float_vector.test_all_less_equal(0.0001F) << "\n";
+    std::vector<Configuration> projected_vector_dummy;
+    //Now, test motion between start and intermediate
+    bool result_start_intermed = vamp::planning::project_constraint_motion<Robot, rake, 1>(
+            Robot::Configuration(new_start),
+            Robot::Configuration(intermed),
+            projected_vector_dummy,
+            task_constraint,
+            env_v
+    );
+    std::cout << "The result of project_constraint_motion between start and intermed is " << result_start_intermed << "\n";
+    bool result_intermed_goal = vamp::planning::project_constraint_motion<Robot, rake, 1>(
+            Robot::Configuration(intermed),
+            Robot::Configuration(new_goal),
+            projected_vector_dummy,
+            task_constraint,
+            env_v
+    );
+    std::cout << "The result of project_constraint_motion between intermed and goal is " << result_intermed_goal << "\n";
+
+    bool result1 = vamp::planning::project_constraint_motion<Robot, rake, 1>(
+            Robot::Configuration(new_start),
+            Robot::Configuration(new_goal),
+            projected_vector,
+            task_constraint,
+            env_v
+        );
+        std::cout << "The result of project_constraint_motion is " << result1 << "\n";
     rrtc_settings.range = range;
     // rrtc_settings.max_iterations = 20000;
     rrtc_settings.dynamic_domain = dyndom;
@@ -196,8 +290,9 @@ auto main(int, char **) -> int
     rrtc_settings.descend_rate = descent_rate;
     // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
+
     auto result =
-        CRRTC::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
+        CRRTC::solve(Robot::Configuration(new_start), Robot::Configuration(new_goal), env_v, rrtc_settings, task_constraint, rng);
 
     if(result.path.size() > 0)
     {
