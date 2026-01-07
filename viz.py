@@ -346,7 +346,7 @@ def plan(server, panda, start, goal):
 #             nonlocal insert_grasp  
 #             insert_grasp = server.gui.add_button("Insert Grasp")  
 #             insert_grasp.on_click(ik_and_plan)
-
+breakpoint()
 urdf = yourdfpy.URDF.load("resources/cricket/cricket_spherized.urdf")
 # urdf = yourdfpy.URDF.load("assets/kuka_iiwa/spherized_kuka/kuka_spherized_180.urdf")
 robot = pk.Robot.from_urdf(urdf)
