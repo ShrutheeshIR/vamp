@@ -347,7 +347,7 @@ def plan(server, panda, start, goal):
 #             insert_grasp = server.gui.add_button("Insert Grasp")  
 #             insert_grasp.on_click(ik_and_plan)
 
-urdf = yourdfpy.URDF.load("/vamp/resources/cricket/cricket_spherized.urdf")
+urdf = yourdfpy.URDF.load("resources/cricket/cricket_spherized.urdf")
 # urdf = yourdfpy.URDF.load("assets/kuka_iiwa/spherized_kuka/kuka_spherized_180.urdf")
 robot = pk.Robot.from_urdf(urdf)
 def fk(config):
@@ -498,7 +498,7 @@ def main():
         section_color=(140, 140, 140)  
     )
     
-    urdf = yourdfpy.URDF.load("/vamp/resources/cricket/cricket_spherized.urdf")
+    urdf = yourdfpy.URDF.load("resources/cricket/cricket_spherized.urdf")
     panda = ViserUrdf(  
         server,  
         urdf,
@@ -515,8 +515,8 @@ def main():
     prev_sphere_mtime = 0.0
 
 
-    traj_path = "/vamp/trajectory.txt"
-    sphere_path = "/vamp/spheres.txt"
+    traj_path = "trajectory.txt"
+    sphere_path = "spheres.txt"
 
     # traj_path = "/src/fruit-ninja/src/geoplanner/notebooks/trajectory.txt"
 
