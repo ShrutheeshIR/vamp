@@ -13,19 +13,19 @@ option(VAMP_OMPL_PATH "Search Path for OMPL Installation - Only Needed for Demo 
 add_compile_options(-w)
 
 if(VAMP_FORCE_CLANG)
-  find_program(CLANG "clang")
-  find_program(CLANGPP "clang++")
+    find_program(CLANG "clang")
+    find_program(CLANGPP "clang++")
 
-  set(CMAKE_C_COMPILER ${CLANG} CACHE STRING "C compiler" FORCE)
-  set(CMAKE_CXX_COMPILER ${CLANGPP} CACHE STRING "C++ compiler" FORCE)
+    set(CMAKE_C_COMPILER ${CLANG} CACHE STRING "C compiler" FORCE)
+    set(CMAKE_CXX_COMPILER ${CLANGPP} CACHE STRING "C++ compiler" FORCE)
 endif()
 
 if(VAMP_FORCE_COLORED_OUTPUT)
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    add_compile_options(-fdiagnostics-color=always)
-  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    add_compile_options(-fcolor-diagnostics)
-  endif()
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        add_compile_options(-fdiagnostics-color=always)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        add_compile_options(-fcolor-diagnostics)
+    endif()
 endif()
 
 project(
@@ -42,7 +42,7 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release)
+    set(CMAKE_BUILD_TYPE Release)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -74,7 +74,7 @@ target_link_libraries_system(vamp_cpp
 
 # Link SIMDxorshift if available
 if(TARGET simdxorshift)
-  target_link_libraries(vamp_cpp INTERFACE simdxorshift)
+    target_link_libraries(vamp_cpp INTERFACE simdxorshift)
 endif()
 
 # Set library properties
@@ -91,47 +91,47 @@ include(Python)
 
 # Install C++ library components (conditional for Python wheel builds)
 if(VAMP_INSTALL_CPP_LIBRARY)
-  # Install C++ library headers and SIMD library (if available)
-  set(VAMP_INSTALL_TARGETS vamp_cpp)
-  if(TARGET simdxorshift)
-    list(APPEND VAMP_INSTALL_TARGETS simdxorshift)
-  endif()
+    # Install C++ library headers and SIMD library (if available)
+    set(VAMP_INSTALL_TARGETS vamp_cpp)
+    if(TARGET simdxorshift)
+        list(APPEND VAMP_INSTALL_TARGETS simdxorshift)
+    endif()
 
-  install(TARGETS ${VAMP_INSTALL_TARGETS}
+    install(TARGETS ${VAMP_INSTALL_TARGETS}
       EXPORT vamp_cppTargets
       LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
       ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   )
 
-  # Install headers
-  install(DIRECTORY src/impl/vamp/
+    # Install headers
+    install(DIRECTORY src/impl/vamp/
       DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/vamp
       FILES_MATCHING PATTERN "*.hh"
   )
 
-  # Generate package configuration files
-  configure_package_config_file(
+    # Generate package configuration files
+    configure_package_config_file(
       "${CMAKE_CURRENT_SOURCE_DIR}/cmake/vampConfig.cmake.in"
       "${CMAKE_CURRENT_BINARY_DIR}/vampConfig.cmake"
       INSTALL_DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/cmake/vamp
   )
 
-  write_basic_package_version_file(
+    write_basic_package_version_file(
       "${CMAKE_CURRENT_BINARY_DIR}/vampConfigVersion.cmake"
       VERSION ${PROJECT_VERSION}
       COMPATIBILITY SameMajorVersion
   )
 
-  # Install package configuration files
-  install(FILES
+    # Install package configuration files
+    install(FILES
       "${CMAKE_CURRENT_BINARY_DIR}/vampConfig.cmake"
       "${CMAKE_CURRENT_BINARY_DIR}/vampConfigVersion.cmake"
       DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/cmake/vamp
   )
 
-  # Export targets
-  install(EXPORT vamp_cppTargets
+    # Export targets
+    install(EXPORT vamp_cppTargets
       FILE vamp_cppTargets.cmake
       NAMESPACE vamp::
       DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/cmake/vamp

@@ -20,8 +20,8 @@ using EnvironmentInput = vamp::collision::Environment<float>;
 using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 
 // Start and goal configurations
-static constexpr Robot::ConfigurationArray start = {-0.75,0.21,-0.05,-2.29,-0.32,2.44,1.64};
-static constexpr Robot::ConfigurationArray goal = {1.31,0.67,-0.05,-1.58,-0.32,2.3,-0.81};
+static constexpr Robot::ConfigurationArray start = {1.016, 0.688, 0.087, -1.281, -0.06, 1.955, 1.891};
+static constexpr Robot::ConfigurationArray goal = {-1.184, 0.689, 0.154, -1.274, -0.106, 1.955, -0.24};
 
 // Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
 static const std::vector<std::array<float, 3>> problem = {
@@ -57,24 +57,27 @@ auto main(int, char **) -> int
     // Create RNG for planning
     auto rng = std::make_shared<vamp::rng::Halton<Robot>>();
 
-    std::array<float, 6> lower_bound = {
-        -10.01, -10.01, -0.02, -10.1, -10.1, -0.1
+    std::array<float, 6> tsr_lower_bound = {
+        -0.001, -10.01, -0.001, -10.1, -0.1, -10.1
     };
-    std::array<float, 6> upper_bound = {
-        10.03, 10.01, 0.02, 10.1, 10.1, 0.1
+    std::array<float, 6> tsr_upper_bound = {
+        0.001, 10.01, 0.001, 10.1, 0.1, 10.1
     };
 
 
+    std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
     Eigen::Matrix<float, 4, 4> T;
+    T << 1,0,0,   0.50,   0,-1,0,      0.570738,   0,0,-1,    0.121557,          0,           0,           0,           1;;
+    eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
+    T << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
+    eef_transforms_ref_frame_w_world[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
 
-    T << -1,0,0,   0.246,   0,1,0,      0.670,   0,0,-1,    0.151 ,          0,           0,           0,           1;
-
-    const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
-    std::cout << "Target pose is : " << target_pose.translation().transpose() << std::endl;
-    const auto in_hand_pose = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
     vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(
-        in_hand_pose, target_pose, std::make_pair(lower_bound, upper_bound));
-
+        eef_transforms_ref_frame_w_world,
+        eef_transforms,
+        std::make_pair(tsr_lower_bound, tsr_upper_bound)
+    );
 
     auto start_time = std::chrono::steady_clock::now();
 
@@ -141,17 +144,48 @@ auto main(int, char **) -> int
 
     }
 
-    Robot::ConfigurationArray test = {-0.154247,-1.38187,1.88281,-1.42206,-0.691598,3.52511,1.43219};
-    typename Robot::template ConfigurationBlock<rake> block;
+    // Robot::ConfigurationArray test = {-0.154247,-1.38187,1.88281,-1.42206,-0.691598,3.52511,1.43219};
+    // typename Robot::template ConfigurationBlock<rake> block;
+    // for (auto i = 0U; i < Robot::dimension; ++i)
+    //     block[i] = Robot::Configuration(test).broadcast(i) + 0.0;
+    // auto dist = task_constraint.distanceToConstraint(block);
+    // // std::cout << "Dist to constraint" << "->" << vamp::utils::get_elapsed_nanoseconds(start_time);
+    // std::cout << "From block : " << dist << std::endl;
+    // task_constraint.print_robot_tsr_error(block);
+    Eigen::Quaternionf qstart(Robot::eefk(start)[0].linear());
+    Eigen::Quaternionf qgoal(Robot::eefk(goal)[0].linear());
+    std::cout << Robot::eefk(start)[0].matrix() << std::endl;
+    std::cout << Robot::eefk(goal)[0].matrix() << std::endl;
+    std::cout << qstart.w() << ", " << qstart.x() << ", " << qstart.y() << ", " << qstart.z() << std::endl;
+    std::cout << qgoal.w() << ", " << qgoal.x() << ", " << qgoal.y() << ", " << qgoal.z() << std::endl;
+
+    Robot::ConfigurationArray holder;
+    typename Robot::template ConfigurationBlock<rake> block, projected_block;
     for (auto i = 0U; i < Robot::dimension; ++i)
-        block[i] = Robot::Configuration(test).broadcast(i) + 0.0;
-    auto dist = task_constraint.distanceToConstraint(block);
-    // std::cout << "Dist to constraint" << "->" << vamp::utils::get_elapsed_nanoseconds(start_time);
-    std::cout << "From block : " << dist << std::endl;
-    task_constraint.print_robot_tsr_error(block);
-    std::cout << Robot::eefk(test)[0].matrix() << std::endl;
+        block[i] = Robot::Configuration(start).broadcast(i);
+    task_constraint.projectConfiguration(block, projected_block);
+    std::cout << std::endl;
+    for (auto i = 0U; i < Robot::dimension; ++i){
+        holder[i] = projected_block[{i, 0}];
+        std::cout << holder[i] << ", ";
+    }
+    std::cout << std::endl;
+    Eigen::Quaternionf q(Robot::eefk(holder)[0].linear());
+    std::cout << Robot::eefk(holder)[0].matrix() << std::endl;
+    std::cout << q.w() << ", " << q.x() << ", " << q.y() << ", " << q.z() << std::endl;
 
-
+    for (auto i = 0U; i < Robot::dimension; ++i)
+        block[i] = Robot::Configuration(goal).broadcast(i);
+    task_constraint.projectConfiguration(block, projected_block);
+    std::cout << std::endl;
+    for (auto i = 0U; i < Robot::dimension; ++i){
+        holder[i] = projected_block[{i, 0}];
+        std::cout << holder[i] << ", ";
+    }
+    std::cout << std::endl;
+    std::cout << Robot::eefk(holder)[0].matrix() << std::endl;
+    Eigen::Quaternionf q2(Robot::eefk(holder)[0].linear());
+    std::cout << q2.w() << ", " << q2.x() << ", " << q2.y() << ", " << q2.z() << std::endl;
 
 
     return 0;

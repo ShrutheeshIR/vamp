@@ -22,8 +22,8 @@ using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution>;
 
 
-static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
-static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
+static constexpr Robot::ConfigurationArray start = {1.016, 0.688, 0.087, -1.281, -0.06, 1.955, 1.891};
+static constexpr Robot::ConfigurationArray goal = {-1.184, 0.689, 0.154, -1.274, -0.106, 1.955, -0.24};
 
 
 
@@ -33,15 +33,15 @@ static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73
 static const std::vector<std::array<float, 3>> problem = {
     // {0.55, 0, 0.25},
     // {0.55, 0, 0.50},
-    {0.55, 0, 0.60},
-    {0.65, 0, 0.50},
-    {0.75, 0, 0.50},
-    {0.35, 0.35, 0.25},
+    // {0.55, 0, 0.60},
+    {0.56, 0, 0.450},
+    {0.1, 0, 0.7},
+    // {0.35, 0.35, 0.25},
     {0, 0.55, 0.25},
     {-0.55, 0, 0.25},
     {-0.35, -0.35, 0.25},
     {0, -0.55, 0.25},
-    {0.35, -0.35, 0.25},
+    // {0.35, -0.35, 0.25},
     {0.35, 0.35, 0.8},
     {0, 0.55, 0.8},
     {-0.35, 0.35, 0.8},
@@ -62,7 +62,7 @@ struct Attempt {
     std::size_t planning_time;
     std::size_t planning_iterations;
     std::size_t path_length;
-    
+
     bool operator<(const Attempt& other) const {
         return planning_time < other.planning_time;
     }
@@ -83,7 +83,7 @@ auto main(int, char **) -> int
     float ranges[] = {0.5, 1.0, 1.5, 2.0};
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     bool dd[] = {false, true};
-    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM};
+    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};
 
     // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
     float descend_rates[] = {0.75, 1.0};
@@ -115,32 +115,45 @@ auto main(int, char **) -> int
     auto rng = std::make_shared<vamp::rng::Halton<Robot>>();
 
 
-    std::array<float, 6> lower_bound = {
-        -0.01, -10.01, -0.03, -0.1, -0.1, -3.14
-    };
-    std::array<float, 6> upper_bound = {
-        0.03, 10.01, 0.03, 0.1, 0.1, 3.14
+    std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
+        -0.001, -10.01, -0.001, -0.01, -0.01, -0.01
     };
 
+    std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
+        0.001, 10.01, 0.001, 0.01, 0.01, 0.01
+    };
+
+
+    std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
     Eigen::Matrix<float, 4, 4> T;
-    T << 1,0,0,   0.543325,   0,-1,0,      0.570738,   0,0,-1,    0.121557,          0,           0,           0,           1;
+    T << 1,0,0,   0.3486,   0,-1,0,      0.647752,   0,0,-1,    0.24,          0,           0,           0,           1;;
+    eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
+    T << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
+    eef_transforms_ref_frame_w_world[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
 
-    const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
-    const auto in_hand_pose = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
-    vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(in_hand_pose, target_pose, std::make_pair(lower_bound, upper_bound));
-    int x;
+
+    vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
+        eef_transforms_ref_frame_w_world,
+        eef_transforms,
+        std::make_pair(tsr_lower_bound, tsr_upper_bound)
+    );
 
 
-    
+    vamp::planning::ComposableConstraints<Robot, rake, decltype(tsr_constraint)> task_constraint(
+        tsr_constraint
+    );
+
+
+
     rrtc_settings.range = range;
-    // rrtc_settings.max_iterations = 20000;
     rrtc_settings.dynamic_domain = dyndom;
     rrtc_settings.projection_method = pm;
     rrtc_settings.descend_rate = descent_rate;
     // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
     auto result =
-        CRRTC::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
+        vamp::planning::CRRTC<Robot, rake, Robot::resolution, decltype(tsr_constraint)>::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
 
     if(result.path.size() > 0)
     {
@@ -187,7 +200,7 @@ auto main(int, char **) -> int
         // std::cin.ignore();
         succ_attempts.push_back(a);
         std::sort(succ_attempts.begin(), succ_attempts.end());
-        
+
 
 
     }
@@ -203,7 +216,9 @@ auto main(int, char **) -> int
     }
     std::cout << "---------------------------" << std::endl;
 
-
+    // auto fka = Robot::eefk(goal);
+    std::cout << std::endl << Robot::eefk(goal)[0].matrix() << std::endl;
+    std::cout << std::endl << Robot::eefk(start)[0].matrix() << std::endl;
 
     return 0;
 }
