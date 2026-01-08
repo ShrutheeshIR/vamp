@@ -22,8 +22,8 @@ using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution>;
 
 
-static constexpr Robot::ConfigurationArray start = {0.858879, 0.906726, -0.00241935, -1.21354, 0.0028208, 2.14026, -0.0247596};
-static constexpr Robot::ConfigurationArray goal = {-0.896329, 1.10141, 0.0016366, -0.859237, -0.00200834, 1.98064, 0.0249129};
+static constexpr Robot::ConfigurationArray start = {1.016, 0.688, 0.087, -1.281, -0.06, 1.955, 1.891};
+static constexpr Robot::ConfigurationArray goal = {-1.184, 0.689, 0.154, -1.274, -0.106, 1.955, -0.24};
 
 
 
@@ -34,8 +34,8 @@ static const std::vector<std::array<float, 3>> problem = {
     // {0.55, 0, 0.25},
     // {0.55, 0, 0.50},
     // {0.55, 0, 0.60},
-    {0.6, 0, 0.450},
-    {0.7, 0, 0.450},
+    {0.56, 0, 0.450},
+    {0.1, 0, 0.7},
     // {0.35, 0.35, 0.25},
     {0, 0.55, 0.25},
     {-0.55, 0, 0.25},
@@ -116,17 +116,17 @@ auto main(int, char **) -> int
 
 
     std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-        -0.001, -10.01, -0.001, -10.1, -0.1, -10.1
+        -0.001, -10.01, -0.001, -0.01, -0.01, -0.01
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
-        0.001, 10.01, 0.001, 10.1, 0.1, 10.1
+        0.001, 10.01, 0.001, 0.01, 0.01, 0.01
     };
 
 
     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
     Eigen::Matrix<float, 4, 4> T;
-    T << 1,0,0,   0.50,   0,-1,0,      0.570738,   0,0,-1,    0.121557,          0,           0,           0,           1;;
+    T << 1,0,0,   0.3486,   0,-1,0,      0.647752,   0,0,-1,    0.24,          0,           0,           0,           1;;
     eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
     T << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
