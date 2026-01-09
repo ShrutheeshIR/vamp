@@ -48,29 +48,22 @@ namespace vamp::planning
             return ableToProject;
         }
         float max_inter_dist = 0.F;
-        // need to compute a ConfigurationBlock structure such that
-        // each element is the difference between 2 successive configurations
-        // for the first element, it is between first and start config
-        // typename Robot::template ConfigurationBlock<rake> diff_block = initial_projected_block + 0.0;
-        //
-        std::array<vamp::FloatT, Robot::dimension * rake> diff_arr;
 
-        float inter_distance = 0.F;
-        for (auto j = 0U; j < Robot::dimension; j++){
-            diff_arr[j * rake] = initial_projected_block[{j, 0}] - start.broadcast(j)[{j, 0}];
-            inter_distance += diff_arr[j * rake] * diff_arr[j * rake];
-        }
-        if (inter_distance > 4 * (distance / rake) * (distance / rake))
+        // Compute inter-rake differences
+        std::array<vamp::FloatT, Robot::dimension * rake> diff_arr;
+        for (auto i = 0U; i < rake; i++)
         {
-            // std::cout << "Invalid config due to distance constraint" << std::endl;
-            return false;
-        }
-        for (auto i = 1U; i < rake; i++)
-        {
-            inter_distance = 0.F;
+            float inter_distance = 0.F;
             for (auto j = 0U; j < Robot::dimension; j++)
             {
-                diff_arr[i + j * rake] = initial_projected_block[{j, i}] - initial_projected_block[{j, i-1}];
+                if (i == 0)
+                {
+                    diff_arr[i + j * rake] = initial_projected_block[{j, i}] - start.broadcast(j)[{j, 0}];
+                }
+                else
+                {
+                    diff_arr[i + j * rake] = initial_projected_block[{j, i}] - initial_projected_block[{j, i-1}];
+                }
                 inter_distance = inter_distance + diff_arr[i + j * rake] * diff_arr[i + j * rake];
             }
             if (inter_distance > 4 * (distance / rake) * (distance / rake))
