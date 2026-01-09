@@ -80,7 +80,7 @@ auto main(int, char **) -> int
 
     // Build sphere cage environment
     EnvironmentInput environment;
-    std::ofstream outfile_sph("/src/spheres.txt");
+    std::ofstream outfile_sph("spheres.txt");
     for (const auto &sphere : problem)
     {
         outfile_sph << sphere[0] << "," << sphere[1] << "," << sphere[2] << "," << radius << "\n";
@@ -199,7 +199,7 @@ auto main(int, char **) -> int
         std::cout << "\nPrinting Result!! " << result.path.size() << std::endl;
         // Output configurations of simplified path
         std::cout << std::fixed << std::setprecision(3);
-        std::ofstream outfile("/src/trajectory.txt");
+        std::ofstream outfile("trajectory.txt");
         for (const auto &config : result.path)
         {
             const auto &array = config.to_array();
