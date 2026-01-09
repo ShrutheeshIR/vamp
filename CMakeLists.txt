@@ -140,6 +140,13 @@ endif()
 
 # C++ demos
 if(VAMP_BUILD_CPP_DEMO)
+  add_library(vamp_problem_setup
+    scripts/cpp/problem_setup/constrained_easier_cage_problem_setup.cc
+    scripts/cpp/problem_setup/constrained_easier_cage_problem_setup.hh
+  )
+  target_link_libraries(vamp_problem_setup
+  PUBLIC vamp_cpp
+  )
   add_executable(vamp_rrtc_example scripts/cpp/rrtc_example.cc)
   target_link_libraries(vamp_rrtc_example PRIVATE vamp_cpp)
 
@@ -151,6 +158,7 @@ if(VAMP_BUILD_CPP_DEMO)
 
   add_executable(vamp_crrtc_spheres scripts/cpp/vamp_crrtc_spheres.cc)
   target_link_libraries(vamp_crrtc_spheres PRIVATE vamp_cpp)
+  target_link_libraries(vamp_crrtc_spheres PRIVATE vamp_problem_setup)
   
   # Disable strict warnings for demos to maintain compatibility
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")

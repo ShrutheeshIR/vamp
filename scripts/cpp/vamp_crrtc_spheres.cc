@@ -14,6 +14,7 @@
 #include <vamp/robots/panda.hh>
 #include <vamp/random/halton.hh>
 #include <fstream>
+#include "problem_setup/constrained_easier_cage_problem_setup.hh"
 
 using Robot = vamp::robots::Panda;
 static constexpr const std::size_t rake = vamp::FloatVectorWidth;
@@ -30,104 +31,7 @@ ConfigurationBlock turn_configuration_into_configuration_block(const Robot::Conf
         }
         return block;
 }
-/*static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
-static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
-*/
 
-//static constexpr Robot::ConfigurationArray start = {0., -0.785, 0., -2.356, 0., 1.571, 0.785};
-//static constexpr Robot::ConfigurationArray goal = {2.35, 1., 0., -0.8, 0, 2.5, 0.785};
-
-// static constexpr Robot::ConfigurationArray goal = {-0.839708,  0.496555, -0.630832, -0.573204,  0.232247,  1.8259,   -0.467584};
-
-// Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
-/*static const std::vector<std::array<float, 3>> problem = {
-    // {0.55, 0, 0.25},
-    // {0.55, 0, 0.50},
-    {0.55, 0, 0.60},
-    {0.65, 0, 0.50},
-    {0.75, 0, 0.50},
-    {0.35, 0.35, 0.25},
-    {0, 0.55, 0.25},
-    {-0.55, 0, 0.25},
-    {-0.35, -0.35, 0.25},
-    {0, -0.55, 0.25},
-    {0.35, -0.35, 0.25},
-    {0.35, 0.35, 0.8},
-    {0, 0.55, 0.8},
-    {-0.35, 0.35, 0.8},
-    {-0.55, 0, 0.8},
-    {-0.35, -0.35, 0.8},
-    {0, -0.55, 0.8},
-    {0.35, -0.35, 0.8},
-};*/
-
-/*static const std::vector<std::array<float, 3>> problem = {
-    {0.55, 0, 0.25},
-    {0.35, 0.35, 0.25},
-    {0, 0.55, 0.25},
-    {-0.55, 0, 0.25},
-    {-0.35, -0.35, 0.25},
-    {0, -0.55, 0.25},
-    {0.35, -0.35, 0.25},
-    {0.35, 0.35, 0.8},
-    {0, 0.55, 0.8},
-    {-0.35, 0.35, 0.8},
-    {-0.55, 0, 0.8},
-    {-0.35, -0.35, 0.8},
-    {0, -0.55, 0.8},
-    {0.35, -0.35, 0.8},
-};*/
-
-static constexpr Robot::ConfigurationArray goal = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
-static constexpr Robot::ConfigurationArray start = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
-
-
-//The following pair will have straight forward motion, rrtc terminates early
-//static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
-//static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
-
-
-
-// static constexpr Robot::ConfigurationArray goal = {-0.839708,  0.496555, -0.630832, -0.573204,  0.232247,  1.8259,   -0.467584};
-
-// Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
-static const std::vector<std::array<float, 3>> problem = {
-    // {0.55, 0, 0.25},
-    // {0.55, 0, 0.50},
-    // {0.35, 0.35, 0.25},
-    {0, 0.55, 0.25},
-    {-0.55, 0, 0.25},
-    {-0.35, -0.35, 0.25},
-    // {0, -0.55, 0.25},
-    // {0.35, -0.35, 0.25},
-    // {0.35, 0.35, 0.8},
-    // {0, 0.55, 0.8},
-    // {-0.35, 0.35, 0.8},
-    // {-0.55, 0, 0.8},
-    {-0.35, -0.35, 0.8},
-    {0, -0.55, 0.8},
-    {0.35, -0.35, 0.8},
-};
-
-/*static const std::vector<std::array<float, 3>> problem = {
-    {0.55, 0, 0.25},
-    {0.35, 0.35, 0.25},
-    {0, 0.55, 0.25},
-    {-0.55, 0, 0.25},
-    {-0.35, -0.35, 0.25},
-    {0, -0.55, 0.25},
-    {0.35, -0.35, 0.25},
-    {0.35, 0.35, 0.8},
-    {0, 0.55, 0.8},
-    {-0.35, 0.35, 0.8},
-    {-0.55, 0, 0.8},
-    {-0.35, -0.35, 0.8},
-    {0, -0.55, 0.8},
-    {0.35, -0.35, 0.8},
-};*/
-// Radius for obstacle spheres
-//static constexpr float radius = 0.15;
-static constexpr float radius = 0.1;
 struct Attempt {
     float range;
     bool dynamic_domain;
@@ -189,25 +93,7 @@ auto main(int, char **) -> int
     // Create RNG for planning
     auto rng = std::make_shared<vamp::rng::Halton<Robot>>();
 
-
-    /*std::array<float, 6> lower_bound = {
-        -100.0, -100.0, -100.0, -100.0, -100.0, -100.0
-    };
-    std::array<float, 6> upper_bound = {
-        100.0, 100.0, 100.0, 100.0, 100.0, 100.0
-    };*/
-
-    std::array<float, 6> lower_bound = {
-        -0.01, -10.01, -0.03, -0.1, -0.1, -3.14
-    };
-    std::array<float, 6> upper_bound = {
-        0.03, 10.01, 0.03, 0.1, 0.1, 3.14
-    };
-
-
-    Eigen::Matrix<float, 4, 4> T;
-    T << 1,0,0,   0.543325,   0,-1,0,      0.570738,   0,0,-1,    0.121557,          0,           0,           0,           1;
-
+    
     const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
     const auto in_hand_pose = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
     vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(in_hand_pose, target_pose, std::make_pair(lower_bound, upper_bound));
@@ -292,7 +178,7 @@ auto main(int, char **) -> int
     std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
 
     auto result =
-        CRRTC::solve(Robot::Configuration(new_start), Robot::Configuration(new_goal), env_v, rrtc_settings, task_constraint, rng);
+        CRRTC::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
 
     if(result.path.size() > 0)
     {
