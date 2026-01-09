@@ -47,7 +47,6 @@ namespace vamp::planning
             // std::cout << "Unable to project " << std::endl;
             return ableToProject;
         }
-
         bool valid = (environment.eef_attachments.size()) ?
                          Robot::template fkcc_attach<rake>(environment, initial_projected_block) :
                          Robot::template fkcc<rake>(environment, initial_projected_block);
@@ -67,6 +66,19 @@ namespace vamp::planning
         {
             // std::cout << "Invalid config " << valid << std::endl;
             return valid;
+        }
+        for (auto i = 0U; i < rake-1; i++)
+        {
+            float inter_distance = 0.F;
+            for (auto j = 0U; j < Robot::dimension; j++)
+            {
+                inter_distance = inter_distance + std::pow(initial_projected_block[{j, i+1}] - initial_projected_block[{j, i}], 2);
+            }
+            if (inter_distance > 4 * (distance / rake) * (distance / rake))
+            {
+                std::cout << "Invalid config due to distance constraint" << std::endl;
+                return false;
+            }
         }
 
         const typename Robot::Configuration new_vector =
