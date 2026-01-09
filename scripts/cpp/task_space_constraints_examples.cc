@@ -8,7 +8,7 @@
 #include <vamp/planning/validate.hh>
 // #include <vamp/planning/cbirrt.hh>
 #include <vamp/planning/task_space_constraint.hh>
-#include <vamp/planning/validate_constraint.hh>
+// #include <vamp/planning/validate_constraint.hh>
 
 #include <vamp/planning/simplify.hh>
 #include <vamp/robots/panda.hh>
@@ -43,38 +43,6 @@ static const std::vector<std::array<float, 3>> problem = {
 // Radius for obstacle spheres
 static constexpr float radius = 0.2;
 
-template <std::size_t rake, std::size_t dim>
-inline auto configuration_block_difference(
-    const vamp::FloatVector<rake, dim> &b,
-    const vamp::FloatVector<dim> &s) noexcept -> vamp::FloatVector<rake, dim>
-{
-    using BlockT = vamp::FloatVector<rake, dim>;
-    using RowT = typename BlockT::RowT;
-
-    BlockT out;
-
-    // prev holds the previous row (as a RowT). Initialize in the loop.
-    RowT prev;
-
-    for (std::size_t i = 0; i < dim; ++i)
-    {
-        RowT curr = b[i];                       // current row from the block
-        RowT start_row(s.element(i));           // broadcast scalar s[i] into a RowT
-
-        if (i == 0)
-        {
-            out[i] = curr - start_row;         // b[0] - s
-        }
-        else
-        {
-            out[i] = curr - prev;              // b[i] - b[i-1]
-        }
-
-        prev = curr;
-    }
-
-    return out;
-}
 
 auto main(int, char **) -> int
 {
