@@ -347,7 +347,7 @@ def plan(server, panda, start, goal):
 #             insert_grasp = server.gui.add_button("Insert Grasp")  
 #             insert_grasp.on_click(ik_and_plan)
 
-urdf = yourdfpy.URDF.load("resources/panda/panda.urdf")
+urdf = yourdfpy.URDF.load("resources/panda/panda_spherized.urdf")
 # urdf = yourdfpy.URDF.load("assets/kuka_iiwa/spherized_kuka/kuka_spherized_180.urdf")
 robot = pk.Robot.from_urdf(urdf)
 def fk(config):
@@ -498,7 +498,7 @@ def main():
         section_color=(140, 140, 140)  
     )
     
-    urdf = yourdfpy.URDF.load("resources/panda/panda.urdf")
+    urdf = yourdfpy.URDF.load("resources/panda/panda_spherized.urdf")
     panda = ViserUrdf(  
         server,  
         urdf,
