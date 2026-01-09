@@ -21,7 +21,7 @@ using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 
 // Start and goal configurations
 static constexpr Robot::ConfigurationArray start = {1.016, 0.688, 0.087, -1.281, -0.06, 1.955, 1.891};
-static constexpr Robot::ConfigurationArray goal = {-1.184, 0.689, 0.154, -1.274, -0.106, 1.955, -0.24};
+static constexpr Robot::ConfigurationArray goal = {-0.154247,-1.38187,1.88281,-1.42206,-0.691598,3.52511,1.43219};
 
 // Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
 static const std::vector<std::array<float, 3>> problem = {
@@ -43,6 +43,39 @@ static const std::vector<std::array<float, 3>> problem = {
 // Radius for obstacle spheres
 static constexpr float radius = 0.2;
 
+template <std::size_t rake, std::size_t dim>
+inline auto configuration_block_difference(
+    const vamp::FloatVector<rake, dim> &b,
+    const vamp::FloatVector<dim> &s) noexcept -> vamp::FloatVector<rake, dim>
+{
+    using BlockT = vamp::FloatVector<rake, dim>;
+    using RowT = typename BlockT::RowT;
+
+    BlockT out;
+
+    // prev holds the previous row (as a RowT). Initialize in the loop.
+    RowT prev;
+
+    for (std::size_t i = 0; i < dim; ++i)
+    {
+        RowT curr = b[i];                       // current row from the block
+        RowT start_row(s.element(i));           // broadcast scalar s[i] into a RowT
+
+        if (i == 0)
+        {
+            out[i] = curr - start_row;         // b[0] - s
+        }
+        else
+        {
+            out[i] = curr - prev;              // b[i] - b[i-1]
+        }
+
+        prev = curr;
+    }
+
+    return out;
+}
+
 auto main(int, char **) -> int
 {
     // Build sphere cage environment
@@ -58,16 +91,16 @@ auto main(int, char **) -> int
     auto rng = std::make_shared<vamp::rng::Halton<Robot>>();
 
     std::array<float, 6> tsr_lower_bound = {
-        -0.001, -10.01, -0.001, -10.1, -0.1, -10.1
+        -0.005, -10.01, -0.005, -0.01, -10.01, -10.01
     };
     std::array<float, 6> tsr_upper_bound = {
-        0.001, 10.01, 0.001, 10.1, 0.1, 10.1
+        0.005, 10.01, 0.005, 0.01, 10.01, 10.01
     };
 
 
     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
     Eigen::Matrix<float, 4, 4> T;
-    T << 1,0,0,   0.50,   0,-1,0,      0.570738,   0,0,-1,    0.121557,          0,           0,           0,           1;;
+    T << 1,0,0,   0.3486,   0,-1,0,      0.647752,   0,0,-1,    0.2399,          0,           0,           0,           1;
     eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
     T << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
@@ -152,40 +185,143 @@ auto main(int, char **) -> int
     // // std::cout << "Dist to constraint" << "->" << vamp::utils::get_elapsed_nanoseconds(start_time);
     // std::cout << "From block : " << dist << std::endl;
     // task_constraint.print_robot_tsr_error(block);
-    Eigen::Quaternionf qstart(Robot::eefk(start)[0].linear());
-    Eigen::Quaternionf qgoal(Robot::eefk(goal)[0].linear());
+    // Eigen::Quaternionf qstart(Robot::eefk(start)[0].linear());
+    // Eigen::Quaternionf qgoal(Robot::eefk(goal)[0].linear());
     std::cout << Robot::eefk(start)[0].matrix() << std::endl;
     std::cout << Robot::eefk(goal)[0].matrix() << std::endl;
-    std::cout << qstart.w() << ", " << qstart.x() << ", " << qstart.y() << ", " << qstart.z() << std::endl;
-    std::cout << qgoal.w() << ", " << qgoal.x() << ", " << qgoal.y() << ", " << qgoal.z() << std::endl;
+    // std::cout << qstart.w() << ", " << qstart.x() << ", " << qstart.y() << ", " << qstart.z() << std::endl;
+    // std::cout << qgoal.w() << ", " << qgoal.x() << ", " << qgoal.y() << ", " << qgoal.z() << std::endl;
 
-    Robot::ConfigurationArray holder;
-    typename Robot::template ConfigurationBlock<rake> block, projected_block;
-    for (auto i = 0U; i < Robot::dimension; ++i)
-        block[i] = Robot::Configuration(start).broadcast(i);
-    task_constraint.projectConfiguration(block, projected_block);
-    std::cout << std::endl;
-    for (auto i = 0U; i < Robot::dimension; ++i){
-        holder[i] = projected_block[{i, 0}];
-        std::cout << holder[i] << ", ";
-    }
-    std::cout << std::endl;
-    Eigen::Quaternionf q(Robot::eefk(holder)[0].linear());
-    std::cout << Robot::eefk(holder)[0].matrix() << std::endl;
-    std::cout << q.w() << ", " << q.x() << ", " << q.y() << ", " << q.z() << std::endl;
+
+    auto vector = Robot::Configuration(goal) - Robot::Configuration(start);
+
+    auto vector_norm = vector.l2_norm();
+    auto distance = vector_norm;
+    vector = vector / vector_norm;
+    typename Robot::template ConfigurationBlock<rake> block, projected_block, direction_vector_block, initial_projected_block;
+    // HACK: broadcast() implicitly assumes that the rake is exactly VectorWidth
+    const auto percents = vamp::FloatVector<rake>(vamp::planning::Percents<rake>::percents);
 
     for (auto i = 0U; i < Robot::dimension; ++i)
-        block[i] = Robot::Configuration(goal).broadcast(i);
-    task_constraint.projectConfiguration(block, projected_block);
-    std::cout << std::endl;
+    {
+        block[i] = Robot::Configuration(start).broadcast(i) + (vector.broadcast(i) * percents);
+        direction_vector_block[i] = vector.broadcast(i);
+    }
+
+    std::cout << "Block values: ";
     for (auto i = 0U; i < Robot::dimension; ++i){
-        holder[i] = projected_block[{i, 0}];
-        std::cout << holder[i] << ", ";
+        std::cout << block[{i, 0}] << ", ";
     }
     std::cout << std::endl;
-    std::cout << Robot::eefk(holder)[0].matrix() << std::endl;
-    Eigen::Quaternionf q2(Robot::eefk(holder)[0].linear());
-    std::cout << q2.w() << ", " << q2.x() << ", " << q2.y() << ", " << q2.z() << std::endl;
+
+
+    bool ableToProject = task_constraint.projectConfiguration(block, initial_projected_block, vamp::planning::ProjMethod::InnerLM, vector_norm, 1.0);
+
+    std::cout << std::endl;
+
+    for (auto i = 0U; i < rake-1; i++)
+    {
+        float inter_distance = 0.F;
+        for (auto j = 0U; j < Robot::dimension; j++)
+        {
+            std::cout << i << " " << j << " " << initial_projected_block[{j, i+1}] << ", " << initial_projected_block[{j, i}] << " " << initial_projected_block[{j, i+1}] - initial_projected_block[{j, i}] << std::endl;
+            inter_distance = inter_distance + std::pow(initial_projected_block[{j, i+1}] - initial_projected_block[{j, i}], 2);
+        }
+        std::cout << "Distance between points " << i << " and " << i+1 << ": " << std::sqrt(inter_distance) << " " << (distance / rake)<< std::endl;
+        // if (inter_distance > (distance / rake) * (distance / rake))
+        // {
+        //     return false;
+        // }
+    }
+
+    // auto diff_block = configuration_block_difference(initial_projected_block, Robot::Configuration(start));
+
+
+    std::array<vamp::FloatT, Robot::dimension * rake> diff_arr;
+    std::cout <<diff_arr.size() << std::endl;
+
+    for (auto j = 0U; j < rake-1; j++)
+        // diff_arr[j * rake] = 0.0;
+        diff_arr[j * rake] = initial_projected_block[{j, 0}] - Robot::Configuration(start).broadcast(j)[{j, 0}];
+
+    // Dimensions are the rows and rake are the columns
+    // for (auto i = 1U; i < rake; i++)
+    // {
+    //     for (auto j = 0U; j < Robot::dimension; j++)
+    //     {
+    //         diff_arr[i * Robot::dimension + j] = initial_projected_block[{j, i}] - initial_projected_block[{j, i-1}];
+    //         // std::cout << j << " " << i << " " << diff_arr[j + i * Robot::dimension] << std::endl;
+    //     }
+    // }
+
+    for (auto i = 1U; i < rake; i++)
+    {
+        for (auto j = 0U; j < Robot::dimension; j++)
+        {
+            diff_arr[i + j * rake] = initial_projected_block[{j, i}] - initial_projected_block[{j, i-1}];
+            // std::cout << j << " " << i << " " << diff_arr[j + i * Robot::dimension] << std::endl;
+        }
+    }
+
+    typename Robot::template ConfigurationBlock<rake> shifted_block = typename Robot::template ConfigurationBlock<rake>(diff_arr);
+
+    std::cout << Robot::Configuration(start) << std::endl;
+    std::cout << initial_projected_block << std::endl;
+    std::cout << shifted_block << std::endl;
+    std::cout << initial_projected_block - shifted_block << std::endl;
+    // for(auto j = 0U; j < Robot::dimension; j++)
+    // {
+    //     std::cout << j << " " << shifted_block[j] << std::endl;
+    // }
+
+    // for(auto j = 1U; j < Robot::dimension; j++)
+    // {
+    //     shifted_block[{j, 0}] = initial_projected_block[{j-1, 0}];
+    // }
+
+
+    // shifted_block[0] = Robot::Configuration(start).broadcast(0);
+    // shifted_block[1] = initial_projected_block[0];
+    // shifted_block[2] = initial_projected_block[1];
+    // shifted_block[3] = initial_projected_block[2];
+
+    // std::cout << diff_block[0].l2_norm() << " , " << diff_block[0].squared_l2_norm() << std::endl;
+
+    // std::cout << initial_projected_block << std::endl;
+    // std::cout <<  shifted_block << std::endl;
+    // std::cout <<  shifted_block << std::endl;
+
+
+
+    // Robot::ConfigurationArray holder;
+    // typename Robot::template ConfigurationBlock<rake> block, projected_block, direction_vector_block;
+    // for (auto i = 0U; i < Robot::dimension; ++i){
+    //     block[i] = Robot::Configuration(start).broadcast(i);
+    //     direction_vector_block[i] = direction_vector.broadcast(i);
+    // }
+    // task_constraint.projectConfiguration(block, projected_block, direction_vector_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0, true);
+    // std::cout << std::endl;
+    // for (auto i = 0U; i < Robot::dimension; ++i){
+    //     holder[i] = projected_block[{i, 0}];
+    //     std::cout << holder[i] << ", ";
+    // }
+    // std::cout << std::endl;
+    // // Eigen::Quaternionf q(Robot::eefk(holder)[0].linear());
+    // // std::cout << Robot::eefk(holder)[0].matrix() << std::endl;
+    // // std::cout << q.w() << ", " << q.x() << ", " << q.y() << ", " << q.z() << std::endl;
+
+    // for (auto i = 0U; i < Robot::dimension; ++i)
+    //     block[i] = Robot::Configuration(goal).broadcast(i);
+    // task_constraint.projectConfiguration(block, projected_block, direction_vector_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0, true);
+    // std::cout << std::endl;
+    // for (auto i = 0U; i < Robot::dimension; ++i){
+    //     holder[i] = projected_block[{i, 0}];
+    //     std::cout << holder[i] << ", ";
+    // }
+    // std::cout << std::endl;
+    // std::cout << Robot::eefk(holder)[0].matrix() << std::endl;
+    // Eigen::Quaternionf q2(Robot::eefk(holder)[0].linear());
+    // std::cout << q2.w() << ", " << q2.x() << ", " << q2.y() << ", " << q2.z() << std::endl;
 
 
     return 0;

@@ -116,11 +116,11 @@ auto main(int, char **) -> int
 
 
     std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-        -0.001, -10.01, -0.001, -0.01, -0.01, -0.01
+        -0.01, -10.01, -0.01, -0.01, -0.01, -0.01
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
-        0.001, 10.01, 0.001, 0.01, 0.01, 0.01
+        0.01, 10.01, 0.01, 0.01, 0.01, 0.01
     };
 
 

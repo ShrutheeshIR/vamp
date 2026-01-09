@@ -1302,7 +1302,7 @@ namespace vamp::planning
                                 // for (auto i = 0U; i < Robot::dimension; i++)
                                 //     std::cout << q_in[{i, 0}] << " ";
                                 // std::cout << std::endl;
-                                c.projectStep(q_in, q_new);
+                                c.projectStep(q_in, q_new, projection_method, update_q, alpha);
                                 q_in = q_new;     // advance state
                                 // std::cout << "Finished running constraint " << c.name << " with output ";
                                 // for (auto i = 0U; i < Robot::dimension; i++)

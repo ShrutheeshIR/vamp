@@ -189,7 +189,7 @@ namespace vamp::planning
                     while (not connected)
                     {
                         counter++;
-                        if (counter > 2)
+                        if (counter > 10)
                             break;
                         // Extend to goal tree
                         const auto other_nearest =
