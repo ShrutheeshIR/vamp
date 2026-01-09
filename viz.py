@@ -481,7 +481,7 @@ def add_constraint_plane(server):
         name="my_cuboid",  
         dimensions=(0.02, 5.0, 5.0),  # (width, height, depth)  
         position=(0.54, 0.0, 0.0),  
-        color=(0, 255, 0),  # Red color  
+        color=(0, 255, 0),  # Green color  
         opacity=0.5
     )    
 

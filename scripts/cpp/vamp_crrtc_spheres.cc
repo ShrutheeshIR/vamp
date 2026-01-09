@@ -14,7 +14,8 @@
 #include <vamp/robots/panda.hh>
 #include <vamp/random/halton.hh>
 #include <fstream>
-#include "problem_setup/constrained_easier_cage_problem_setup.hh"
+//#include "problem_setup/constrained_easier_cage_problem_setup.hh"
+#include "problem_setup/plane_constraint_problem_setup.hh"
 
 using Robot = vamp::robots::Panda;
 static constexpr const std::size_t rake = vamp::FloatVectorWidth;
