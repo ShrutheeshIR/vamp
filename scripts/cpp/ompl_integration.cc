@@ -26,7 +26,7 @@
 #include <ompl/base/ConstrainedSpaceInformation.h>
 #include <vamp/planning/task_space_constraint.hh>
 #include <vamp/planning/validate_constraint.hh>
-
+#include "problem_setup/plane_constraint_problem_setup.hh"
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
 
@@ -39,89 +39,8 @@ using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 using ConfigurationBlock = typename Robot::template ConfigurationBlock<rake>;
 
 
-std::array<float, 6> lower_bound = {
-    -0.01, -10.01, -0.03, -0.1, -0.1, -3.14
-};
-std::array<float, 6> upper_bound = {
-    0.03, 10.01, 0.03, 0.1, 0.1, 3.14
-};
-
-
-
-
-
-// Start and goal configurations
-//static constexpr std::array<float, dimension> start = {0., -0.785, 0., -2.356, 0., 1.571, 0.785};
-//static constexpr std::array<float, dimension> goal = {2.35, 1., 0., -0.8, 0, 2.5, 0.785};
-
-//static constexpr std::array<float, dimension> goal = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
-//static constexpr std::array<float, dimension> start = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
-
-static constexpr std::array<float, dimension> start = {-0.855292,1.12975,0.0380571,-0.69921,0.0141439,1.73613,0.0000393391};
-static constexpr std::array<float, dimension> goal =  {0.841046,1.13069,-0.0242863,-0.697919,-0.00982904,1.74158,0.000353813};
-
-// Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
-/*
-static const std::vector<std::array<float, 3>> problem = {
-    {0.55, 0, 0.25},
-    {0.35, 0.35, 0.25},
-    {0, 0.55, 0.25},
-    {-0.55, 0, 0.25},
-    {-0.35, -0.35, 0.25},
-    {0, -0.55, 0.25},
-    {0.35, -0.35, 0.25},
-    {0.35, 0.35, 0.8},
-    {0, 0.55, 0.8},
-    {-0.35, 0.35, 0.8},
-    {-0.55, 0, 0.8},
-    {-0.35, -0.35, 0.8},
-    {0, -0.55, 0.8},
-    {0.35, -0.35, 0.8},
-};
-*/
-/*
-static const std::vector<std::array<float, 3>> problem = {
-    // {0.55, 0, 0.25},
-    // {0.55, 0, 0.50},
-    // {0.35, 0.35, 0.25},
-    //{0, 0.55, 0.25},
-    //{-0.55, 0, 0.25},
-    //{-0.35, -0.35, 0.25},
-    // {0, -0.55, 0.25},
-    // {0.35, -0.35, 0.25},
-    // {0.35, 0.35, 0.8},
-    // {0, 0.55, 0.8},
-    // {-0.35, 0.35, 0.8},
-    // {-0.55, 0, 0.8},
-    //{-0.35, -0.35, 0.8},
-    //{0, -0.55, 0.8},
-    //{0.35, -0.35, 0.8},
-};*/
-
-
-static const std::vector<std::array<float, 3>> problem = {
-    // {0.55, 0, 0.25},
-    // {0.55, 0, 0.50},
-    // {0.35, 0.35, 0.25},
-    {0, 0.55, 0.25},
-    {-0.55, 0, 0.25},
-    {-0.35, -0.35, 0.25},
-    // {0, -0.55, 0.25},
-    // {0.35, -0.35, 0.25},
-    // {0.35, 0.35, 0.8},
-    // {0, 0.55, 0.8},
-    // {-0.35, 0.35, 0.8},
-    // {-0.55, 0, 0.8},
-    {-0.35, -0.35, 0.8},
-    {0, -0.55, 0.8},
-    {0.35, -0.35, 0.8},
-};
-
-// Radius for obstacle spheres
-static constexpr float radius = 0.1;
-
 // Maximum planning time
-static constexpr float planning_time = 1.0;
+static constexpr float planning_time = 30.0;
 
 // Maximum simplification time
 static constexpr float simplification_time = 1.0;
@@ -264,8 +183,8 @@ public:
         if (!pss) {
             throw std::runtime_error("ProjectedStateSpace member field weak pointer no longer exists!");
         }
-        std::cout << "At the very begnning of project, the state is: \n";
-        pss->printState(state, std::cout);
+        //std::cout << "At the very begnning of project, the state is: \n";
+        //pss->printState(state, std::cout);
         Configuration c = double_vector_to_vamp(extractStateReals(state, pss));
         //raise(SIGTRAP);
         
@@ -278,8 +197,8 @@ public:
         //}
         //std::cout << "\n";
         fillStateFromReals(newReals, state, pss);
-        std::cout << "At the end, we get: \n";
-        pss->printState(state, std::cout);
+        //std::cout << "At the end, we get: \n";
+        //pss->printState(state, std::cout);
         return result;
 
     }
@@ -319,12 +238,12 @@ public:
     double distance(const Configuration &configuration) const
     {
         ConfigurationBlock block =  turn_configuration_into_configuration_block(configuration);
-        std::cout << "block is" << block << "\n";
+        //std::cout << "block is" << block << "\n";
         auto simd_float_vector = original_taskspace_constraint.distanceToConstraint(block);
         //std::cout << "distanceToConstraint returned " << simd_float_vector << "\n";
         //std::cout << "is the start position on the manifold?? Answer: " << simd_float_vector.test_all_less_equal(0.0001F) << "\n";
         double dist = simd_float_vector[{0, 0}];
-        std::cout << "dist is" << dist << "\n";
+        //std::cout << "dist is" << dist << "\n";
         return dist;
     }
 
@@ -360,7 +279,7 @@ struct VAMPStateValidator : public ob::StateValidityChecker
     auto isValid(const ob::State *state) const -> bool override
     {
         // Convert OMPL to VAMP vector and validate
-        std::cout << "our implemtnation of is valid is called!\n";
+        //std::cout << "our implemtnation of is valid is called!\n";
        auto *pss = dynamic_cast<ob::ProjectedStateSpace*>(si_->getStateSpace().get());
         if (!pss)
             throw ompl::Exception("Expected ProjectedStateSpace");
@@ -378,7 +297,7 @@ struct VAMPStateValidator : public ob::StateValidityChecker
         //const ob::State *ambient = projState->getAmbientState();
         //si_->getStateSpace()->printState(ambient, std::cout);
         auto result = custom_constraint->isSatisfied(c);
-        std::cout << "At the end of isValid for stateValdiator, is valid returns " << result << "\n";
+        //std::cout << "At the end of isValid for stateValdiator, is valid returns " << result << "\n";
         return result;
     }
     
@@ -413,13 +332,13 @@ struct VAMPMotionValidator : public ob::MotionValidator
             throw ompl::Exception("Expected CustomConstraint");
 
         // Step 4. Convert state into VAMP configuration
-        std::cout << "Check motion called with these following states:\n";
-        pss->printState(s1, std::cout);
-        pss->printState(s2, std::cout);
+        //std::cout << "Check motion called with these following states:\n";
+        //State(s1, std::cout);
+        //pss->printState(s2, std::cout);
         Configuration configuration1 = double_vector_to_vamp(extractStateReals(s1, pss));;
         Configuration configuration2 = double_vector_to_vamp(extractStateReals(s2, pss));;
-        std::cout << "configuration 1 for checkMotion is " << configuration1 << "\n";
-        std::cout << "configuration 2 for checkMotion is " << configuration2 << "\n";
+        //std::cout << "configuration 1 for checkMotion is " << configuration1 << "\n";
+        //std::cout << "configuration 2 for checkMotion is " << configuration2 << "\n";
         std::vector<Configuration> projected_vector_dummy;
 
         // Step 5. Call VAMP’s constrained validator
@@ -430,7 +349,7 @@ struct VAMPMotionValidator : public ob::MotionValidator
             custom_constraint->original_taskspace_constraint,
             env_v
         );
-        std::cout << "The result of project_constraint_motion is " << result << "\n";
+        //std::cout << "The result of project_constraint_motion is " << result << "\n";
         return result;
         //return vamp::planning::validate_motion<Robot, rake, Robot::resolution>(
             //ompl_to_vamp(s1), ompl_to_vamp(s2), env_v);
@@ -447,8 +366,6 @@ struct VAMPMotionValidator : public ob::MotionValidator
 
 auto main(int argc, char **) -> int
 {
-    Eigen::Matrix<float, 4, 4> T;
-    T << 1,0,0,   0.543325,   0,-1,0,      0.570738,   0,0,-1,    0.121557,          0,           0,           0,           1;
 
     const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
     const auto in_hand_pose = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
@@ -546,7 +463,7 @@ auto main(int argc, char **) -> int
 
     planner->setProblemDefinition(pdef);
     std::cout << "default range is "<< planner->getRange() <<"\n";
-    planner->setRange(1.0);
+    //planner->setRange(1.0);
     planner->setup();
 
     // Solve the problem

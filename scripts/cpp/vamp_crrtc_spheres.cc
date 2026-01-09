@@ -3,7 +3,7 @@
 #include <utility>
 #include <iostream>
 #include <iomanip>
-
+#include <chrono>
 #include <vamp/collision/factory.hh>
 // #include <vamp/planning/validate.hh>
 #include <vamp/planning/crrtc.hh>
@@ -18,6 +18,7 @@
 #include "problem_setup/plane_constraint_problem_setup.hh"
 
 using Robot = vamp::robots::Panda;
+using namespace std::chrono;
 static constexpr const std::size_t rake = vamp::FloatVectorWidth;
 using EnvironmentInput = vamp::collision::Environment<float>;
 using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
@@ -101,9 +102,9 @@ auto main(int, char **) -> int
     int x;
 
 
-    //attempt to project start down to the manifold.
+    //below was just for testing, not needed at all
     
-
+/*
     std::vector<Configuration> projected_vector;
     Robot::ConfigurationArray zero_vector = {0.0,0.0,0.0,-0.0,0.0,0.0,0.0};
     bool success = vamp::planning::project_constraint_vector<Robot, rake, Robot::resolution>(
@@ -118,14 +119,7 @@ auto main(int, char **) -> int
     std::cout << "projection success: " << success << "\n";
     
     std::cout << "size of projected_vector is " << projected_vector.size();
-    /*for(auto proj_vector : projected_vector)
-    {
 
-        for (std::size_t i = 0; i < Robot::dimension; ++i) {
-            std::cout << proj_vector.broadcast(i) << " "; // extract scalar
-        }
-        std::cout << std::endl;
-    }*/
     Robot::ConfigurationArray new_start = {-0.855292,1.12975,0.0380571,-0.69921,0.0141439,1.73613,0.0000393391};
     Robot::ConfigurationArray new_goal = {0.841046,1.13069,-0.0242863,-0.697919,-0.00982904,1.74158,0.000353813};
     auto block = turn_configuration_into_configuration_block(Robot::Configuration(new_start));
@@ -170,6 +164,8 @@ auto main(int, char **) -> int
             env_v
         );
         std::cout << "The result of project_constraint_motion is " << result1 << "\n";
+
+    */
     rrtc_settings.range = range;
     // rrtc_settings.max_iterations = 20000;
     rrtc_settings.dynamic_domain = dyndom;
@@ -177,10 +173,12 @@ auto main(int, char **) -> int
     rrtc_settings.descend_rate = descent_rate;
     // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
-
+    auto t1 = high_resolution_clock::now();
     auto result =
         CRRTC::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
-
+    auto t2 = high_resolution_clock::now();
+    auto duration_ms = duration_cast<milliseconds>(t2 - t1).count();
+    std::cout << "Solve time: " << duration_ms << " ms\n";
     if(result.path.size() > 0)
     {
         Attempt a{

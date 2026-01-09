@@ -163,6 +163,24 @@ if(VAMP_BUILD_CPP_DEMO)
   add_executable(vamp_crrtc_spheres scripts/cpp/vamp_crrtc_spheres.cc)
   target_link_libraries(vamp_crrtc_spheres PRIVATE vamp_cpp)
   target_link_libraries(vamp_crrtc_spheres PRIVATE vamp_problem_setup)
+
+  # OMPL integration demo
+if(VAMP_BUILD_OMPL_DEMO)
+  find_package(ompl QUIET PATHS ${VAMP_OMPL_PATH})
+
+  if(ompl_FOUND)
+    add_executable(vamp_ompl_integration scripts/cpp/ompl_integration.cc)
+    target_link_libraries(vamp_ompl_integration PRIVATE ompl::ompl vamp_cpp)
+    target_link_libraries(vamp_ompl_integration PRIVATE vamp_problem_setup)
+    
+    # Disable strict warnings for demos to maintain compatibility
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      target_compile_options(vamp_ompl_integration PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
+    endif()
+    else()
+      message(WARNING "OMPL not found! Cannot build OMPL demo.")
+    endif()
+  endif()
   
   # Disable strict warnings for demos to maintain compatibility
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -173,22 +191,7 @@ if(VAMP_BUILD_CPP_DEMO)
   endif()
 endif()
 
-# OMPL integration demo
-if(VAMP_BUILD_OMPL_DEMO)
-  find_package(ompl QUIET PATHS ${VAMP_OMPL_PATH})
 
-  if(ompl_FOUND)
-    add_executable(vamp_ompl_integration scripts/cpp/ompl_integration.cc)
-    target_link_libraries(vamp_ompl_integration PRIVATE ompl::ompl vamp_cpp)
-    
-    # Disable strict warnings for demos to maintain compatibility
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-      target_compile_options(vamp_ompl_integration PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
-    endif()
-  else()
-    message(WARNING "OMPL not found! Cannot build OMPL demo.")
-  endif()
-endif()
 
 # Print build configuration
 message(STATUS "VAMP build configuration:")
