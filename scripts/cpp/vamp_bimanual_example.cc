@@ -36,7 +36,7 @@ struct Attempt {
     std::size_t planning_time;
     std::size_t planning_iterations;
     std::size_t path_length;
-    
+
     bool operator<(const Attempt& other) const {
         return planning_time < other.planning_time;
     }
@@ -93,7 +93,7 @@ auto main(int, char **) -> int
         }
         // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
         environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x, y, z}, {0.0, 0.0, 0.0}, {dx/2, dy/2, dz/2}));
-    }        
+    }
     infile.close();
 
 
@@ -118,11 +118,16 @@ auto main(int, char **) -> int
     Eigen::Matrix<float, 4, 4> T;
     T << -0.719427, 0.694568, 6.59173e-05, -2.2769e-05, 0.694568, 0.719427, -2.26738e-05, -0.000370264, -6.31774e-05, 2.94462e-05, -1, 0.171814, 0, 0, 0, 1;
     const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
-    vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> task_constraint(target_pose, std::make_pair(lower_bound, upper_bound));
+    vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_task_constraint(target_pose, std::make_pair(lower_bound, upper_bound));
+
+    vamp::planning::ComposableConstraints<Robot, rake, decltype(bimanual_task_constraint)> task_constraint(
+        bimanual_task_constraint
+    );
 
 
 
-    
+
+
     rrtc_settings.range = range;
     rrtc_settings.max_iterations = 100000;
     rrtc_settings.dynamic_domain = dyndom;
@@ -131,7 +136,7 @@ auto main(int, char **) -> int
     // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
     auto result =
-        CRRTC::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
+    vamp::planning::CRRTC<Robot, rake, Robot::resolution, decltype(bimanual_task_constraint)>::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
 
     if(result.path.size() > 0)
     {
@@ -178,7 +183,7 @@ auto main(int, char **) -> int
         // std::cin.ignore();
         succ_attempts.push_back(a);
         std::sort(succ_attempts.begin(), succ_attempts.end());
-        
+
 
 
     }
