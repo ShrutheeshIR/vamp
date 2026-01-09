@@ -11,13 +11,13 @@
 namespace vamp::planning
 {
 
-    template <typename Robot, std::size_t rake, std::size_t resolution>
+    template <typename Robot, std::size_t rake, std::size_t resolution, typename... Constraints>
     inline constexpr auto project_constraint_vector(
         const typename Robot::Configuration &start,
         const typename Robot::Configuration &vector,
         float distance,
         std::vector<typename Robot::Configuration> &projected_vector,
-        BimanualTaskSpaceConstraint<Robot, rake> &constraint,
+        ComposableConstraints<Robot, rake, Constraints...> &constraint,
         const collision::Environment<FloatVector<rake>> &environment,
         ProjMethod projection_method = ProjMethod::GradDesc,
         float projection_descent_rate = 1.0) -> bool
@@ -46,13 +46,49 @@ namespace vamp::planning
         {
             return ableToProject;
         }
+        float max_inter_dist = 0.F;
+        // need to compute a ConfigurationBlock structure such that
+        // each element is the difference between 2 successive configurations
+        // for the first element, it is between first and start config
+        // typename Robot::template ConfigurationBlock<rake> diff_block = initial_projected_block + 0.0;
+        //
+        std::array<vamp::FloatT, Robot::dimension * rake> diff_arr;
+
+        float inter_distance = 0.F;
+        for (auto j = 0U; j < Robot::dimension; j++){
+            diff_arr[j * rake] = initial_projected_block[{j, 0}] - start.broadcast(j)[{j, 0}];
+            inter_distance += diff_arr[j * rake] * diff_arr[j * rake];
+        }
+        if (inter_distance > 4 * (distance / rake) * (distance / rake))
+        {
+            // std::cout << "Invalid config due to distance constraint" << std::endl;
+            return false;
+        }
+        for (auto i = 1U; i < rake; i++)
+        {
+            inter_distance = 0.F;
+            for (auto j = 0U; j < Robot::dimension; j++)
+            {
+                diff_arr[i + j * rake] = initial_projected_block[{j, i}] - initial_projected_block[{j, i-1}];
+                inter_distance = inter_distance + diff_arr[i + j * rake] * diff_arr[i + j * rake];
+            }
+            if (inter_distance > 4 * (distance / rake) * (distance / rake))
+            {
+                // std::cout << "Invalid config due to distance constraint" << std::endl;
+                return false;
+            }
+            max_inter_dist = std::max(max_inter_dist, inter_distance);
+        }
+        max_inter_dist = std::sqrt(max_inter_dist);
+        typename Robot::template ConfigurationBlock<rake> shifted_block = typename Robot::template ConfigurationBlock<rake>(diff_arr);
+
 
         bool valid = (environment.eef_attachments.size()) ?
                          Robot::template fkcc_attach<rake>(environment, initial_projected_block) :
                          Robot::template fkcc<rake>(environment, initial_projected_block);
 
         typename Robot::ConfigurationArray last_projected;
-        for (auto i = 0; i < rake; i++)
+        for (auto i = 0U; i < rake; i++)
         {
             for (auto j = 0U; j < Robot::dimension; j++)
             {
@@ -62,32 +98,34 @@ namespace vamp::planning
         }
         // std::cout << initial_projected_block << std::endl;
 
-        if (not valid or n == 1)
+        if (not valid or max_inter_dist < (distance / rake))
         {
             return valid;
         }
 
-        const typename Robot::Configuration new_vector =
-            typename Robot::Configuration(last_projected) - start;
 
-        auto q_dist = new_vector.squared_l2_norm();
-        if (q_dist > 2 * distance * distance)  // projected too far
-        {
-            return false;
-        }
+        // const typename Robot::Configuration new_vector =
+        //     typename Robot::Configuration(last_projected) - start;
 
-        n = std::max(std::ceil(q_dist / static_cast<float>(rake) * resolution), 1.F);
+        // auto q_dist = new_vector.squared_l2_norm();
+        // if (q_dist > 2 * distance * distance)  // projected too far
+        // {
+        //     return false;
+        // }
+
+        // n = std::max(std::ceil(q_dist / static_cast<float>(rake) * resolution), 1.F) * 2;
+        //
+        n = std::max(std::ceil(max_inter_dist * resolution), 1.F);
         // std::cout << " N : " << n << " qdist " << q_dist << " res " << resolution << " new vector " << new_vector << std::endl;
-        const auto backstep = new_vector / (rake * n);
+        // const auto backstep = new_vector / (rake * n);
+
+        // typename Robot::template ConfigurationBlock<rake> diff_block = typename Robot::template ConfigurationBlock<rake>(diff_arr);
 
         for (auto i = 1U; i < n; ++i)
         {
-            for (auto j = 0U; j < Robot::dimension; ++j)
-            {
-                initial_projected_block[j] = initial_projected_block[j] - backstep.broadcast(j);
-            }
 
-            if (not constraint.projectConfiguration(initial_projected_block, projected_block, projection_method, q_dist))
+            initial_projected_block = initial_projected_block - shifted_block / n;
+            if (not constraint.projectConfiguration(initial_projected_block, projected_block, projection_method, max_inter_dist * rake))
             {
                 return false;
             }
@@ -110,12 +148,12 @@ namespace vamp::planning
         return true;
     }
 
-    template <typename Robot, std::size_t rake, std::size_t resolution>
+    template <typename Robot, std::size_t rake, std::size_t resolution, typename... Constraints>
     inline constexpr auto project_constraint_motion(
         const typename Robot::Configuration &start,
         const typename Robot::Configuration &goal,
         std::vector<typename Robot::Configuration> &projected_vector,
-        BimanualTaskSpaceConstraint<Robot, rake> &constraint,
+        ComposableConstraints<Robot, rake, Constraints...> &constraint,
         const collision::Environment<FloatVector<rake>> &environment) -> bool
     {
         auto vector = goal - start;

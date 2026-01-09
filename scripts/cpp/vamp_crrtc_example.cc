@@ -73,7 +73,7 @@ struct Attempt {
     std::size_t planning_time;
     std::size_t planning_iterations;
     std::size_t path_length;
-    
+
     bool operator<(const Attempt& other) const {
         return planning_time < other.planning_time;
     }
@@ -86,8 +86,8 @@ auto main(int, char **) -> int
     // Setup RRTC and plan
     vamp::planning::RRTCSettings rrtc_settings;
 
-    // float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
-    float ranges[] = {0.5, 0.75};
+    float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
+    // float ranges[] = {0.5, 0.75};
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     // bool dd[] = {false};
     bool dd[] = {false, true};
@@ -131,7 +131,7 @@ auto main(int, char **) -> int
         }
         // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
         environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x + 0.1, y + 1.0, z + 0.11}, {0.0, 0.0, 0.0}, {dx, dy, dz}));
-    }        
+    }
     infile.close();
 
 
@@ -177,7 +177,7 @@ auto main(int, char **) -> int
 
 
 
-    
+
     rrtc_settings.range = range;
     rrtc_settings.max_iterations = 100000;
     rrtc_settings.dynamic_domain = dyndom;
@@ -233,7 +233,7 @@ auto main(int, char **) -> int
         // std::cin.ignore();
         succ_attempts.push_back(a);
         std::sort(succ_attempts.begin(), succ_attempts.end());
-        
+
 
 
     }

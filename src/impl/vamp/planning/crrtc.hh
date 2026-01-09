@@ -13,7 +13,7 @@
 
 namespace vamp::planning
 {
-    template <typename Robot, std::size_t rake, std::size_t resolution>
+    template <typename Robot, std::size_t rake, std::size_t resolution, typename... Constraints>
     struct CRRTC
     {
         using Configuration = typename Robot::Configuration;
@@ -26,7 +26,7 @@ namespace vamp::planning
             const Configuration &goal,
             const collision::Environment<FloatVector<rake>> &environment,
             const RRTCSettings &settings,
-            BimanualTaskSpaceConstraint<Robot, rake> &constraint,
+            ComposableConstraints<Robot, rake, Constraints...> &constraint,
             typename RNG::Ptr rng) noexcept -> PlanningResult<Robot>
         {
             return solve(start, std::vector<Configuration>{goal}, environment, settings, constraint, rng);
@@ -37,7 +37,7 @@ namespace vamp::planning
             const std::vector<Configuration> &goals,
             const collision::Environment<FloatVector<rake>> &environment,
             const RRTCSettings &settings,
-            BimanualTaskSpaceConstraint<Robot, rake> &constraint,
+            ComposableConstraints<Robot, rake, Constraints...> &constraint,
             typename RNG::Ptr rng) noexcept -> PlanningResult<Robot>
         {
             PlanningResult<Robot> result;
@@ -103,7 +103,7 @@ namespace vamp::planning
             while (iter++ < settings.max_iterations and free_index < settings.max_samples and not connected)
             {
                 // if (iter % 1 == 0)
-                    // std::cout << "Starting iteration : " << iter << ", " << free_index << ", " <<connected << " , " << settings.max_samples << std::endl;
+                //     std::cout << "Starting iteration : " << iter << ", " << free_index << ", " <<connected << " , " << settings.max_samples << std::endl;
                 float asize = tree_a->size();
                 float bsize = tree_b->size();
                 float ratio = std::abs(asize - bsize) / asize;
@@ -121,12 +121,14 @@ namespace vamp::planning
                 const auto nearest = tree_a->nearest(NNFloatArray<dimension>{temp_array.data()});
                 if (not nearest)
                 {
+                    std::cout << "No nearest " << std::endl;
                     continue;
                 }
 
                 const auto &[nearest_node, nearest_distance] = *nearest;
                 const auto nearest_radius = radii[nearest_node.index];
 
+                // std::cout << nearest_radius << ", " << nearest_distance << ", " <<  nearest_node.index << std::endl;
                 if (settings.dynamic_domain and nearest_radius < nearest_distance)
                 {
                     continue;
@@ -185,9 +187,9 @@ namespace vamp::planning
 
                     // try to connect to goal directly
                     while (not connected)
-                    {   
+                    {
                         counter++;
-                        if (counter > 2)
+                        if (counter > 10)
                             break;
                         // Extend to goal tree
                         const auto other_nearest =
