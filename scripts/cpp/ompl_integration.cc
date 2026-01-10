@@ -479,7 +479,7 @@ auto main(int argc, char **) -> int
     {   
         og::PathGeometric *path =
         pdef->getSolutionPath()->as<og::PathGeometric>();
-        std::ofstream outfile("trajectory.txt")
+        std::ofstream outfile("trajectory.txt");
         outfile << std::fixed << std::setprecision(6);
         std::cout << "Raw path length: " << path->length() << std::endl;
         std::cout << "Raw path states: " << path->getStateCount() << std::endl;
