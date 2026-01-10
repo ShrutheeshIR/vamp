@@ -382,11 +382,13 @@ auto main(int argc, char **) -> int
 
     // Build sphere cage environment
     EnvironmentInput environment;
+    std::ofstream outfile_sph("spheres.txt");
     for (const auto &sphere : problem)
     {
+        outfile_sph << sphere[0] << "," << sphere[1] << "," << sphere[2] << "," << radius << "\n";
         environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
     }
-
+    outfile_sph.close();
     environment.sort();
     auto env_v = EnvironmentVector(environment);
 
@@ -474,12 +476,26 @@ auto main(int argc, char **) -> int
     if (solved)
     {   
         og::PathGeometric *path =
-            pdef->getSolutionPath()->as<og::PathGeometric>();
-
+        pdef->getSolutionPath()->as<og::PathGeometric>();
+        std::ofstream outfile("trajectory.txt");
         std::cout << "Raw path length: " << path->length() << std::endl;
         std::cout << "Raw path states: " << path->getStateCount() << std::endl;
 
         path->print(std::cout);
+        for (std::size_t i = 0; i < path->getStateCount(); ++i)
+        {
+            const auto *state =
+                path->getState(i)->as<ob::RealVectorStateSpace::StateType>();
+
+            for (std::size_t j = 0; j < dimension; ++j)
+            {
+                if (j > 0)
+                    outfile << ",";
+                outfile << state->values[j];
+            }
+            outfile << "\n";
+        }
+        outfile.close();
     }
     // Only accept exact solutions
     if (solved == ob::PlannerStatus::EXACT_SOLUTION)
