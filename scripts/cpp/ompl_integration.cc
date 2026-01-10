@@ -3,6 +3,7 @@
 #include <utility>
 #include <csignal>
 #include <iostream>
+#include <fstream>
 #include <vamp/vector.hh>
 #include <vamp/vector/interface.hh>
 #include <vamp/collision/factory.hh>
