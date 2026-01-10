@@ -485,14 +485,13 @@ auto main(int argc, char **) -> int
         path->print(std::cout);
         for (std::size_t i = 0; i < path->getStateCount(); ++i)
         {
-            const auto *state =
-                path->getState(i)->as<ob::RealVectorStateSpace::StateType>();
+            std::vector<double> result = extractStateReals(path->getState(i), css)
 
             for (std::size_t j = 0; j < dimension; ++j)
             {
                 if (j > 0)
                     outfile << ",";
-                outfile << state->values[j];
+                outfile << result[j];
             }
             outfile << "\n";
         }
