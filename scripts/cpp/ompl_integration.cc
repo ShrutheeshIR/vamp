@@ -485,7 +485,7 @@ auto main(int argc, char **) -> int
         path->print(std::cout);
         for (std::size_t i = 0; i < path->getStateCount(); ++i)
         {
-            std::vector<double> result = extractStateReals(path->getState(i), css)
+            std::vector<double> result = extractStateReals(path->getState(i), *css);
 
             for (std::size_t j = 0; j < dimension; ++j)
             {
