@@ -467,7 +467,7 @@ auto main(int argc, char **) -> int
 
     planner->setProblemDefinition(pdef);
     std::cout << "default range is "<< planner->getRange() <<"\n";
-    //planner->setRange(1.0);
+    planner->setRange(1.0);
     planner->setup();
 
     // Solve the problem
