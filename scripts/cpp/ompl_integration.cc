@@ -4,6 +4,7 @@
 #include <csignal>
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 #include <vamp/vector.hh>
 #include <vamp/vector/interface.hh>
 #include <vamp/collision/factory.hh>
@@ -478,7 +479,8 @@ auto main(int argc, char **) -> int
     {   
         og::PathGeometric *path =
         pdef->getSolutionPath()->as<og::PathGeometric>();
-        std::ofstream outfile("trajectory.txt");
+        std::ofstream outfile("trajectory.txt")
+        outfile << std::fixed << std::setprecision(6);
         std::cout << "Raw path length: " << path->length() << std::endl;
         std::cout << "Raw path states: " << path->getStateCount() << std::endl;
 
