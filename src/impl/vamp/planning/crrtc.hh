@@ -10,6 +10,7 @@
 #include <vamp/random/rng.hh>
 #include <vamp/utils.hh>
 #include <vamp/vector.hh>
+#include "validate_constraint.hh"
 
 namespace vamp::planning
 {
@@ -297,7 +298,7 @@ namespace vamp::planning
             result.iterations = iter;
             result.size.emplace_back(start_tree.size());
             result.size.emplace_back(goal_tree.size());
-            std::cout << "Terminated with  : " << iter << ", " << free_index << ", " <<connected << " , " << settings.max_samples << ", " << tree_a->size() << ", " << tree_b->size() << ", " << result.iterations << ", " << result.nanoseconds/1e6 << std::endl;
+            std::cout << "Terminated with  : " << iter << ", " << free_index << ", " <<connected << " , " << settings.max_samples << ", " << tree_a->size() << ", " << tree_b->size() << ", " << result.iterations << ", " << result.nanoseconds/1e6 << " , " << (float)invalid_distance_counter_outside / iter << " , " << (float)invalid_distance_counter_inside / iter << ", " << (float) unable_to_project_counter / iter << ", " << (float) collision_counter / iter << std::endl;
             return result;
         }
     };
