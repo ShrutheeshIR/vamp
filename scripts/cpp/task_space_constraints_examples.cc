@@ -224,7 +224,7 @@ auto main(int, char **) -> int
         float inter_distance = 0.F;
         for (auto j = 0U; j < Robot::dimension; j++)
         {
-            std::cout << i << " " << j << " " << initial_projected_block[{j, i+1}] << ", " << initial_projected_block[{j, i}] << " " << initial_projected_block[{j, i+1}] - initial_projected_block[{j, i}] << std::endl;
+            // std::cout << i << " " << j << " " << initial_projected_block[{j, i+1}] << ", " << initial_projected_block[{j, i}] << " " << initial_projected_block[{j, i+1}] - initial_projected_block[{j, i}] << std::endl;
             inter_distance = inter_distance + std::pow(initial_projected_block[{j, i+1}] - initial_projected_block[{j, i}], 2);
         }
         std::cout << "Distance between points " << i << " and " << i+1 << ": " << std::sqrt(inter_distance) << " " << (distance / rake)<< std::endl;
@@ -240,7 +240,7 @@ auto main(int, char **) -> int
     std::array<vamp::FloatT, Robot::dimension * rake> diff_arr;
     std::cout <<diff_arr.size() << std::endl;
 
-    for (auto j = 0U; j < rake-1; j++)
+    for (auto j = 0U; j < Robot::dimension; j++)
         // diff_arr[j * rake] = 0.0;
         diff_arr[j * rake] = initial_projected_block[{j, 0}] - Robot::Configuration(start).broadcast(j)[{j, 0}];
 
@@ -269,10 +269,12 @@ auto main(int, char **) -> int
     std::cout << initial_projected_block << std::endl;
     std::cout << shifted_block << std::endl;
     std::cout << initial_projected_block - shifted_block << std::endl;
-    // for(auto j = 0U; j < Robot::dimension; j++)
-    // {
-    //     std::cout << j << " " << shifted_block[j] << std::endl;
-    // }
+    auto q_dist = shifted_block[0] * shifted_block[0];
+    for(auto j = 1U; j < Robot::dimension; j++)
+    {
+        q_dist = q_dist + shifted_block[j] * shifted_block[j];
+    }
+    std::cout << q_dist << " " << q_dist.sqrt() << " " << std::endl;
 
     // for(auto j = 1U; j < Robot::dimension; j++)
     // {

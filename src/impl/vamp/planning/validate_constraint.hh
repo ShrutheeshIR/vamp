@@ -44,37 +44,31 @@ namespace vamp::planning
         bool ableToProject = constraint.projectConfiguration(block, initial_projected_block, projection_method, distance, projection_descent_rate);
         if (not ableToProject)
         {
+            // std::cout << "Unable to project " << std::endl;
             return ableToProject;
         }
         float max_inter_dist = 0.F;
-        // need to compute a ConfigurationBlock structure such that
-        // each element is the difference between 2 successive configurations
-        // for the first element, it is between first and start config
-        // typename Robot::template ConfigurationBlock<rake> diff_block = initial_projected_block + 0.0;
-        //
-        std::array<vamp::FloatT, Robot::dimension * rake> diff_arr;
 
-        float inter_distance = 0.F;
-        for (auto j = 0U; j < Robot::dimension; j++){
-            diff_arr[j * rake] = initial_projected_block[{j, 0}] - start.broadcast(j)[{j, 0}];
-            inter_distance += diff_arr[j * rake] * diff_arr[j * rake];
-        }
-        if (inter_distance > 4 * (distance / rake) * (distance / rake))
+        // Compute inter-rake differences
+        std::array<vamp::FloatT, Robot::dimension * rake> diff_arr;
+        for (auto i = 0U; i < rake; i++)
         {
-            // std::cout << "Invalid config due to distance constraint" << std::endl;
-            return false;
-        }
-        for (auto i = 1U; i < rake; i++)
-        {
-            inter_distance = 0.F;
+            float inter_distance = 0.F;
             for (auto j = 0U; j < Robot::dimension; j++)
             {
-                diff_arr[i + j * rake] = initial_projected_block[{j, i}] - initial_projected_block[{j, i-1}];
+                if (i == 0)
+                {
+                    diff_arr[i + j * rake] = initial_projected_block[{j, i}] - start.broadcast(j)[{j, 0}];
+                }
+                else
+                {
+                    diff_arr[i + j * rake] = initial_projected_block[{j, i}] - initial_projected_block[{j, i-1}];
+                }
                 inter_distance = inter_distance + diff_arr[i + j * rake] * diff_arr[i + j * rake];
             }
             if (inter_distance > 4 * (distance / rake) * (distance / rake))
             {
-                // std::cout << "Invalid config due to distance constraint" << std::endl;
+                // std::cout << "Invalid config due to distance constraint" << inter_distance << " at " << i << " with max distance allowed is " << 4 * (distance / rake) * (distance / rake) << std::endl;
                 return false;
             }
             max_inter_dist = std::max(max_inter_dist, inter_distance);
@@ -100,35 +94,32 @@ namespace vamp::planning
 
         if (not valid or max_inter_dist < (distance / rake))
         {
+            // std::cout << "Invalid config " << valid << std::endl;
             return valid;
         }
 
 
-        // const typename Robot::Configuration new_vector =
-        //     typename Robot::Configuration(last_projected) - start;
-
-        // auto q_dist = new_vector.squared_l2_norm();
-        // if (q_dist > 2 * distance * distance)  // projected too far
-        // {
-        //     return false;
-        // }
-
-        // n = std::max(std::ceil(q_dist / static_cast<float>(rake) * resolution), 1.F) * 2;
-        //
         n = std::max(std::ceil(max_inter_dist * resolution), 1.F);
-        // std::cout << " N : " << n << " qdist " << q_dist << " res " << resolution << " new vector " << new_vector << std::endl;
-        // const auto backstep = new_vector / (rake * n);
-
-        // typename Robot::template ConfigurationBlock<rake> diff_block = typename Robot::template ConfigurationBlock<rake>(diff_arr);
 
         for (auto i = 1U; i < n; ++i)
         {
 
             initial_projected_block = initial_projected_block - shifted_block / n;
-            if (not constraint.projectConfiguration(initial_projected_block, projected_block, projection_method, max_inter_dist * rake))
+            if (not constraint.projectConfiguration(initial_projected_block, projected_block, projection_method, max_inter_dist * rake, projection_descent_rate))
             {
                 return false;
             }
+            auto q_dist = (projected_block[0] - initial_projected_block[0]) * (projected_block[0] - initial_projected_block[0]);
+            for(auto j = 1U; j < Robot::dimension; j++)
+                q_dist = q_dist + (projected_block[j] - initial_projected_block[j]) * (projected_block[j] - initial_projected_block[j]);
+            if (q_dist.test_any_greater_equal(4 * max_inter_dist / n * max_inter_dist / n))
+            {
+                std::cout << q_dist << " " << q_dist.sqrt() << " " << max_inter_dist << std::endl;
+                std::cout << projected_block << "," << initial_projected_block << "," << shifted_block / n <<std::endl;
+                return false;
+            }
+
+
 
             if (not Robot::template fkcc<rake>(environment, projected_block))
             {
