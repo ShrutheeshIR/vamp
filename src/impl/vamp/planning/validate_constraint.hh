@@ -37,11 +37,13 @@ namespace vamp::planning
         typename Robot::template ConfigurationBlock<rake> block;
         typename Robot::template ConfigurationBlock<rake> projected_block;
         typename Robot::template ConfigurationBlock<rake> initial_projected_block;
+        typename Robot::template ConfigurationBlock<rake> start_block;
 
         // HACK: broadcast() implicitly assumes that the rake is exactly VectorWidth
         for (auto i = 0U; i < Robot::dimension; ++i)
         {
             block[i] = start.broadcast(i) + (vector.broadcast(i) * percents);
+            start_block[i] = start.broadcast(i);
         }
 
         std::size_t n = std::max(std::ceil(distance / static_cast<float>(rake) * resolution), 1.F);
@@ -55,6 +57,9 @@ namespace vamp::planning
             unable_to_project_counter++;
             return ableToProject;
         }
+
+
+
         float max_inter_dist = 0.F;
 
         // Compute inter-rake differences
@@ -66,7 +71,7 @@ namespace vamp::planning
             {
                 if (i == 0)
                 {
-                    diff_arr[i + j * rake] = initial_projected_block[{j, i}] - start[{0, j}];
+                    diff_arr[i + j * rake] = initial_projected_block[{j, i}] - start_block[{j, i}];
                 }
                 else
                 {

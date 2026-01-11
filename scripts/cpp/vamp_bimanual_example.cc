@@ -53,7 +53,7 @@ auto main(int, char **) -> int
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     // bool dd[] = {false};
     bool dd[] = {false, true};
-    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};
+    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM};//, vamp::planning::ProjMethod::GradDesc};
 
     // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
     float descend_rates[] = {0.75, 1.0};
@@ -134,6 +134,12 @@ auto main(int, char **) -> int
     rrtc_settings.projection_method = pm;
     rrtc_settings.descend_rate = descent_rate;
     // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
+
+    vamp::planning::invalid_distance_counter_outside = 0;
+    vamp::planning::invalid_distance_counter_inside = 0;
+    vamp::planning::collision_counter = 0;
+    vamp::planning::unable_to_project_counter = 0;
+
     std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
     auto result =
     vamp::planning::CRRTC<Robot, rake, Robot::resolution, decltype(bimanual_task_constraint)>::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);

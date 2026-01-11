@@ -36,7 +36,7 @@ struct Attempt {
     std::size_t planning_time;
     std::size_t planning_iterations;
     std::size_t path_length;
-    
+
     bool operator<(const Attempt& other) const {
         return planning_time < other.planning_time;
     }
@@ -137,12 +137,19 @@ auto main(int, char **) -> int
 
         typename Robot::template ConfigurationBlock<rake> projected_block;
 
-        bool success = task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::GradDesc);
+        bool success = task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM);
         for(auto i=0U; i < Robot::dimension; i++)
             std::cout << projected_block[{i, 0}] << " ";
         std::cout << " --> " << success << " -- ";
         task_constraint.print_robot_tsr_error(projected_block);
     }
+    typename Robot::template ConfigurationBlock<rake> start_broadcasted;
+    for(auto i = 0U; i < Robot::dimension; ++i)
+        start_broadcasted[i] = startc.broadcast(i);
+
+    // std::cout << Robot::Configuration(start) << Robot::Configuration(start).broadcast(0) << std::endl;
+    auto diff = projected_block - start_broadcasted;
+    std::cout << projected_block << std::endl << start_broadcasted << std::endl << diff << std::endl;
 
     // Robot::eefk(start)
 

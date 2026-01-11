@@ -101,6 +101,8 @@ namespace vamp::planning
             }
 
             bool connected = false;
+            int validate_failed = 0;
+            int dyndomfailed = 0;
             while (iter++ < settings.max_iterations and free_index < settings.max_samples and not connected)
             {
                 // if (iter % 1 == 0)
@@ -132,6 +134,7 @@ namespace vamp::planning
                 // std::cout << nearest_radius << ", " << nearest_distance << ", " <<  nearest_node.index << std::endl;
                 if (settings.dynamic_domain and nearest_radius < nearest_distance)
                 {
+                    dyndomfailed++;
                     continue;
                 }
 
@@ -291,6 +294,7 @@ namespace vamp::planning
                         radii[nearest_node.index] =
                             std::max(radii[nearest_node.index] * (1.F - settings.alpha), settings.min_radius);
                     }
+                    validate_failed++;
                 }
             }
 
@@ -298,7 +302,7 @@ namespace vamp::planning
             result.iterations = iter;
             result.size.emplace_back(start_tree.size());
             result.size.emplace_back(goal_tree.size());
-            std::cout << "Terminated with  : " << iter << ", " << free_index << ", " <<connected << " , " << settings.max_samples << ", " << tree_a->size() << ", " << tree_b->size() << ", " << result.iterations << ", " << result.nanoseconds/1e6 << " , " << (float)invalid_distance_counter_outside / iter << " , " << (float)invalid_distance_counter_inside / iter << ", " << (float) unable_to_project_counter / iter << ", " << (float) collision_counter / iter << std::endl;
+            std::cout << "Terminated with  : " << iter << ", " << free_index << ", " <<connected << " , " << settings.max_samples << ", " << tree_a->size() << ", " << tree_b->size() << ", " << result.iterations << ", " << result.nanoseconds/1e6 << " , " << (float)invalid_distance_counter_outside / iter << " , " << (float)invalid_distance_counter_inside / iter << ", " << (float) unable_to_project_counter / iter << ", " << (float) unable_to_project_inside_counter / iter << ", " << (float) collision_counter / iter << ", " << (float) collision_inside_counter / iter << ", " << (float) validate_failed / iter << ", " << (float) dyndomfailed / iter <<  std::endl;
             return result;
         }
     };
