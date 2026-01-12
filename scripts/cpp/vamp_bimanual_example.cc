@@ -115,10 +115,9 @@ auto main(int, char **) -> int
 
 
     // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
-    Eigen::Matrix<float, 4, 4> T;
-    T << -0.719427, 0.694568, 6.59173e-05, -2.2769e-05, 0.694568, 0.719427, -2.26738e-05, -0.000370264, -6.31774e-05, 2.94462e-05, -1, 0.171814, 0, 0, 0, 1;
-    const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
-    vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_task_constraint(target_pose, std::make_pair(lower_bound, upper_bound));
+
+    std::array<float, 7> transform = {0.0000348, 0.3745484, 0.9272074, 0.0000018, 0.0, 0.0, 0.171814};
+    vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_task_constraint(transform, lower_bound, upper_bound);
 
     vamp::planning::ComposableConstraints<Robot, rake, decltype(bimanual_task_constraint)> task_constraint(
         bimanual_task_constraint

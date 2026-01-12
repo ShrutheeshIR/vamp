@@ -16,21 +16,11 @@ if(VAMP_BUILD_PYTHON_BINDINGS)
 
   if(NOT VAMP_ROBOT_MODULES)
     list(APPEND VAMP_ROBOT_MODULES
-      sphere
-      ur5
       panda
-      fetch
-      baxter
-      bimanualpanda
     )
 
     list(APPEND VAMP_ROBOT_STRUCTS
-      Sphere
-      UR5
       Panda
-      Fetch
-      Baxter
-      BimanualPanda
     )
   endif()
 
@@ -137,4 +127,4 @@ if(VAMP_BUILD_PYTHON_BINDINGS)
       DESTINATION "${CMAKE_SOURCE_DIR}/src/vamp/_core"
     )
   endforeach()
-endif() 
+endif()

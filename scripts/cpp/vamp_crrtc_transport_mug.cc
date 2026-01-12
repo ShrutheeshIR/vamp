@@ -93,21 +93,30 @@ auto main(int, char **) -> int
         10.01, 10.01, 0.01, 0.01, 0.01, 0.01
     };
 
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 0.7071068, 0, 0.7071068,   0.354, 0.700, 0.243}};
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
 
-    std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
-    Eigen::Matrix<float, 4, 4> T;
-    T << 0,0,1,   0.354,   0,-1,0,      0.700,   1,0,0,    0.243,          0,           0,           0,           1;
-    eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
-    T << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
-    eef_transforms_ref_frame_w_world[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-
-
-    vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
+    vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(
         eef_transforms_ref_frame_w_world,
         eef_transforms,
-        std::make_pair(tsr_lower_bound, tsr_upper_bound)
+        tsr_lower_bound,
+        tsr_upper_bound
     );
+
+    // std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
+    // Eigen::Matrix<float, 4, 4> T;
+    // T << 0,0,1,   0.354,   0,-1,0,      0.700,   1,0,0,    0.243,          0,           0,           0,           1;
+    // eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    // std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
+    // T << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
+    // eef_transforms_ref_frame_w_world[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+
+
+    // vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
+    //     eef_transforms_ref_frame_w_world,
+    //     eef_transforms,
+    //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
+    // );
 
 
     vamp::planning::ComposableConstraints<Robot, rake, decltype(tsr_constraint)> task_constraint(

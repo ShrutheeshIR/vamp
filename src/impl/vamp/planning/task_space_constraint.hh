@@ -9,7 +9,7 @@
 #include <iostream>
 #include <vamp/vector/eigen.hh>
 #include <vamp/vector/math.hh>
-
+#include <iomanip>
 namespace vamp::planning
 {
 
@@ -79,10 +79,6 @@ namespace vamp::planning
          */
     protected:
         using ConfigurationBlock = typename Robot::ConfigurationBlock<rake>;
-
-        std::pair<std::array<float, 6>, std::array<float, 6>> bounds;  // error bounds in se3
-
-        Eigen::Transform<float, 3, Eigen::Isometry> right_eef_pose_w_ref_left_eef;
 
         struct TSRComputeInput
         {
@@ -183,26 +179,26 @@ namespace vamp::planning
         ConfigurationBlock q_old;
 
     public:
-        std::string name = "BimanualTaskSpaceConstraint";
+        static constexpr char* name = "BimanualTaskSpaceConstraint";
         BimanualTaskSpaceConstraint(
-            const Eigen::Transform<float, 3, Eigen::Isometry> right_eef_pose_w_ref_left_eef,  // rTl
-            const std::pair<std::array<float, 6>, std::array<float, 6>> bounds)
-          : right_eef_pose_w_ref_left_eef(right_eef_pose_w_ref_left_eef)
-          , bounds(bounds)
+            const std::array<float, 7> right_eef_pose_w_ref_left_eef,  // rTl qw, qx, qy, qz, tx, ty, tz
+            const std::array<float, 6> lower_bound,
+            const std::array<float, 6> upper_bound
+    )
         {
-            Eigen::Quaternion<float> q1(right_eef_pose_w_ref_left_eef.linear());
-            std::array<float, 7> transform1 = {
-                q1.w(),
-                q1.x(),
-                q1.y(),
-                q1.z(),
-                right_eef_pose_w_ref_left_eef.translation().x(),
-                right_eef_pose_w_ref_left_eef.translation().y(),
-                right_eef_pose_w_ref_left_eef.translation().z()};
+            // Eigen::Quaternion<float> q1(right_eef_pose_w_ref_left_eef.linear());
+            // std::array<float, 7> transform1 = {
+            //     q1.w(),
+            //     q1.x(),
+            //     q1.y(),
+            //     q1.z(),
+            //     right_eef_pose_w_ref_left_eef.translation().x(),
+            //     right_eef_pose_w_ref_left_eef.translation().y(),
+            //     right_eef_pose_w_ref_left_eef.translation().z()};
 
-            RobotConstraint<Robot, rake>::template assignBlock<7>(transform1, tsr_function_inp.rTlB);
-            RobotConstraint<Robot, rake>::template assignBlock<6>(bounds.first, tsr_function_inp.lbB);
-            RobotConstraint<Robot, rake>::template assignBlock<6>(bounds.second, tsr_function_inp.ubB);
+            RobotConstraint<Robot, rake>::template assignBlock<7>(right_eef_pose_w_ref_left_eef, tsr_function_inp.rTlB);
+            RobotConstraint<Robot, rake>::template assignBlock<6>(lower_bound, tsr_function_inp.lbB);
+            RobotConstraint<Robot, rake>::template assignBlock<6>(upper_bound, tsr_function_inp.ubB);
         }
 
         auto print_robot_tsr_error(const ConfigurationBlock &q) const
@@ -446,7 +442,7 @@ namespace vamp::planning
         ConfigurationBlock q_old;
 
     public:
-        std::string name = "SelfCollisionConstraint";
+        static constexpr char* name = "SelfCollisionConstraint";
         SelfCollisionConstraint()
         {
             ;
@@ -716,46 +712,29 @@ namespace vamp::planning
         ConfigurationBlock q_old;
 
     public:
-        std::string name = "TaskSpaceConstraint";
+        static constexpr char* name = "TaskSpaceConstraint";
         TaskSpaceConstraint(
-            std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_pose_w_ref_reference,  // rTe
-            std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> ref_frame_w_world,         // wTr
-            const std::pair<std::array<float, 6 * Robot::n_eef>, std::array<float, 6 * Robot::n_eef>> eef_pos_bounds)
+            std::array<std::array<float, 7>, Robot::n_eef> eef_pose_w_ref_reference, // qw, qx, qy, qz, tx, ty, tz
+            std::array<std::array<float, 7>, Robot::n_eef> ref_frame_w_world, // qw, qx, qy, qz, tx, ty, tz
+            const std::array<float, 6 * Robot::n_eef> lower_bound,
+            const std::array<float, 6 * Robot::n_eef> upper_bound
+        )
         {
 
 
             std::array<float, 7 * Robot::n_eef> transform1;
+            std::memcpy(transform1.data(), eef_pose_w_ref_reference.data(), sizeof(float) * 7 * Robot::n_eef);
+
             std::array<float, 7 * Robot::n_eef> transform2;
-
-            for (auto eef_idx = 0U; eef_idx < Robot::n_eef; eef_idx++)
-            {
-                Eigen::Quaternion<float> q1(eef_pose_w_ref_reference[eef_idx].linear());
-                transform1[7 * eef_idx + 0] = q1.w();
-                transform1[7 * eef_idx + 1] = q1.x();
-                transform1[7 * eef_idx + 2] = q1.y();
-                transform1[7 * eef_idx + 3] = q1.z();
-                transform1[7 * eef_idx + 4] = eef_pose_w_ref_reference[eef_idx].translation().x();
-                transform1[7 * eef_idx + 5] = eef_pose_w_ref_reference[eef_idx].translation().y();
-                transform1[7 * eef_idx + 6] = eef_pose_w_ref_reference[eef_idx].translation().z();
-
-                Eigen::Quaternion<float> q2(ref_frame_w_world[eef_idx].linear());
-                transform2[7 * eef_idx + 0] = q2.w();
-                transform2[7 * eef_idx + 1] = q2.x();
-                transform2[7 * eef_idx + 2] = q2.y();
-                transform2[7 * eef_idx + 3] = q2.z();
-                transform2[7 * eef_idx + 4] = ref_frame_w_world[eef_idx].translation().x();
-                transform2[7 * eef_idx + 5] = ref_frame_w_world[eef_idx].translation().y();
-                transform2[7 * eef_idx + 6] = ref_frame_w_world[eef_idx].translation().z();
-            }
+            std::memcpy(transform2.data(), ref_frame_w_world.data(), sizeof(float) * 7 * Robot::n_eef);
 
             RobotConstraint<Robot, rake>::template assignBlock<7 * Robot::n_eef>(transform1, tsr_function_inp.rTeB);
             RobotConstraint<Robot, rake>::template assignBlock<7 * Robot::n_eef>(transform2, tsr_function_inp.wTrB);
 
-            RobotConstraint<Robot, rake>::template assignBlock<6 * Robot::n_eef>(eef_pos_bounds.first, tsr_function_inp.lbB);
-            RobotConstraint<Robot, rake>::template assignBlock<6 * Robot::n_eef>(eef_pos_bounds.second, tsr_function_inp.ubB);
-
-
+            RobotConstraint<Robot, rake>::template assignBlock<6 * Robot::n_eef>(lower_bound, tsr_function_inp.lbB);
+            RobotConstraint<Robot, rake>::template assignBlock<6 * Robot::n_eef>(upper_bound, tsr_function_inp.ubB);
         }
+
 
         auto print_robot_tsr_error(const ConfigurationBlock &q) const
         {
@@ -1083,7 +1062,7 @@ namespace vamp::planning
         ConfigurationBlock q_old;
 
     public:
-        std::string name = "CoMTaskSpaceConstraint";
+        static constexpr char* name = "CoMTaskSpaceConstraint";
         CoMTaskSpaceConstraint(
             const std::array<float, 2 * num_polygons> polygon_points)
         {
@@ -1258,6 +1237,8 @@ namespace vamp::planning
             ConfigurationBlock q_old;
 
         public:
+            using ConstraintPack = std::tuple<Constraints...>;
+
             static constexpr std::size_t total_size =
                 (Constraints::size + ...);
 
