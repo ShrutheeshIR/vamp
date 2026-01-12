@@ -377,9 +377,9 @@ namespace vamp::binding
         using Composable_TSR_COM = vamp::planning::ComposableConstraints<Robot, rake, TSR_Constraint, COM_Constraint>;
 
         using CRRTC_TSR =
-            ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, Composable_TSR>, vamp::planning::RRTCSettings, Composable_TSR>;
-        // using CRRTC_TSR_COM =
-        //     ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, Composable_TSR_COM>, vamp::planning::RRTCSettings, Composable_TSR_COM>;
+            ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, TSR_Constraint>, vamp::planning::RRTCSettings, Composable_TSR>;
+        using CRRTC_TSR_COM =
+            ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, TSR_Constraint, COM_Constraint>, vamp::planning::RRTCSettings, Composable_TSR_COM>;
         // using CRRTC_COM =
         //     ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, Composable_COM>, vamp::planning::RRTCSettings, Composable_COM>;
 
@@ -716,13 +716,18 @@ namespace vamp::binding
             submodule.def("set_radius", &Robot::set_radius, "Set radius.");
         }
 
-        // #define CONSTRAINEDPLANNER(name, func, desc, ...)                                                                       \
-        //     MF(name, func::single, desc, "start"_a, "goal"_a, "environment"_a, "settings"_a, "constraint"_a, "rng"_a);               \
-        //     // MF(name, func::multi, desc, "start"_a, "goal"_a, "environment"_a, "settings"_a, "constraint"_a, "rng"_a);
+        #define CONSTRAINEDPLANNER(name, func, desc, ...)                                                                       \
+            MF(name, func::single, desc, "start"_a, "goal"_a, "environment"_a, "settings"_a, "constraint"_a, "rng"_a);               \
+            MF(name, func::multi, desc, "start"_a, "goal"_a, "environment"_a, "settings"_a, "constraint"_a, "rng"_a);
 
-        //         CONSTRAINEDPLANNER("crrtc", CRRTC_TSR, "CRRTConnectTSR");
-                // CONSTRAINEDPLANNER("crrtc", CRRTC_TSR_COM, "CRRTConnectTSRCOM");
+                CONSTRAINEDPLANNER("crrtc", CRRTC_TSR, "CRRTConnectTSR");
+                CONSTRAINEDPLANNER("crrtc", CRRTC_TSR_COM, "CRRTConnectTSRCOM");
 
+        // submodule.def("crrtc_solve", [](auto &constraint_instance) {
+        //     return HPN::ConstrainedPlannerHelper<vamp::planning::CRRTC, vamp::planning::RRTCSettings,
+        //                              std::decay_t<decltype(constraint_instance)>>::single();
+        // });
+        // ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, vamp::planning::TaskSpaceConstraint<Robot, rake>>, vamp::planning::RRTCSettings, TSR_Constraint>
 
         return submodule;
     }
