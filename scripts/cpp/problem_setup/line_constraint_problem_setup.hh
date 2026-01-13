@@ -9,7 +9,7 @@ extern const Robot::ConfigurationArray start;
 extern const std::vector<std::array<float, 3>> problem;
 extern const float radius;
 
-extern const std::array<float, Robot::n_eef> tsr_lower_bound;
-extern const std::array<float, Robot::n_eef> tsr_upper_bound;
+extern const std::array<float, 6 * Robot::n_eef> tsr_lower_bound;
+extern const std::array<float, 6 * Robot::n_eef> tsr_upper_bound;
 
 extern const Eigen::Matrix<float, 4, 4> T;
