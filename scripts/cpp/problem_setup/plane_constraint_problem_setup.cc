@@ -16,10 +16,10 @@ const std::vector<std::array<float, 3>> problem = {
 const float radius = 0.1;
 
 //used for constraint
-const std::array<float, Robot::n_eef> tsr_lower_bound = {
+const std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
     -0.01, -10.01, -10.01, -3.14, -3.14, -3.14
 };
-const std::array<float, Robot::n_eef> tsr_upper_bound = {
+const std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
     0.03, 10.01, 10.01, 3.14, 3.14, 3.14
 };
 

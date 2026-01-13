@@ -87,8 +87,10 @@ auto main(int, char **) -> int
 
     eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
-    T << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
-    eef_transforms_ref_frame_w_world[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    Eigen::Matrix<float, 4, 4> T_identity;
+    T_identity << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
+    
+    eef_transforms_ref_frame_w_world[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T_identity);
 
 
     vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
