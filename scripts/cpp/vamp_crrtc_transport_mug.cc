@@ -83,7 +83,7 @@ auto main(int, char **) -> int
     sphere_attachment.spheres.emplace_back(vamp::collision::factory::sphere::array({0.0, 0.0, 0.0}, 0.03));
     sphere_attachment.spheres.emplace_back(vamp::collision::factory::sphere::array({0.0, 0.0, 0.03}, 0.03));
 
-    env_v.attach(sphere_attachment);
+    // env_v.attach(sphere_attachment);
 
     std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
         -10.01, -10.01, -0.01, -0.01, -0.01, -0.01
@@ -93,10 +93,10 @@ auto main(int, char **) -> int
         10.01, 10.01, 0.01, 0.01, 0.01, 0.01
     };
 
-    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 0.7071068, 0, 0.7071068,   0.354, 0.700, 0.243}};
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 0.707107, 0, 0.707107, 0.354, 0.7, 0.243}};
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
 
-    vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(
+    vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
         eef_transforms_ref_frame_w_world,
         eef_transforms,
         tsr_lower_bound,
