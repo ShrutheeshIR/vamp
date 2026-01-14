@@ -25,8 +25,8 @@ using AttachmentInput = vamp::collision::Attachment<float>;
 // Start and goal configurations
 // static constexpr Robot::ConfigurationArray start = {-1.334, 1.550, 0.960, -2.372, 0.230, 2.632, 1.963, 1.330, 1.555, -0.957, -2.412, -0.232, 2.622, -0.325 };
 // static constexpr Robot::ConfigurationArray goal = {-1.951, 0.078, 1.857, -1.970, 1.473, 1.657, 2.161, 1.019, 0.509, -1.371, -1.750, -1.111, 1.985, -0.609};
-static constexpr Robot::ConfigurationArray start = {-1.314, 1.339, 1.095, -2.495, 0.513, 2.551, -1.495, 1.294, 1.309, -1.055, -2.493, -0.713, 2.500, -3.014 };
-static constexpr Robot::ConfigurationArray goal = {-1.068, 0.602, 1.329, -1.797, 1.059, 1.959, -1.149, 1.033, 0.446, -1.224, -1.837, -1.286, 1.917, 2.813};
+static constexpr Robot::ConfigurationArray start = {-1.362, 1.319, 1.064, -2.486, 0.518, 2.481, -1.459, 1.327, 1.260, -1.048, -2.481, -0.644, 2.444, -0.011 };
+static constexpr Robot::ConfigurationArray goal = {-2.143, 0.395, 2.249, -2.043, 1.320, 1.772, -0.697, 1.359, 1.320, -2.092, -2.138, -0.140, 2.437, -1.547 };
 
 
 struct Attempt {
@@ -109,16 +109,16 @@ auto main(int, char **) -> int
 
 
     std::array<float, 6> lower_bound = {
-        -0.01, -0.01, -0.01, -0.01, -0.01, -0.01
+        -0.001, -0.001, -0.001, -0.001, -0.001, -0.001
     };
     std::array<float, 6> upper_bound = {
-        0.01, 0.01, 0.01, 0.01, 0.01, 0.01
+        0.001, 0.001, 0.001, 0.001, 0.001, 0.001
     };
 
 
     // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
 
-    std::array<float, 7> transform = {0.00, 1.0, 0.00, 0.00, 0.0, 0.0, 0.171814};
+    std::array<float, 7> transform = {0.00, 0.0, 1.00, 0.00, 0.0, 0.0, 0.221814};
     vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_task_constraint(transform, lower_bound, upper_bound);
 
     vamp::planning::ComposableConstraints<Robot, rake, decltype(bimanual_task_constraint)> task_constraint(
