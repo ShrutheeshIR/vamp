@@ -186,6 +186,15 @@ namespace vamp::planning
 
                     auto prior = new_configuration;
                     auto prior_index = new_configuration_index;
+                    const auto other_nearest =
+                        tree_b->nearest(NNFloatArray<dimension>{new_configuration_index});
+                    if (not other_nearest)
+                    {
+                        continue;
+                    }
+                    const auto &[other_nearest_node, other_nearest_distance] = *other_nearest;
+                    const std::size_t n_extensions = std::ceil(other_nearest_distance / settings.range);
+                    auto max_connect_attempts = 2 * n_extensions;
 
                     auto counter = 0U;
 
@@ -193,7 +202,7 @@ namespace vamp::planning
                     while (not connected)
                     {
                         counter++;
-                        if (counter > 10)
+                        if (counter > max_connect_attempts)
                             break;
                         // Extend to goal tree
                         const auto other_nearest =
