@@ -28,6 +28,7 @@
 #include <ompl/base/ConstrainedSpaceInformation.h>
 #include <vamp/planning/task_space_constraint.hh>
 #include <vamp/planning/validate_constraint.hh>
+#include <csignal>
 #include "problem_setup/plane_constraint_problem_setup.hh"
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
@@ -142,13 +143,14 @@ inline static auto vamp_to_ompl(const Configuration &c, ob::State *state)
 class CustomConstraint : public ob::Constraint
 {
 public:
-    vamp::planning::TaskSpaceConstraint<Robot, rake>& original_taskspace_constraint;
+     mutable vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>> constraints;
+
 private:
     std::weak_ptr<ob::ProjectedStateSpace> ps_space_;
 public:
-    CustomConstraint(vamp::planning::TaskSpaceConstraint<Robot, rake>& x)
-        : ob::Constraint(6, 0), 
-        original_taskspace_constraint(x)
+    CustomConstraint(vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>& x)
+        : ob::Constraint(Robot::dimension, Robot::dimension - 6), 
+        constraints(x)
     {
     }
  
@@ -179,7 +181,7 @@ public:
     // for now, I left out the function, since it might not be necessary.
     bool project(ob::State *state) const override
     {
-        //std::cout << "Our project state version is called!\n";
+        std::cout << "Our project state version is called!\n";
         std::shared_ptr<ob::ProjectedStateSpace> pss_ptr = getProjectedStateSpace();
         auto pss = pss_ptr.get();
         if (!pss) {
@@ -221,7 +223,7 @@ public:
         //std::cout << "Project: COnfiguration is " << configuration << "\n";
         ConfigurationBlock block = turn_configuration_into_configuration_block(configuration);
         //std::cout << "After converted to configuration block, it is " << block << "\n";
-        bool result = original_taskspace_constraint.projectConfiguration(block, block);
+        bool result = constraints.projectConfiguration(block, block);
         //std::cout << "After pojection, the configuration block is " << block << "\n";
         //std::cout << "Result of projection is " << result << "\n";
         typename Robot::ConfigurationArray last_projected;
@@ -241,7 +243,7 @@ public:
     {
         ConfigurationBlock block =  turn_configuration_into_configuration_block(configuration);
         //std::cout << "block is" << block << "\n";
-        auto simd_float_vector = original_taskspace_constraint.distanceToConstraint(block);
+        auto simd_float_vector = constraints.distanceToConstraint(block);
         //std::cout << "distanceToConstraint returned " << simd_float_vector << "\n";
         //std::cout << "is the start position on the manifold?? Answer: " << simd_float_vector.test_all_less_equal(0.0001F) << "\n";
         double dist = simd_float_vector[{0, 0}];
@@ -281,7 +283,7 @@ struct VAMPStateValidator : public ob::StateValidityChecker
     auto isValid(const ob::State *state) const -> bool override
     {
         // Convert OMPL to VAMP vector and validate
-        //std::cout << "our implemtnation of is valid is called!\n";
+        std::cout << "our implemtnation of is valid is called!\n";
        auto *pss = dynamic_cast<ob::ProjectedStateSpace*>(si_->getStateSpace().get());
         if (!pss)
             throw ompl::Exception("Expected ProjectedStateSpace");
@@ -299,7 +301,7 @@ struct VAMPStateValidator : public ob::StateValidityChecker
         //const ob::State *ambient = projState->getAmbientState();
         //si_->getStateSpace()->printState(ambient, std::cout);
         auto result = custom_constraint->isSatisfied(c);
-        //std::cout << "At the end of isValid for stateValdiator, is valid returns " << result << "\n";
+        std::cout << "At the end of isValid for stateValdiator, is valid returns " << result << "\n";
         return result;
     }
     
@@ -348,7 +350,7 @@ struct VAMPMotionValidator : public ob::MotionValidator
             configuration1,
             configuration2,
             projected_vector_dummy,
-            custom_constraint->original_taskspace_constraint,
+            custom_constraint->constraints,
             env_v
         );
         //std::cout << "The result of project_constraint_motion is " << result << "\n";
@@ -369,10 +371,22 @@ struct VAMPMotionValidator : public ob::MotionValidator
 auto main(int argc, char **) -> int
 {
 
-    const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
-    const auto in_hand_pose = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
-    vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(in_hand_pose, target_pose, std::make_pair(tsr_lower_bound, tsr_upper_bound));
+     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
 
+    eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
+    Eigen::Matrix<float, 4, 4> T_identity;
+    T_identity << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
+    
+    eef_transforms_ref_frame_w_world[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T_identity);
+
+
+    vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
+        eef_transforms_ref_frame_w_world,
+        eef_transforms,
+        std::make_pair(tsr_lower_bound, tsr_upper_bound)
+    );
+    
     bool optimize = false;  // Flag - if true, will spend entire planning budget optimizing, otherwise exit on
                             // first solution
 
@@ -417,6 +431,9 @@ auto main(int argc, char **) -> int
     space->setBounds(bounds);
     
     // Set up the constraint manifold
+    vamp::planning::ComposableConstraints<Robot, rake, decltype(tsr_constraint)> task_constraint(
+        tsr_constraint
+    );
     std::shared_ptr<ob::Constraint> constraint = std::make_shared<CustomConstraint>(task_constraint);
 
 

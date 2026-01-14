@@ -14,7 +14,7 @@
 #include <vamp/robots/panda.hh>
 #include <vamp/random/halton.hh>
 #include <fstream>
-#include "problem_setup/plane_constraint_problem_setup.hh"
+#include "problem_setup/random_obs_plane_constraint_problem_setup.hh"
 
 using Robot = vamp::robots::Panda;
 static constexpr const std::size_t rake = vamp::FloatVectorWidth;
@@ -38,30 +38,33 @@ struct Attempt {
     }
 };
 
-// std::ostream& dump(std::ostream &o, const Attempt& a)
-// {
-//     return o << a.range << ", " << a.dynamic_domain << ", " << a.proj_method << ", " << a.descend_rate << ", " << a.planning_time/1e6 << ", " << a.planning_iterations << std::endl;
-// }
-
-auto main(int, char **) -> int
+auto main(int argc, char** argv) -> int
 {
+    if (argc < 3)
+    {
+        std::cerr << "Usage: " << argv[0] << " <num_obstacles> <iterations>\n";
+        return 1;
+    }
+
+    int n_obstacles = std::stoi(argv[1]);
+    int iterations  = std::stoi(argv[2]);
+
+    std::cout << "Obstacles: " << n_obstacles << "\n";
+    std::cout << "Iterations: " << iterations << "\n";
+
 
 
     // Setup RRTC and plan
     vamp::planning::RRTCSettings rrtc_settings;
 
-    float ranges[] = {0.5, 1.0, 1.5, 2.0};
-    // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
-    bool dd[] = {false, true};
-    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};
-
-    // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
-    float descend_rates[] = {0.75, 1.0};
-    // float descend_rates[] = {1.0};
+    float ranges[] = {1.0};
+    bool dd[] = {false};
+    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM};
+    float descend_rates[] = {1.0};
 
 
     std::vector<Attempt> succ_attempts;
-
+    for (int iteration = 0; iteration < iterations; iteration++) {
     for(const auto range: ranges){
         for(const auto dyndom: dd){
             for(const auto &pm: projection_method){
@@ -71,6 +74,7 @@ auto main(int, char **) -> int
 
     // Build sphere cage environment
     EnvironmentInput environment;
+    std::vector<std::array<float, 3>> problem = make_problem(n_obstacles);
     std::ofstream outfile_sph("/src/spheres.txt");
     for (const auto &sphere : problem)
     {
@@ -104,23 +108,8 @@ auto main(int, char **) -> int
     vamp::planning::ComposableConstraints<Robot, rake, decltype(tsr_constraint)> task_constraint(
         tsr_constraint
     );
-    /*
-        const Robot::ConfigurationArray dumb_start = {-0.855292,1.12975,0.0380571,-0.69921,0.0141439,1.73613,0.0000393391};
-    const Robot::ConfigurationArray dumb_goal = {0.841046,1.13069,-0.0242863,-0.697919,-0.00982904,1.74158,0.000353813};
-    Robot::ConfigurationArray zero_vector = {0.0,0.0,0.0,-0.0,0.0,0.0,0.0};
-    std::vector<Robot::Configuration> projected_vector;
-    bool successy = vamp::planning::project_constraint_vector<Robot, rake, Robot::resolution>(
-        Robot::Configuration(dumb_start),
-        Robot::Configuration(zero_vector),
-        range,
-        projected_vector,
-        task_constraint,
-        env_v 
-    );
-    std::cout << successy;
-    std::cout << projected_vector << "Is new projected vector\n";
 
-    */
+
 
     rrtc_settings.range = range;
     rrtc_settings.dynamic_domain = dyndom;
@@ -190,10 +179,34 @@ auto main(int, char **) -> int
         }
     }
     }
+    }
+
+    double total_time = 0.0;
+    std::size_t total_iterations = 0;
+    std::size_t total_path_length = 0;
     std::cout << "------Final Result --------" << std::endl;
     std::sort(succ_attempts.rbegin(), succ_attempts.rend());
-    for (const auto &a : succ_attempts) {
-        std::cout << a.range << ", " << a.dynamic_domain << ", " << a.proj_method << ", " << a.descend_rate << ", " << a.planning_time/1e6 << ", " << a.planning_iterations << ", " << a.path_length << std::endl;
+    if (!succ_attempts.empty())
+    {
+        double total_time = 0.0;
+        std::size_t total_iterations = 0;
+        std::size_t total_path_length = 0;
+        for (const auto &a : succ_attempts) {
+            total_time += a.planning_time/1e6;
+            total_iterations += a.planning_iterations;
+            total_path_length += a.path_length;
+            std::cout << a.planning_time/1e6 << ", " << a.planning_iterations << ", " << a.path_length << std::endl;
+
+        }
+        const std::size_t n = succ_attempts.size();
+
+        std::cout << "\n====== Averages over " << n << " successful attempts ======\n";
+        std::cout << "Average planning time (ms): "
+                << (total_time / n) << "\n";
+        std::cout << "Average planning iterations: "
+                << static_cast<double>(total_iterations) / n << "\n";
+        std::cout << "Average path length: "
+                << static_cast<double>(total_path_length) / n << "\n";
 
     }
     std::cout << "---------------------------" << std::endl;

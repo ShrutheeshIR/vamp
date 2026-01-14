@@ -141,8 +141,8 @@ endif()
 # C++ demos
 if(VAMP_BUILD_CPP_DEMO)
     add_library(vamp_problem_setup
-    scripts/cpp/problem_setup/plane_constraint_problem_setup.cc
-    scripts/cpp/problem_setup/plane_constraint_problem_setup.hh
+    scripts/cpp/problem_setup/plane_constraint_no_orientation_problem_setup.cc
+    scripts/cpp/problem_setup/plane_constraint_no_orientation_problem_setup.hh
     )
     target_link_libraries(vamp_problem_setup
     PUBLIC vamp_cpp
