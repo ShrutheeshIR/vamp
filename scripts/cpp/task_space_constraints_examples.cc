@@ -24,8 +24,8 @@ using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 // static constexpr Robot::ConfigurationArray start = {1.016, 0.688, 0.087, -1.281, -0.06, 1.955, 1.891};
 // static constexpr Robot::ConfigurationArray goal = {-0.154247,-1.38187,1.88281,-1.42206,-0.691598,3.52511,1.43219};
 
-static constexpr Robot::ConfigurationArray start = {-1.334, 1.550, 0.960, -2.372, 0.230, 2.632, 1.963, 1.330, 1.555, -0.957, -2.412, -0.232, 2.622, -0.325 };
-static constexpr Robot::ConfigurationArray goal = {-1.951, 0.078, 1.857, -1.970, 1.473, 1.657, 2.161, 1.019, 0.509, -1.371, -1.750, -1.111, 1.985, -0.609};
+static constexpr Robot::ConfigurationArray start = {-1.314, 1.339, 1.095, -2.495, 0.513, 2.551, -1.495, 1.294, 1.309, -1.055, -2.493, -0.713, 2.500, -3.014 };
+static constexpr Robot::ConfigurationArray goal = {-1.068, 0.602, 1.329, -1.797, 1.059, 1.959, -1.149, 1.033, 0.446, -1.224, -1.837, -1.286, 1.917, 2.813};
 
 // Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
 static const std::vector<std::array<float, 3>> problem = {
@@ -84,10 +84,10 @@ auto main(int, char **) -> int
     //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
     // );
     std::array<float, 6> lower_bound = {
-        -0.02, -0.02, -0.02, -0.1, -0.1, -0.1
+        -0.01, -0.01, -0.01, -0.01, -0.01, -0.01
     };
     std::array<float, 6> upper_bound = {
-        0.02, 0.02, 0.02, 0.1, 0.1, 0.1
+        0.01, 0.01, 0.01, 0.01, 0.01, 0.01
     };
 
 
@@ -116,6 +116,22 @@ auto main(int, char **) -> int
     // Eigen::Quaternionf qgoal(Robot::eefk(goal)[0].linear());
     std::cout << Robot::eefk(start)[0].matrix() << std::endl;
     std::cout << Robot::eefk(goal)[0].matrix() << std::endl;
+
+    auto start_eefk = Robot::eefk(start);
+    std::cout << (start_eefk[0].inverse() * start_eefk[1]).matrix()  << std::endl;
+    auto goal_eefk = Robot::eefk(goal);
+    std::cout << (goal_eefk[0].inverse() * goal_eefk[1]).matrix()  << std::endl;
+
+    auto lTr_start = start_eefk[0].inverse() * start_eefk[1];
+    Eigen::Quaternionf q1(lTr_start.linear());
+    std::cout << q1.w() << ", " << q1.x() << ", " << q1.y() << ", " << q1.z() << std::endl;
+
+
+    auto lTr_goal = goal_eefk[0].inverse() * goal_eefk[1];
+    Eigen::Quaternionf q2(lTr_goal.linear());
+    std::cout << q2.w() << ", " << q2.x() << ", " << q2.y() << ", " << q2.z() << std::endl;
+
+
     // std::cout << qstart.w() << ", " << qstart.x() << ", " << qstart.y() << ", " << qstart.z() << std::endl;
     // std::cout << qgoal.w() << ", " << qgoal.x() << ", " << qgoal.y() << ", " << qgoal.z() << std::endl;
 
