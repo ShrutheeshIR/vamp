@@ -10,7 +10,7 @@ namespace vamp::robots
 {
     struct BimanualPanda
     {
-        static constexpr char *name = "bimanualpanda";
+        static constexpr char *name = "bimanual_panda";
         static constexpr std::size_t dimension = 14;
         static constexpr std::size_t n_spheres = 118;
         static constexpr float min_radius = 0.012000000104308128;

@@ -17,10 +17,12 @@ if(VAMP_BUILD_PYTHON_BINDINGS)
   if(NOT VAMP_ROBOT_MODULES)
     list(APPEND VAMP_ROBOT_MODULES
       panda
+      bimanual_panda
     )
 
     list(APPEND VAMP_ROBOT_STRUCTS
       Panda
+      BimanualPanda
     )
   endif()
 

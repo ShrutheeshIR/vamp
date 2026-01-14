@@ -23,8 +23,8 @@ using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution>;
 using AttachmentInput = vamp::collision::Attachment<float>;
 
 // Start and goal configurations
-static constexpr Robot::ConfigurationArray start = {-1.3238,  1.358 ,  1.0783, -2.4974,  0.5572,  2.5477, -1.4485, 1.2848,  1.2911, -1.0714, -2.4884, -0.6705,  2.5082,  0.7243 };
-static constexpr Robot::ConfigurationArray goal = {-1.997 ,  0.385 ,  2.1832, -2.0013,  1.3083,  1.8498, -0.7243, 1.2835,  1.3097, -2.0683, -2.1051, -0.1333,  2.4786, -0.7243 };
+static constexpr Robot::ConfigurationArray start = {-1.334, 1.550, 0.960, -2.372, 0.230, 2.632, 1.963, 1.330, 1.555, -0.957, -2.412, -0.232, 2.622, -0.325 };
+static constexpr Robot::ConfigurationArray goal = {-1.951, 0.078, 1.857, -1.970, 1.473, 1.657, 2.161, 1.019, 0.509, -1.371, -1.750, -1.111, 1.985, -0.609};
 
 
 struct Attempt {
@@ -107,16 +107,16 @@ auto main(int, char **) -> int
 
 
     std::array<float, 6> lower_bound = {
-        -0.02, -0.02, -0.02, -0.1, -0.1, -0.1
+        -0.01, -0.01, -0.01, -0.01, -0.01, -0.01
     };
     std::array<float, 6> upper_bound = {
-        0.02, 0.02, 0.02, 0.1, 0.1, 0.1
+        0.01, 0.01, 0.01, 0.01, 0.01, 0.01
     };
 
 
     // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
 
-    std::array<float, 7> transform = {0.0000348, 0.3745484, 0.9272074, 0.0000018, 0.0, 0.0, 0.171814};
+    std::array<float, 7> transform = {0.00, 1.0, 0.00, 0.00, 0.0, 0.0, 0.171814};
     vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_task_constraint(transform, lower_bound, upper_bound);
 
     vamp::planning::ComposableConstraints<Robot, rake, decltype(bimanual_task_constraint)> task_constraint(

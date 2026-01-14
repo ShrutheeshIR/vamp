@@ -383,10 +383,10 @@ namespace vamp::binding
         // using CRRTC_COM =
         //     ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, Composable_COM>, vamp::planning::RRTCSettings, Composable_COM>;
 
-        // using Composable_Bimanual = vamp::planning::ComposableConstraints<Robot, rake, Bimanual_Constraint>;
+        using Composable_Bimanual = vamp::planning::ComposableConstraints<Robot, rake, Bimanual_Constraint>;
         // using Composable_TSR_COM_Bimanual = vamp::planning::ComposableConstraints<Robot, rake, TSR_Constraint, COM_Constraint, Bimanual_Constraint>;
-        // using CRRTC_Bimanual =
-        //     ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, Composable_Bimanual>, vamp::planning::RRTCSettings, Composable_Bimanual>;
+        using CRRTC_Bimanual =
+            ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, Bimanual_Constraint>, vamp::planning::RRTCSettings, Composable_Bimanual>;
 
 
     };
@@ -722,6 +722,11 @@ namespace vamp::binding
 
                 CONSTRAINEDPLANNER("crrtc", CRRTC_TSR, "CRRTConnectTSR");
                 CONSTRAINEDPLANNER("crrtc", CRRTC_TSR_COM, "CRRTConnectTSRCOM");
+
+                if constexpr (Robot::n_eef > 1) {
+                    CONSTRAINEDPLANNER("crrtc", CRRTC_Bimanual, "CRRTConnectBimanual");
+
+                }
 
         // submodule.def("crrtc_solve", [](auto &constraint_instance) {
         //     return HPN::ConstrainedPlannerHelper<vamp::planning::CRRTC, vamp::planning::RRTCSettings,

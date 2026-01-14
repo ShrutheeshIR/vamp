@@ -114,6 +114,24 @@ namespace vamp::planning
                 else
                     return q[0];
             }
+
+            void print() const
+            {
+                std::cout << "rTlB: ";
+                for (int i = 0U; i < 7; i ++)
+                    std::cout << rTlB[{i, 0}] << " ";
+                std::cout << std::endl;
+
+                std::cout << "lbB: ";
+                for (int i = 0U; i < 6; i ++)
+                    std::cout << lbB[{i, 0}] << " ";
+                std::cout << std::endl;
+
+                std::cout << "ubB: ";
+                for (int i = 0U; i < 6; i ++)
+                    std::cout << ubB[{i, 0}] << " ";
+                std::cout << std::endl;
+            }
         };
 
         mutable TSRComputeInput tsr_function_inp;
@@ -199,6 +217,7 @@ namespace vamp::planning
             RobotConstraint<Robot, rake>::template assignBlock<7>(right_eef_pose_w_ref_left_eef, tsr_function_inp.rTlB);
             RobotConstraint<Robot, rake>::template assignBlock<6>(lower_bound, tsr_function_inp.lbB);
             RobotConstraint<Robot, rake>::template assignBlock<6>(upper_bound, tsr_function_inp.ubB);
+            // tsr_function_inp.print();
         }
 
         auto print_robot_tsr_error(const ConfigurationBlock &q) const

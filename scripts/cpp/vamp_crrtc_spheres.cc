@@ -162,10 +162,10 @@ auto main(int, char **) -> int
     rrtc_settings.descend_rate = descent_rate;
     // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
-    vamp::planning::invalid_distance_counter_outside = 0;
-    vamp::planning::invalid_distance_counter_inside = 0;
-    vamp::planning::collision_counter = 0;
-    vamp::planning::unable_to_project_counter = 0;
+    // vamp::planning::invalid_distance_counter_outside = 0;
+    // vamp::planning::invalid_distance_counter_inside = 0;
+    // vamp::planning::collision_counter = 0;
+    // vamp::planning::unable_to_project_counter = 0;
 
 
     auto result =
