@@ -7,6 +7,7 @@ ROBOT_RRT_RANGES = {
     "bimanual_panda": 1.0,
     "fetch": 1.0,
     "baxter": 0.5,
+    "g1" : 1.0,
     }
 
 ROBOT_FIRST_JOINT_LOCATIONS = {
@@ -14,6 +15,7 @@ ROBOT_FIRST_JOINT_LOCATIONS = {
     "ur5": [0.0, 0.0, 0.91],
     "panda": [0.0, 0.0, 0.0],
     "bimanual_panda": [0.0, 0.0, 0.0],
+    "g1" : [0.0, 0.0, 0.0],
     }
 
 ROBOT_MAX_RADII = {
@@ -21,6 +23,7 @@ ROBOT_MAX_RADII = {
     "fetch": 1.5,
     "panda": 1.19,
     "bimanual_panda": 1.19,
+    "g1" : 10.0,
     }
 
 POINT_RADIUS = 0.0025

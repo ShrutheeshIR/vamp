@@ -16,11 +16,13 @@ if(VAMP_BUILD_PYTHON_BINDINGS)
 
   if(NOT VAMP_ROBOT_MODULES)
     list(APPEND VAMP_ROBOT_MODULES
+        g1_unitree
       panda
       bimanual_panda
     )
 
     list(APPEND VAMP_ROBOT_STRUCTS
+    G1Unitree
       Panda
       BimanualPanda
     )

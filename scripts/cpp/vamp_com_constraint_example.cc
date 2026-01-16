@@ -140,49 +140,62 @@ auto main(int, char **) -> int
 
 
     // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
-    Eigen::Matrix<float, 4, 4> T;
-    T << 0.9999990, -0.0009995,  0.0010005, 0.0, 0.0010005,  0.9999990, -0.0009995, -0.303, -0.0009995,  0.0010005,  0.9999990, 0.0, 0.0, 0.0, 0.0, 1.0;
-    const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
+    // Eigen::Matrix<float, 4, 4> T;
+    // T << 0.9999990, -0.0009995,  0.0010005, 0.0, 0.0010005,  0.9999990, -0.0009995, -0.303, -0.0009995,  0.0010005,  0.9999990, 0.0, 0.0, 0.0, 0.0, 1.0;
+    // const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
 
-    std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
+    // std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
 
-    T << 0.9999990, -0.0009995,  0.0010005, 0.13, 0.0010005,  0.9999990, -0.0009995, 0.11, -0.0009995,  0.0010005,  0.9999990, -0.725, 0.0, 0.0, 0.0, 1.0;
-    eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    T << 0.9999990, -0.0009995,  0.0010005, 0.13, 0.0010005,  0.9999990, -0.0009995, 0.11, -0.0009995,  0.0010005,  0.9999990, -0.725, 0.0, 0.0, 0.0, 1.0;
-    eef_transforms[1] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    T << 0.9999990, -0.0009995,  0.0010005, 0.13, 0.0010005,  0.9999990, -0.0009995, 0.11, -0.0009995,  0.0010005,  0.9999990, -0.725, 0.0, 0.0, 0.0, 1.0;
-    eef_transforms[2] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    T << 0.9999990, -0.0009995,  0.0010005, 0.13, 0.0010005,  0.9999990, -0.0009995, -0.11, -0.0009995,  0.0010005,  0.9999990, -0.725, 0.0, 0.0, 0.0, 1.0;
-    eef_transforms[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    // T << 0.9999990, -0.0009995,  0.0010005, 0.13, 0.0010005,  0.9999990, -0.0009995, 0.11, -0.0009995,  0.0010005,  0.9999990, -0.725, 0.0, 0.0, 0.0, 1.0;
+    // eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    // T << 0.9999990, -0.0009995,  0.0010005, 0.13, 0.0010005,  0.9999990, -0.0009995, 0.11, -0.0009995,  0.0010005,  0.9999990, -0.725, 0.0, 0.0, 0.0, 1.0;
+    // eef_transforms[1] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    // T << 0.9999990, -0.0009995,  0.0010005, 0.13, 0.0010005,  0.9999990, -0.0009995, 0.11, -0.0009995,  0.0010005,  0.9999990, -0.725, 0.0, 0.0, 0.0, 1.0;
+    // eef_transforms[2] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    // T << 0.9999990, -0.0009995,  0.0010005, 0.13, 0.0010005,  0.9999990, -0.0009995, -0.11, -0.0009995,  0.0010005,  0.9999990, -0.725, 0.0, 0.0, 0.0, 1.0;
+    // eef_transforms[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
 
-    std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
-    T << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
-    eef_transforms_ref_frame_w_world[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    eef_transforms_ref_frame_w_world[1] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    eef_transforms_ref_frame_w_world[2] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    eef_transforms_ref_frame_w_world[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    // std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
+    // T << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
+    // eef_transforms_ref_frame_w_world[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    // eef_transforms_ref_frame_w_world[1] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    // eef_transforms_ref_frame_w_world[2] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    // eef_transforms_ref_frame_w_world[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
 
 
-    vamp::planning::TaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{{1, 0,0,0,   0, 0, 0}, {1, 0,0,0,   0.0, 0.0, 0.0}, {1.0, 0.0, 0.0, 0.0, 0.13, 0.11, -0.725}, {1.0, 0.0, 0.0, 0.0, 0.13, -0.11, -0.725}}};
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{{1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}}};
+
+    vamp::planning::FeetTaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
         eef_transforms_ref_frame_w_world,
         eef_transforms,
-        std::make_pair(tsr_lower_bound, tsr_upper_bound)
+        tsr_lower_bound,
+        tsr_upper_bound
     );
 
-    vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_constraint(
-        target_pose,
-        std::make_pair(lower_bound, upper_bound)
-    );
+    // vamp::planning::TaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
+    //     eef_transforms_ref_frame_w_world,
+    //     eef_transforms,
+    //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
+    // );
+
+    std::array<float, 7> transform = {1.00, 0.0, 0.00, 0.00, 0.0, -0.303, 0.0};
+    vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_task_constraint(transform, lower_bound, upper_bound);
+
+    // vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_constraint(
+    //     target_pose,
+    //     std::make_pair(lower_bound, upper_bound)
+    // );
     vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4> com_constraint(
         polygon_points
     );
 
-    vamp::planning::SelfCollisionConstraint<Robot, rake> self_collision_constraint;
+    // vamp::planning::SelfCollisionConstraint<Robot, rake> self_collision_constraint;
 
-    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_constraint) > task_constraint(
+    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint) > task_constraint(
         feet_tsr_constraint,
         com_constraint,
-        bimanual_constraint
+        bimanual_task_constraint
     );
     // vamp::planning::ComposableConstraints<Robot, rake, decltype(bimanual_constraint), decltype(com_constraint)> task_constraint(
     //     bimanual_constraint,
@@ -197,7 +210,7 @@ auto main(int, char **) -> int
     // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
     auto result =
-        vamp::planning::CRRTC<Robot, rake, Robot::resolution, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_constraint)>::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
+        vamp::planning::CRRTC<Robot, rake, Robot::resolution, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint)>::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
     // auto result =
     //     vamp::planning::CRRTC<Robot, rake, Robot::resolution, decltype(bimanual_constraint), decltype(com_constraint)>::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
 

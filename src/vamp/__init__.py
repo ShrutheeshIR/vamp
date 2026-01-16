@@ -91,7 +91,7 @@ def configure_robot_and_planner_with_kwargs(robot_name: str, planner_name: str, 
         if robot_name in ROBOT_RRT_RANGES:
             plan_settings.rrtc.range = ROBOT_RRT_RANGES[robot_name]
 
-    if planner_name == "crrtc":
+    elif planner_name == "crrtc":
         plan_settings = RRTCSettings()
         if robot_name in ROBOT_RRT_RANGES:
             plan_settings.range = ROBOT_RRT_RANGES[robot_name]

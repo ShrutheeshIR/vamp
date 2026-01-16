@@ -35,6 +35,7 @@ AnyPlanningResult = Union[
     panda.PlanningResult,
     bimanual_panda.PlanningResult,
     fetch.PlanningResult,
+    g1.PlanningResult,
     baxter.PlanningResult,
     ]
 
