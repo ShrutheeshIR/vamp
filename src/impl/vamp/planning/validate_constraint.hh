@@ -26,7 +26,7 @@ namespace vamp::planning
         std::vector<typename Robot::Configuration> &projected_vector,
         ComposableConstraints<Robot, rake, Constraints...> &constraint,
         const collision::Environment<FloatVector<rake>> &environment,
-        ProjMethod projection_method = ProjMethod::GradDesc,
+        ProjMethod projection_method = ProjMethod::InnerLM,
         float projection_descent_rate = 1.0) -> bool
     {
         projected_vector.clear();
@@ -96,7 +96,7 @@ namespace vamp::planning
                          Robot::template fkcc<rake>(environment, initial_projected_block);
 
         typename Robot::ConfigurationArray last_projected;
-        for (auto i = 0U; i < rake; i++)
+        for (auto i = rake-1; i < rake; i++)
         {
             for (auto j = 0U; j < Robot::dimension; j++)
             {
@@ -164,10 +164,12 @@ namespace vamp::planning
         const typename Robot::Configuration &goal,
         std::vector<typename Robot::Configuration> &projected_vector,
         ComposableConstraints<Robot, rake, Constraints...> &constraint,
-        const collision::Environment<FloatVector<rake>> &environment) -> bool
+        const collision::Environment<FloatVector<rake>> &environment,
+        ProjMethod projection_method = ProjMethod::InnerLM,
+        float projection_descent_rate = 1.0) -> bool
     {
         auto vector = goal - start;
         return project_constraint_vector<Robot, rake, resolution>(
-            start, vector, vector.l2_norm(), projected_vector, constraint, environment);
+            start, vector, vector.l2_norm(), projected_vector, constraint, environment, projection_method, projection_descent_rate);
     }
 }  // namespace vamp::planning

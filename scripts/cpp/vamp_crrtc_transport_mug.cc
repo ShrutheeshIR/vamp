@@ -9,6 +9,7 @@
 #include <vamp/planning/crrtc.hh>
 #include <vamp/planning/task_space_constraint.hh>
 #include <vamp/planning/validate_constraint.hh>
+#include <vamp/planning/simplify_constraints.hh>
 
 // #include <vamp/planning/simplify.hh>
 #include <vamp/robots/panda.hh>
@@ -137,11 +138,18 @@ auto main(int, char **) -> int
 
     if(result.path.size() > 0)
     {
+
+        // Simplify path with default settings
+        vamp::planning::SimplifySettings simplify_settings;
+        auto simplify_result = vamp::planning::simplify<Robot, rake, Robot::resolution, decltype(tsr_constraint)>(
+            result.path, env_v, task_constraint, simplify_settings, rng);
+
+
         std::cout << "\nPrinting Result!! " << result.path.size() << std::endl;
         // Output configurations of simplified path
         std::cout << std::fixed << std::setprecision(3);
         std::ofstream outfile("/src/trajectory.txt");
-        for (const auto &config : result.path)
+        for (const auto &config : simplify_result.path)
         {
             const auto &array = config.to_array();
             Robot::ConfigurationArray soln;

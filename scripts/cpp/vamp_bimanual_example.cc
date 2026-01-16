@@ -9,6 +9,7 @@
 #include <vamp/planning/crrtc.hh>
 #include <vamp/planning/task_space_constraint.hh>
 #include <vamp/planning/validate_constraint.hh>
+#include <vamp/planning/simplify_constraints.hh>
 
 // #include <vamp/planning/simplify.hh>
 #include <vamp/robots/bimanual_panda.hh>
@@ -165,7 +166,23 @@ auto main(int, char **) -> int
         // Output configurations of simplified path
         std::cout << std::fixed << std::setprecision(3);
         std::ofstream outfile("/src/trajectory.txt");
-        for (const auto &config : result.path)
+
+        vamp::planning::invalid_distance_counter_outside = 0;
+        vamp::planning::invalid_distance_counter_inside = 0;
+        vamp::planning::collision_counter = 0;
+        vamp::planning::unable_to_project_counter = 0;
+
+        // Simplify path with default settings
+        vamp::planning::SimplifySettings simplify_settings;
+        auto simplify_result = vamp::planning::simplify<Robot, rake, Robot::resolution, decltype(bimanual_task_constraint)>(
+            result.path, env_v, task_constraint, simplify_settings, rng);
+        std::cout << "Simplify took " << result.nanoseconds / 1e6 << " ms" << std::endl;
+        // std::cout << "Invalid distance counter outside: " << vamp::planning::invalid_distance_counter_outside << std::endl;
+        // std::cout << "Invalid distance counter inside: " << vamp::planning::invalid_distance_counter_inside << std::endl;
+        // std::cout << "Collision counter: " << vamp::planning::collision_counter << std::endl;
+        // std::cout << "Unable to project counter: " << vamp::planning::unable_to_project_counter << std::endl;
+
+        for (const auto &config : simplify_result.path)
         {
             const auto &array = config.to_array();
             Robot::ConfigurationArray soln;

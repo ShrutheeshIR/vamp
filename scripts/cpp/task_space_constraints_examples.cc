@@ -28,7 +28,7 @@ using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 // static constexpr Robot::ConfigurationArray goal = {-1.068, 0.602, 1.329, -1.797, 1.059, 1.959, -1.149, 1.033, 0.446, -1.224, -1.837, -1.286, 1.917, 2.813};
 
 static constexpr Robot::ConfigurationArray start = {-1.362, 1.319, 1.064, -2.486, 0.518, 2.481, -1.459, 1.327, 1.260, -1.048, -2.481, -0.644, 2.444, -0.011 };
-static constexpr Robot::ConfigurationArray goal = {-2.143, 0.395, 2.249, -2.043, 1.320, 1.772, -0.697, 1.359, 1.320, -2.092, -2.138, -0.140, 2.437, -1.547 };
+static constexpr Robot::ConfigurationArray goal = {-0.781, -0.924, 1.185, 0.443, 0.802, -0.709, 0.762, 0.032, 0.060, -1.044, 0.343, 0.504, -0.007, -1.536 };
 
 // Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
 static const std::vector<std::array<float, 3>> problem = {
@@ -303,6 +303,34 @@ auto main(int, char **) -> int
     // std::cout << Robot::eefk(holder)[0].matrix() << std::endl;
     // Eigen::Quaternionf q2(Robot::eefk(holder)[0].linear());
     // std::cout << q2.w() << ", " << q2.x() << ", " << q2.y() << ", " << q2.z() << std::endl;
+
+    auto vector = Robot::Configuration(start) - Robot::Configuration(goal);
+    std::cout << vector << " with norm : " << vector.l2_norm() << std::endl;
+    std::vector<Robot::Configuration> projected_vector;
+    auto ret = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(Robot::Configuration(start), Robot::Configuration(goal), projected_vector, task_constraint, env_v);
+
+    // Robot::Configuration start_plus_percent = {-1.289,  1.039,  1.079, -2.12 ,  0.553,  2.082, -1.181,  1.165, 1.11 , -1.048, -2.128, -0.5  ,  2.138, -0.202};
+    Robot::ConfigurationArray test = {-1.289,  1.039,  1.079, -2.12 ,  0.553,  2.082, -1.181,  1.165, 1.11 , -1.048, -2.128, -0.5  ,  2.138, -0.202};
+
+
+    for (auto i = 0U; i < Robot::dimension; ++i){
+        block[i] = Robot::Configuration(test).broadcast(i);
+    }
+    std::cout << "\n\n Running project for a single config : \n\n";
+    task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0);
+    std::cout << std::endl;
+    first = true;
+    for (auto i = 0U; i < Robot::dimension; ++i){
+        holder[i] = projected_block[{i, 0}];
+        std::cout << holder[i] << ", ";
+        if (!first) outfile << ",";
+        outfile << holder[i];
+        first = false;
+
+    }
+    std::cout << std::endl;
+
+
 
     outfile.close();
 
