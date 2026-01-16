@@ -727,6 +727,64 @@ namespace vamp::planning
         // some housekeeping variables predefined for speed
 
 
+        struct ShortenedJacobianProjectInp
+        {
+            vamp::FloatVector<rake, 6 * 2 * Robot::dimension> J;  // jacobian
+            vamp::FloatVector<rake, 6 * 2> err;                   // error vector
+
+            auto &operator[](size_t index)
+            {
+                if (index < 6 * 2 * Robot::dimension)
+                {
+                    return J[index];
+                }
+                else if (
+                    index >= 6 * 2 * Robot::dimension &&
+                    index < 6 * 2 * Robot::dimension + 6 * 2)
+                {
+                    return err[index - 6 * 2 * Robot::dimension];
+                }
+                else
+                {
+                    return err[0];
+                }
+            }
+
+            const auto operator[](size_t index) const
+            {
+                if (index < 6 * 2 * Robot::dimension)
+                {
+                    return J[index];
+                }
+                else if (
+                    index >= 6 * 2 * Robot::dimension &&
+                    index < 6 * 2 * Robot::dimension + 6 * 2)
+                {
+                    return err[index - 6 * 2 * Robot::dimension];
+                }
+                else
+                {
+                    return err[0];
+                }
+            }
+
+            ShortenedJacobianProjectInp &
+            operator=(vamp::FloatVector<rake, 6 * 2 + 6 * 2 * Robot::dimension> y)
+            {
+                for (size_t i = 0; i < 6 * 2; i++)
+                {
+                    err[i] = y[6 * 2 * Robot::dimension + i];
+                }
+                for (size_t i = 0; i < 6 * 2 * Robot::dimension; i++)
+                {
+                    J[i] = y[i];
+                }
+                return *this;
+            }
+        };
+
+        mutable ShortenedJacobianProjectInp short_jac_proj_inp;
+
 
         ConfigurationBlock q_old;
 
@@ -787,6 +845,11 @@ namespace vamp::planning
             //     std::cout << short_jac_proj_inp.J[{i, 0}] << " ";
             // }
             // std::cout << std::endl;
+            std::cout << "Error : " << std::endl;
+            for(auto i=0U; i < 6 * 2; i++)
+                std::cout << short_jac_proj_inp.err[{i, 0}] << " ";
+            std::cout << std::endl;
+
             return dist;
 
         }
@@ -811,6 +874,31 @@ namespace vamp::planning
 
             }
 
+            for (std::size_t eef_idx = 0; eef_idx < 2; ++eef_idx) { // eef_idx = 0 -> i=2, 1 -> i=3
+                std::size_t i = eef_idx + 2;
+
+                for (std::size_t se3_idx = 0; se3_idx < 6; ++se3_idx) {
+                    for (std::size_t dim = 0; dim < Robot::dimension; ++dim) {
+
+
+                        std::size_t idxB = (eef_idx * 6 + se3_idx) * Robot::dimension + dim;
+                        std::size_t idxA = (i * 6 + se3_idx) * Robot::dimension + dim;
+
+                        short_jac_proj_inp[idxB] = jac_proj_inp[idxA];   // SIMD element assignment
+                    }
+                }
+            }
+
+            for (std::size_t eef_idx = 0; eef_idx < 2; ++eef_idx) { // eef_idx = 0 -> i=2, 1 -> i=3
+                std::size_t i = eef_idx + 2;
+
+                for (std::size_t se3_idx = 0; se3_idx < 6; ++se3_idx) {
+                        std::size_t idxB = (eef_idx * 6 + se3_idx);
+                        std::size_t idxA = (i * 6 + se3_idx);
+
+                        short_jac_proj_inp[idxB + short_jac_offset] = jac_proj_inp[idxA + jac_offset];   // SIMD element assignment
+                    }
+                }
 
 
 
@@ -865,15 +953,24 @@ namespace vamp::planning
 
                 if (projection_method == ProjMethod::InnerLM)
                 {
-                    Robot::template solve_tsr_error_lm_inner<rake>(jac_proj_inp, grad);
+                    Robot::template solve_2_eef_tsr_error_lm_inner<rake>(short_jac_proj_inp, grad);
+                    // grad = grad.zero_out_nans();
+                    // std::cout << "Grad for TSR constraint: "  ;
+                    // for (auto i = 0U; i < Robot::dimension; i++)
+                    //         std::cout << q[{i, 0}] << " -- " <<grad[{i, 0}] << " ";
+                    // std::cout << std::endl;
+
+                    // Robot::template solve_tsr_error_lm_inner<rake>(jac_proj_inp, grad);
                 }
                 if (projection_method == ProjMethod::OuterLM)
                 {
-                    Robot::template solve_tsr_error_lm_outer<rake>(jac_proj_inp, grad);
+                    Robot::template solve_2_eef_tsr_error_lm_outer<rake>(short_jac_proj_inp, grad);
+                    // Robot::template solve_tsr_error_lm_outer<rake>(jac_proj_inp, grad);
                 }
                 if (projection_method == ProjMethod::GradDesc)
                 {
-                    Robot::template solve_tsr_error_gradient_descent<rake>(jac_proj_inp, grad);
+                    Robot::template solve_2_eef_tsr_error_gradient_descent<rake>(short_jac_proj_inp, grad);
+                    // Robot::template solve_tsr_error_gradient_descent<rake>(jac_proj_inp, grad);
                 }
                 RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
             }
@@ -1302,7 +1399,8 @@ namespace vamp::planning
                                 // for (auto i = 0U; i < Robot::dimension; i++)
                                 //     std::cout << q_in[{i, 0}] << " ";
                                 // std::cout << std::endl;
-                                c.projectStep(q_in, q_new, projection_method, update_q, alpha);
+                                // std::cout << "Feeding " << alpha << " for " << c.name << std::endl;
+                                c.projectStep(q_in, q_new, projection_method, update_q);
                                 q_in = q_new;     // advance state
                                 // std::cout << "Finished running constraint " << c.name << " with output ";
                                 // for (auto i = 0U; i < Robot::dimension; i++)

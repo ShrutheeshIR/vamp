@@ -8,7 +8,7 @@
 #include <vamp/planning/validate.hh>
 // #include <vamp/planning/cbirrt.hh>
 #include <vamp/planning/task_space_constraint.hh>
-#include <vamp/planning/validate_constraint.hh>
+// #include <vamp/planning/validate_constraint.hh>
 
 #include <vamp/planning/simplify.hh>
 #include <vamp/robots/bimanual_panda.hh>

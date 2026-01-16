@@ -346,6 +346,30 @@ namespace vamp
         }
 
         template <unsigned int = 0>
+        inline static constexpr auto zero_out_nans(VectorT v) noexcept -> VectorT
+        {
+            // reinterpret float vector as integer vector
+            const __m256i vi = _mm256_castps_si256(v);
+
+            // IEEE-754 masks
+            const __m256i exp_mask  = _mm256_set1_epi32(0x7F800000); // exponent bits
+            const __m256i mant_mask = _mm256_set1_epi32(0x007FFFFF); // mantissa bits
+
+            // extract exponent and mantissa
+            const __m256i exp  = _mm256_and_si256(vi, exp_mask);
+            const __m256i mant = _mm256_and_si256(vi, mant_mask);
+
+            // check NaN: exponent all ones && mantissa != 0
+            const __m256i is_nan = _mm256_and_si256(
+                _mm256_cmpeq_epi32(exp, exp_mask),        // exponent == 0xFF
+                _mm256_cmpgt_epi32(mant, _mm256_setzero_si256()) // mantissa != 0
+            );
+
+            // clear NaN lanes (replace NaN with zero)
+            return _mm256_andnot_ps(_mm256_castsi256_ps(is_nan), v);
+        }
+
+        template <unsigned int = 0>
         inline static constexpr auto cmp_not_equal(VectorT l, VectorT r) noexcept -> VectorT
         {
             return _mm256_cmp_ps(l, r, _CMP_NEQ_OQ);

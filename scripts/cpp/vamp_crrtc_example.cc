@@ -130,7 +130,7 @@ auto main(int, char **) -> int
             continue;
         }
         // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
-        environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x + 0.1, y + 1.0, z + 0.11}, {0.0, 0.0, 0.0}, {dx, dy, dz}));
+        environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x + 0.1, y + 1.0, z + 0.1}, {0.0, 0.0, 0.0}, {dx, dy, dz}));
     }
     infile.close();
 
