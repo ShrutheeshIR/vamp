@@ -1570,6 +1570,12 @@ namespace vamp::planning
         {
 
             Robot::template compute_com<rake>(q, com_jac_polygons);
+            // com_jac_polygons.com must be offset by the first floating joint
+            for(auto i=0U; i < 3; i++){
+                com_jac_polygons.CoM[i] = com_jac_polygons.CoM[i] - q[i];
+            }
+
+
             Robot::template com_constraint_error<rake>(com_jac_polygons, num_polygons, jac_proj_inp);
             // std::cout << "COM  : ";
             // for(auto i=0U; i < 3; i++){
@@ -1832,7 +1838,7 @@ namespace vamp::planning
                 {
                     success = true;
                 }
-                // std::cout << "Num projection steps : " << project_iter << " "<< dist << " and success : " << success << " " << std::endl;
+                std::cout << "Num projection steps : " << project_iter << " "<< dist << " and success : " << success << " " << std::endl;
                 // std::cout << "Num steps : " << project_iter << " and success : " << success << " " << " dist " << dist << " q " << q << " q_new " << q_new << std::endl;
 
                 return success;

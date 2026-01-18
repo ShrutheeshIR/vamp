@@ -25,8 +25,8 @@ using AttachmentInput = vamp::collision::Attachment<float>;
 // Start and goal configurations
 // static constexpr Robot::ConfigurationArray start = {0.697778, -0.5024, -1.256, -1.94109, -2.12554, -2.36424, -2.44589, -0.204884, -2.35822, 0.113728, -0.793422, -0.234981, -2.26647, -2.81113, -2.53907, 0.0183405, -0.824602, -0.245389, -2.46313, -0.490082, -0.492354, -2.94348, -1.4976, -2.50464, -0.98188, -1.8918, -1.55106, -1.55222, -2.98216, -2.18801, -2.53406, -0.999044, -1.91263, -1.56892, -1.56953};
 
-static constexpr Robot::ConfigurationArray start = {-0.01405,0.00000,-0.20000,0.00000,0.00060,0.00064,-0.89950,-0.00000,-0.00000,1.75013,-0.87266,-0.00000,-0.89950,0.00000,0.00000,1.75013,-0.87266,-0.00000,1.59564,-0.27786,0.51984,0.00002,0.00014,0.00009,-0.00003,-0.00006,-0.00000,-0.00001,-0.00001,0.00017,0.00007,-0.00000,0.00003,-0.00000,0.00002};
-static constexpr Robot::ConfigurationArray goal = {0.00539,0.00009,0.03086,0.00000,-0.01316,0.00001,0.00027,0.00001,-0.00002,0.00900,0.01995,-0.00001,0.00025,0.00001,0.00001,0.00900,0.01998,-0.00001,0.00001,-0.00000,-0.00796,0.00159,0.00003,-0.00010,-0.00000,-0.00017,-0.00001,-0.00032,0.00148,-0.00011,-0.00008,0.00008,0.00009,0.00001,0.00013};
+static constexpr Robot::ConfigurationArray goal = {-0.01405,0.00000,-0.20000,0.00000,0.00060,0.00064,-0.89950,-0.00000,-0.00000,1.75013,-0.87266,-0.00000,-0.89950,0.00000,0.00000,1.75013,-0.87266,-0.00000,1.59564,-0.27786,0.51984,0.00002,0.00014,0.00009,-0.00003,-0.00006,-0.00000,-0.00001,-0.00001,0.00017,0.00007,-0.00000,0.00003,-0.00000,0.00002};
+static constexpr Robot::ConfigurationArray start = {0.00539,0.00009,0.03086,0.00000,-0.01316,0.00001,0.00027,0.00001,-0.00002,0.00900,0.01995,-0.00001,0.00025,0.00001,0.00001,0.00900,0.01998,-0.00001,0.00001,-0.00000,-0.00796,0.00159,0.00003,-0.00010,-0.00000,-0.00017,-0.00001,-0.00032,0.00148,-0.00011,-0.00008,0.00008,0.00009,0.00001,0.00013};
 // static constexpr Robot::ConfigurationArray goal = {-0.045,0.0,-0.03,0.0,-0.264,0.0,0.0,0.0,0.0,0.456,0.0,0.0,0.0,0.0,0.0,0.486,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
 
@@ -84,17 +84,29 @@ auto main(int, char **) -> int
     auto rng = std::make_shared<vamp::rng::Halton<Robot>>();
 
     auto isometries = Robot::eefk(start);
-    std::cout << isometries[0].matrix() << std::endl<< isometries[1].matrix() << std::endl<< isometries[2].matrix() << std::endl<< isometries[3].matrix() << std::endl;
+    std::cout << "Start pose eef poses " << std::endl;
+    std::cout << "Left hand " << isometries[0].matrix() << std::endl;
+    std::cout << "Right hand " << isometries[1].matrix() << std::endl;
+    std::cout << "Left foot " << isometries[2].matrix() << std::endl;
+    std::cout << "Right foot " << isometries[3].matrix() << std::endl;
 
-    std::cout << (isometries[0].inverse() * isometries[1]).matrix() << std::endl;
+    std::cout << "Relative pose between left and right hand " << (isometries[0].inverse() * isometries[1]).matrix() << std::endl;
 
     isometries = Robot::eefk(goal);
-    std::cout << isometries[0].matrix() << std::endl<< isometries[1].matrix() << std::endl<< isometries[2].matrix() << std::endl<< isometries[3].matrix() << std::endl;
+    std::cout << "Goal pose eef poses " << std::endl;
+    std::cout << "Left hand " << isometries[0].matrix() << std::endl;
+    std::cout << "Right hand " << isometries[1].matrix() << std::endl;
+    std::cout << "Left foot " << isometries[2].matrix() << std::endl;
+    std::cout << "Right foot " << isometries[3].matrix() << std::endl;
+
+    std::cout << "Relative pose between left and right hand " << (isometries[0].inverse() * isometries[1]).matrix() << std::endl;
+
+    // std::cout << isometries[0].matrix() << std::endl<< isometries[1].matrix() << std::endl<< isometries[2].matrix() << std::endl<< isometries[3].matrix() << std::endl;
 
     std::cout << "Hands : " << (isometries[0].inverse() * isometries[1]).matrix() << std::endl;
     std::array<float, 8> polygon_points = {
         // 1.0, -0.05, 1.0, 0.05, 0.0, 0.05, 0.0, -0.05
-        0.025, -0.11, 0.025, 0.11, -0.015, 0.11, -0.015, -0.11
+        0.12, -0.12, 0.12, 0.12, 0.06, 0.12, 0.06, -0.12
         // 10.20, -10.25, 10.20, 10.25, -10.05, 10.25, -10.05, -10.25
         // 0.0, 0.2, 1.0, 0.2, 1.0, 1.0, 0.0, 1.0
     };

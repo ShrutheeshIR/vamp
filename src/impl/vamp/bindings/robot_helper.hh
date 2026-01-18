@@ -384,10 +384,12 @@ namespace vamp::binding
         //     ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, Composable_COM>, vamp::planning::RRTCSettings, Composable_COM>;
 
         using Composable_Bimanual = vamp::planning::ComposableConstraints<Robot, rake, Bimanual_Constraint>;
-        // using Composable_TSR_COM_Bimanual = vamp::planning::ComposableConstraints<Robot, rake, TSR_Constraint, COM_Constraint, Bimanual_Constraint>;
+        using Composable_TSR_COM_Bimanual = vamp::planning::ComposableConstraints<Robot, rake, TSR_Constraint, COM_Constraint, Bimanual_Constraint>;
         using CRRTC_Bimanual =
             ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, Bimanual_Constraint>, vamp::planning::RRTCSettings, Composable_Bimanual>;
 
+        using CRRTC_TSR_COM_Bimanual =
+            ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, TSR_Constraint, COM_Constraint, Bimanual_Constraint>, vamp::planning::RRTCSettings, Composable_TSR_COM_Bimanual>;
 
     };
 
@@ -725,6 +727,7 @@ namespace vamp::binding
 
                 if constexpr (Robot::n_eef > 1) {
                     CONSTRAINEDPLANNER("crrtc", CRRTC_Bimanual, "CRRTConnectBimanual");
+                    CONSTRAINEDPLANNER("crrtc", CRRTC_TSR_COM_Bimanual, "CRRTConnectTSR_COM_Bimanual");
 
                 }
 
