@@ -311,7 +311,7 @@ struct VAMPStateValidator : public ob::StateValidityChecker
 
         return Robot::template fkcc<rake>(env_v, temp_block);
         //std::cout << "At the end of isValid for stateValdiator, is valid returns " << result << "\n";
-        return result;
+
     }
     
 };
@@ -331,50 +331,33 @@ struct VAMPMotionValidator : public ob::MotionValidator
 
     auto checkMotion(const ob::State *s1, const ob::State *s2) const -> bool override
     {
-        // Convert OMPL states to VAMP vectors and check motion between states
-        auto *pss = dynamic_cast<ob::ProjectedStateSpace*>(si_->getStateSpace().get());
-        if (!pss)
+        auto *css = dynamic_cast<ob::ProjectedStateSpace*>(si_->getStateSpace().get());
+        if (!css)
             throw ompl::Exception("Expected ProjectedStateSpace");
 
-        // Step 2. Get the OMPL Constraint object
-        auto constraint_base = pss->getConstraint();
+        auto constraint_base = css->getConstraint();
 
-        // Step 3. Downcast it to your CustomConstraint
         auto *custom_constraint = dynamic_cast<CustomConstraint*>(constraint_base.get());
         if (!custom_constraint)
             throw ompl::Exception("Expected CustomConstraint");
 
-        // Step 4. Convert state into VAMP configuration
-        //std::cout << "Check motion called with these following states:\n";
-        //State(s1, std::cout);
-        //pss->printState(s2, std::cout);
-        Configuration configuration1 = double_vector_to_vamp(extractStateReals(s1, pss));;
-        Configuration configuration2 = double_vector_to_vamp(extractStateReals(s2, pss));;
-        //std::cout << "configuration 1 for checkMotion is " << configuration1 << "\n";
-        //std::cout << "configuration 2 for checkMotion is " << configuration2 << "\n";
-        std::vector<Configuration> projected_vector_dummy;
+        Configuration configuration2 = double_vector_to_vamp(extractStateReals(s2, css));
+        if (!(custom_constraint->isSatisfied(configuration2))) {
+            std::cout << "configuration2 is not satisfied within checkMotion!\n";
+            return false;
+        }
 
-        // Step 5. Call VAMP’s constrained validator
-        auto result = vamp::planning::project_constraint_motion<Robot, rake, 1>(
-            configuration1,
-            configuration2,
-            projected_vector_dummy,
-            custom_constraint->original_taskspace_constraint,
-            env_v
-        );
-        //std::cout << "The result of project_constraint_motion is " << result << "\n";
-        return result;
-        //return vamp::planning::validate_motion<Robot, rake, Robot::resolution>(
-            //ompl_to_vamp(s1), ompl_to_vamp(s2), env_v);
+        return css->discreteGeodesic(s1, s2, false);
+
+
     }
 
     auto checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const
         -> bool override
     {
+        //Intentionally not implemented
         throw ompl::Exception("Not implemented!");
     }
-
-    
 };
 
 auto main(int argc, char **) -> int
@@ -494,6 +477,7 @@ auto main(int argc, char **) -> int
         outfile << std::fixed << std::setprecision(10);
         std::cout << "Raw path length: " << path->length() << std::endl;
         std::cout << "Raw path states: " << path->getStateCount() << std::endl;
+        std::cout << "Found solution in " << nanoseconds / 1e6 << "ms!\n";
 
         path->print(std::cout);
         for (std::size_t i = 0; i < path->getStateCount(); ++i)
@@ -513,7 +497,7 @@ auto main(int argc, char **) -> int
     // Only accept exact solutions
     if (solved == ob::PlannerStatus::EXACT_SOLUTION)
     {
-        std::cout << "Found solution in " << nanoseconds / 1e6 << "ms! Simplfying..." << std::endl;
+        std::cout << "Simplfying..." << std::endl;
 
         // Simplify the path using OMPL's path simplification
         const ob::PathPtr &path = pdef->getSolutionPath();
