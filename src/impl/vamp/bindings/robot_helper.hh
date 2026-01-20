@@ -17,6 +17,7 @@
 #include <vamp/collision/validity.hh>
 #include <vamp/planning/validate.hh>
 #include <vamp/planning/simplify.hh>
+#include <vamp/planning/simplify_constraints.hh>
 #include <vamp/planning/plan.hh>
 #include <vamp/planning/prm.hh>
 #include <vamp/planning/fcit.hh>
@@ -367,6 +368,21 @@ namespace vamp::binding
         };
         static constexpr const std::size_t num_com_polygons = 4;
 
+        template <typename CC>
+        struct ConstrainedSimplifyHelper
+        {
+
+            inline static auto simplify_with_constraints(
+                const Path &path,
+                const EnvironmentInput &environment,
+                CC &constraint,
+                const vamp::planning::SimplifySettings &settings,
+                typename RNG::Ptr rng) -> vamp::planning::PlanningResult<Robot>
+            {
+                return vamp::planning::constraint::simplify_with_constraints<Robot, rake, Robot::resolution>(
+                    path, EnvironmentVector(environment), constraint, settings, rng);
+            }
+        };
 
         using TSR_Constraint = vamp::planning::TaskSpaceConstraint<Robot, rake>;
         using COM_Constraint = vamp::planning::CoMTaskSpaceConstraint<Robot, rake, num_com_polygons>;
@@ -390,6 +406,10 @@ namespace vamp::binding
 
         using CRRTC_TSR_COM_Bimanual =
             ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, TSR_Constraint, COM_Constraint, Bimanual_Constraint>, vamp::planning::RRTCSettings, Composable_TSR_COM_Bimanual>;
+
+
+        using Simplifier_TSR_COM_Bimanual =
+            ConstrainedSimplifyHelper<Composable_TSR_COM_Bimanual>;
 
     };
 
@@ -637,18 +657,19 @@ namespace vamp::binding
         bind_composable<Robot ,typename HPN::TSR_Constraint>(submodule);
         bind_composable<Robot ,typename HPN::COM_Constraint>(submodule);
         bind_composable<Robot ,typename HPN::TSR_Constraint, typename HPN::COM_Constraint>(submodule);
-    if constexpr (Robot::n_eef > 1){
-        nb::class_<typename HPN::Bimanual_Constraint>(submodule, "BimanualTaskSpaceConstraint")
-            .def(nb::init<std::array<float, 7>, std::array<float, 6>, std::array<float, 6>>())                    // constructor args
-            .def("distanceToConstraint",
-                [](const typename HPN::Bimanual_Constraint& self,  const NDArray &c_in) {
-                return self.distanceToConstraint(NA::template block<rake>(c_in))[{0, 0}];
-            }, "Get distance to constraint");
+        if constexpr (Robot::n_eef > 1){
+            nb::class_<typename HPN::Bimanual_Constraint>(submodule, "BimanualTaskSpaceConstraint")
+                .def(nb::init<std::array<float, 7>, std::array<float, 6>, std::array<float, 6>>())                    // constructor args
+                .def("distanceToConstraint",
+                    [](const typename HPN::Bimanual_Constraint& self,  const NDArray &c_in) {
+                    return self.distanceToConstraint(NA::template block<rake>(c_in))[{0, 0}];
+                }, "Get distance to constraint");
 
-            bind_composable<Robot ,typename HPN::Bimanual_Constraint>(submodule);
-            bind_composable<Robot ,typename HPN::TSR_Constraint, typename HPN::COM_Constraint, typename HPN::Bimanual_Constraint>(submodule);
+                bind_composable<Robot ,typename HPN::Bimanual_Constraint>(submodule);
+                bind_composable<Robot ,typename HPN::TSR_Constraint, typename HPN::COM_Constraint, typename HPN::Bimanual_Constraint>(submodule);
+        }
 
-    }
+
 
 #define MF(name, func, desc, ...)                                                                            \
     submodule.def(name, HPN::func, ##__VA_ARGS__, desc);                                                     \
@@ -718,18 +739,29 @@ namespace vamp::binding
             submodule.def("set_radius", &Robot::set_radius, "Set radius.");
         }
 
-        #define CONSTRAINEDPLANNER(name, func, desc, ...)                                                                       \
-            MF(name, func::single, desc, "start"_a, "goal"_a, "environment"_a, "settings"_a, "constraint"_a, "rng"_a);               \
-            MF(name, func::multi, desc, "start"_a, "goal"_a, "environment"_a, "settings"_a, "constraint"_a, "rng"_a);
+    #define CONSTRAINEDPLANNER(name, func, desc, ...)                                                                       \
+        MF(name, func::single, desc, "start"_a, "goal"_a, "environment"_a, "settings"_a, "constraint"_a, "rng"_a);               \
+        MF(name, func::multi, desc, "start"_a, "goal"_a, "environment"_a, "settings"_a, "constraint"_a, "rng"_a);
 
-                CONSTRAINEDPLANNER("crrtc", CRRTC_TSR, "CRRTConnectTSR");
-                CONSTRAINEDPLANNER("crrtc", CRRTC_TSR_COM, "CRRTConnectTSRCOM");
+            CONSTRAINEDPLANNER("crrtc", CRRTC_TSR, "CRRTConnectTSR");
+            CONSTRAINEDPLANNER("crrtc", CRRTC_TSR_COM, "CRRTConnectTSRCOM");
 
-                if constexpr (Robot::n_eef > 1) {
-                    CONSTRAINEDPLANNER("crrtc", CRRTC_Bimanual, "CRRTConnectBimanual");
-                    CONSTRAINEDPLANNER("crrtc", CRRTC_TSR_COM_Bimanual, "CRRTConnectTSR_COM_Bimanual");
+            if constexpr (Robot::n_eef > 1) {
+                CONSTRAINEDPLANNER("crrtc", CRRTC_Bimanual, "CRRTConnectBimanual");
+                CONSTRAINEDPLANNER("crrtc", CRRTC_TSR_COM_Bimanual, "CRRTConnectTSR_COM_Bimanual");
 
-                }
+            }
+
+    #define CONSTRAINEDSIMPLIFIER(name, func, desc, ...)                                                                       \
+        MF(name, func::simplify_with_constraints, desc, "path"_a, "environment"_a, "constraint"_a, "settings"_a, "rng"_a);               \
+
+            // CONSTRAINEDSIMPLIFIER("crrtc", CRRTC_TSR, "CRRTConnectTSR");
+            // CONSTRAINEDSIMPLIFIER("crrtc", CRRTC_TSR_COM, "CRRTConnectTSRCOM");
+
+            if constexpr (Robot::n_eef > 1) {
+                CONSTRAINEDSIMPLIFIER("simplify_with_constraints", Simplifier_TSR_COM_Bimanual, "Simplifier_TSR_COM_Bimanual");
+
+            }
 
         // submodule.def("crrtc_solve", [](auto &constraint_instance) {
         //     return HPN::ConstrainedPlannerHelper<vamp::planning::CRRTC, vamp::planning::RRTCSettings,

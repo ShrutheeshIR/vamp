@@ -9,6 +9,7 @@
 #include <vamp/planning/crrtc.hh>
 #include <vamp/planning/task_space_constraint.hh>
 #include <vamp/planning/validate_constraint.hh>
+#include <vamp/planning/simplify_constraints.hh>
 
 // #include <vamp/planning/simplify.hh>
 #include <vamp/robots/g1_unitree.hh>
@@ -23,8 +24,8 @@ using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 using AttachmentInput = vamp::collision::Attachment<float>;
 
 // Start and goal configurations
-static constexpr Robot::ConfigurationArray start = {-0.01405,0.00000,-0.20000,0.00000,0.00060,0.00064,-0.89950,-0.00000,-0.00000,1.75013,-0.87266,-0.00000,-0.89950,0.00000,0.00000,1.75013,-0.87266,-0.00000,1.59564,-0.27786,0.51984,0.00002,0.00014,0.00009,-0.00003,-0.00006,-0.00000,-0.00001,-0.00001,0.00017,0.00007,-0.00000,0.00003,-0.00000,0.00002};
-static constexpr Robot::ConfigurationArray goal = {0.00539,0.00009,0.03086,0.00000,-0.01316,0.00001,0.00027,0.00001,-0.00002,0.00900,0.01995,-0.00001,0.00025,0.00001,0.00001,0.00900,0.01998,-0.00001,0.00001,-0.00000,-0.00796,0.00159,0.00003,-0.00010,-0.00000,-0.00017,-0.00001,-0.00032,0.00148,-0.00011,-0.00008,0.00008,0.00009,0.00001,0.00013};
+static constexpr Robot::ConfigurationArray start = {-0.01691,-0.00008,0.52435,-0.00002,0.00087,0.00058,-0.89966,-0.00864,0.01527,1.75038,-0.87267,0.01757,-0.89936,0.00875,-0.01522,1.75040,-0.87267,-0.01753,1.59564,0.14700,0.37000,0.00002,0.00014,0.00009,-0.00003,-0.00006,0.00000,-0.00001,-0.00001,0.00017,0.00007,-0.00000,0.00003,0.00000,0.00002};
+static constexpr Robot::ConfigurationArray goal = {0.03977,-0.00000,0.72049,0.00000,0.03753,-0.00002,-0.31120,0.00002,0.00004,0.64394,-0.41457,-0.00000,-0.31121,-0.00004,0.00000,0.64394,-0.41456,-0.00000,-0.00002,-0.00000,-0.24500,-0.00031,-0.00532,-0.00196,-0.00210,0.00362,-0.00156,0.00867,-0.00646,0.00363,-0.00701,0.00148,-0.00521,0.00134,0.01348};
 
 // static constexpr Robot::ConfigurationArray start = {-0.148774,1.59886,1.36434,-2.75007,0.544898,2.51704,-1.4485,2.07773,1.0024,-0.823622,-1.69743,-0.625681,2.59153,0.7243};
 // static constexpr Robot::ConfigurationArray goal = {-1.62706,-0.100903,2.59477,-2.09287,1.2912,1.8256,-0.7243,1.75215,1.5907,-2.0261,-1.8123,-0.119768,2.50718,-0.7243};
@@ -96,7 +97,7 @@ auto main(int, char **) -> int
             std::cerr << "Error reading line: " << line << std::endl;
             continue;
         }
-        // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
+        std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
         environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x, y, z}, {0.0, 0.0, 0.0}, {dx/2, dy/2, dz/2}));
     }
     infile.close();
@@ -113,7 +114,7 @@ auto main(int, char **) -> int
 
     std::array<float, 8> polygon_points = {
         // 1.0, -0.05, 1.0, 0.05, 0.0, 0.05, 0.0, -0.05
-        0.05, -0.11, 0.05, 0.11, -0.015, 0.11, -0.015, -0.11
+        0.08, -0.045, 0.08, 0.045, 0.06, 0.045, 0.06, -0.045
         // 10.20, -10.25, 10.20, 10.25, -10.05, 10.25, -10.05, -10.25
         // 0.0, 0.2, 1.0, 0.2, 1.0, 1.0, 0.0, 1.0
     };
@@ -163,10 +164,10 @@ auto main(int, char **) -> int
     // eef_transforms_ref_frame_w_world[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
 
 
-    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{{1, 0,0,0,   0, 0, 0}, {1, 0,0,0,   0.0, 0.0, 0.0}, {1.0, 0.0, 0.0, 0.0, 0.13, 0.11, -0.725}, {1.0, 0.0, 0.0, 0.0, 0.13, -0.11, -0.725}}};
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{{1.,     0.0005, 0.0005, 0.0005,   0, 0, 0}, {1.,     0.0005, 0.0005, 0.0005,   0.0, 0.0, 0.0}, {1.,     0.0005, 0.0005, 0.0005, 0.12, 0.11, -0.0}, {1.,     0.0005, 0.0005, 0.0005, 0.12, -0.11, -0.0}}};
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{{1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}}};
 
-    vamp::planning::FeetTaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
+    vamp::planning::TaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
         eef_transforms_ref_frame_w_world,
         eef_transforms,
         tsr_lower_bound,
@@ -179,7 +180,7 @@ auto main(int, char **) -> int
     //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
     // );
 
-    std::array<float, 7> transform = {1.00, 0.0, 0.00, 0.00, 0.0, -0.303, 0.0};
+    std::array<float, 7> transform = {1.,     0.0005, 0.0005, 0.0005, 0.0, -0.303, 0.0};
     vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_task_constraint(transform, lower_bound, upper_bound);
 
     // vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_constraint(
@@ -231,6 +232,11 @@ auto main(int, char **) -> int
         if((succ_attempts.size() == 0) || (succ_attempts.size() > 0 && a < succ_attempts[0])){
 
         std::cout << "\nPrinting Result!! " << result.path.size() << std::endl;
+        vamp::planning::SimplifySettings simplify_settings;
+        auto simplify_result = vamp::planning::constraint::simplify_with_constraints<Robot, rake, Robot::resolution, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint)>(
+            result.path, env_v, task_constraint, simplify_settings, rng);
+        std::cout << "Simplify took " << result.nanoseconds / 1e6 << " ms" << std::endl;
+
         // Output configurations of simplified path
         std::cout << std::fixed << std::setprecision(3);
         std::ofstream outfile("/src/trajectory.txt");

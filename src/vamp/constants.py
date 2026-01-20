@@ -23,7 +23,7 @@ ROBOT_MAX_RADII = {
     "fetch": 1.5,
     "panda": 1.19,
     "bimanual_panda": 1.19,
-    "g1" : 10.0,
+    "g1" : 20.0,
     }
 
 POINT_RADIUS = 0.0025
