@@ -76,7 +76,7 @@ auto main(int, char **) -> int
     //     environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
     // }
     // outfile_sph.close();
-    std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/shelf_drake.txt");
+    std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/shelf_panda.txt");
     if (!infile.is_open()) {
         std::cerr << "Failed to open file!" << std::endl;
         return 1;
@@ -178,7 +178,7 @@ auto main(int, char **) -> int
 
         // Simplify path with default settings
         vamp::planning::SimplifySettings simplify_settings;
-        auto simplify_result = vamp::planning::simplify<Robot, rake, Robot::resolution, decltype(bimanual_task_constraint)>(
+        auto simplify_result = vamp::planning::constraint::simplify_with_constraints<Robot, rake, Robot::resolution, decltype(bimanual_task_constraint)>(
             result.path, env_v, task_constraint, simplify_settings, rng);
         std::cout << "Simplify took " << result.nanoseconds / 1e6 << " ms" << std::endl;
         // std::cout << "Invalid distance counter outside: " << vamp::planning::invalid_distance_counter_outside << std::endl;

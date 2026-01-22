@@ -64,13 +64,27 @@ auto main(int, char **) -> int
 
 
     EnvironmentInput environment;
-    std::ofstream outfile_sph("/src/spheres.txt");
-    for (const auto &sphere : problem)
-    {
-        outfile_sph << sphere[0] << "," << sphere[1] << "," << sphere[2] << "," << radius << "\n";
-        environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
+    std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/shelf_panda.txt");
+    if (!infile.is_open()) {
+        std::cerr << "Failed to open file!" << std::endl;
+        return 1;
     }
-    outfile_sph.close();
+
+    std::string line;
+    while (std::getline(infile, line)) {
+        std::istringstream iss(line);
+        char delim;
+        float x, y, z, dx, dy, dz;
+
+        if (!(iss >> x >> delim >> y >> delim >> z >> delim >> dx >> delim >> dy >> delim >> dz)) {
+            std::cerr << "Error reading line: " << line << std::endl;
+            continue;
+        }
+        ;
+        // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
+        environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x, y, z}, {0.0, 0.0, 0.0}, {dx/2, dy/2, dz/2}));
+    }
+    infile.close();
 
     environment.sort();
     auto env_v = EnvironmentVector(environment);
@@ -141,7 +155,7 @@ auto main(int, char **) -> int
 
         // Simplify path with default settings
         vamp::planning::SimplifySettings simplify_settings;
-        auto simplify_result = vamp::planning::simplify<Robot, rake, Robot::resolution, decltype(tsr_constraint)>(
+        auto simplify_result = vamp::planning::constraint::simplify_with_constraints<Robot, rake, Robot::resolution, decltype(tsr_constraint)>(
             result.path, env_v, task_constraint, simplify_settings, rng);
 
 

@@ -410,6 +410,10 @@ namespace vamp::binding
 
         using Simplifier_TSR_COM_Bimanual =
             ConstrainedSimplifyHelper<Composable_TSR_COM_Bimanual>;
+        using Simplifier_TSR =
+            ConstrainedSimplifyHelper<Composable_TSR>;
+        using Simplifier_Bimanual =
+            ConstrainedSimplifyHelper<Composable_Bimanual>;
 
     };
 
@@ -757,9 +761,11 @@ namespace vamp::binding
 
             // CONSTRAINEDSIMPLIFIER("crrtc", CRRTC_TSR, "CRRTConnectTSR");
             // CONSTRAINEDSIMPLIFIER("crrtc", CRRTC_TSR_COM, "CRRTConnectTSRCOM");
+            CONSTRAINEDSIMPLIFIER("simplify_with_constraints", Simplifier_TSR, "Simplifier_TSR");
 
             if constexpr (Robot::n_eef > 1) {
                 CONSTRAINEDSIMPLIFIER("simplify_with_constraints", Simplifier_TSR_COM_Bimanual, "Simplifier_TSR_COM_Bimanual");
+                CONSTRAINEDSIMPLIFIER("simplify_with_constraints", Simplifier_Bimanual, "Simplifier_Bimanual");
 
             }
 

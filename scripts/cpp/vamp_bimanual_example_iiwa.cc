@@ -74,7 +74,7 @@ auto main(int, char **) -> int
     Eigen::Quaternionf goal_quat(goal_rel.linear());
     std::cout << goal_quat.coeffs().transpose() << " " << goal_rel.translation().transpose() << std::endl;
 
-    float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
+    float descend_rates[] = {0.5, 0.75, 1.0};
     // float descend_rates[] = {1.0};
     // float descend_rates[] = {1.0};
     std::vector<Attempt> succ_attempts;
@@ -147,7 +147,7 @@ auto main(int, char **) -> int
     rrtc_settings.dynamic_domain = dyndom;
     rrtc_settings.projection_method = pm;
     rrtc_settings.descend_rate = descent_rate;
-    // rrtc_settings.radius = 4.0;
+    rrtc_settings.radius = 4.0;
     // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
 
     vamp::planning::invalid_distance_counter_outside = 0;

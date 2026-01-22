@@ -149,8 +149,8 @@ if(VAMP_BUILD_CPP_DEMO)
   # add_executable(vamp_crrtc_example scripts/cpp/vamp_crrtc_example.cc)
   # target_link_libraries(vamp_crrtc_example PRIVATE vamp_cpp)
 
-  # add_executable(vamp_crrtc_spheres scripts/cpp/vamp_crrtc_spheres.cc)
-  # target_link_libraries(vamp_crrtc_spheres PRIVATE vamp_cpp)
+  add_executable(vamp_crrtc_spheres scripts/cpp/vamp_crrtc_spheres.cc)
+  target_link_libraries(vamp_crrtc_spheres PRIVATE vamp_cpp)
 
 # add_executable(vamp_crrtc_transport_mug scripts/cpp/vamp_crrtc_transport_mug.cc)
 # target_link_libraries(vamp_crrtc_transport_mug PRIVATE vamp_cpp)
