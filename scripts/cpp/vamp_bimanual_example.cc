@@ -49,15 +49,15 @@ auto main(int, char **) -> int
 
     vamp::planning::RRTCSettings rrtc_settings;
 
-    float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
+    float ranges[] = {1.0};
     // float ranges[] = {0.5, 0.75};
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     // bool dd[] = {false};
-    bool dd[] = {false, true};
+    bool dd[] = {false};
     vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM};//, vamp::planning::ProjMethod::GradDesc};
 
     // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
-    float descend_rates[] = {0.75, 1.0};
+    float descend_rates[] = {1.0};
     // float descend_rates[] = {1.0};
     std::vector<Attempt> succ_attempts;
     for(const auto range: ranges){

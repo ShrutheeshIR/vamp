@@ -124,6 +124,30 @@ namespace vamp::collision
           , axis_3_r(other.axis_3_r)
         {
         }
+
+        // write an indexer
+        auto operator[](std::size_t i) const -> DataT
+        {
+            switch (i)
+            {
+                case 0: return x;
+                case 1: return y;
+                case 2: return z;
+                case 3: return axis_1_x;
+                case 4: return axis_1_y;
+                case 5: return axis_1_z;
+                case 6: return axis_2_x;
+                case 7: return axis_2_y;
+                case 8: return axis_2_z;
+                case 9: return axis_3_x;
+                case 10: return axis_3_y;
+                case 11: return axis_3_z;
+                case 12: return axis_1_r;
+                case 13: return axis_2_r;
+                case 14: return axis_3_r;
+                default: throw std::out_of_range("Index out of range");
+            }
+        }
     };
 
     // A cylinder shape oriented in an arbitrary frame. The cylinder is defined by
@@ -217,6 +241,22 @@ namespace vamp::collision
           , rdv(other.rdv)
         {
         }
+
+        auto operator[](std::size_t i) const -> DataT
+        {
+            switch (i)
+            {
+                case 0: return x1;
+                case 1: return y1;
+                case 2: return z1;
+                case 3: return xv;
+                case 4: return yv;
+                case 5: return zv;
+                case 6: return r;
+                case 7: return rdv;
+                default: throw std::out_of_range("Index out of range");
+            }
+        }
     };
 
     template <typename DataT>
@@ -242,6 +282,18 @@ namespace vamp::collision
         explicit Sphere(const Sphere<OtherDataT> &other)
           : Shape<DataT>(other), x(other.x), y(other.y), z(other.z), r(other.r)
         {
+        }
+
+        auto operator[](std::size_t i) const -> DataT
+        {
+            switch (i)
+            {
+                case 0: return x;
+                case 1: return y;
+                case 2: return z;
+                case 3: return r;
+                default: throw std::out_of_range("Index out of range");
+            }
         }
     };
 

@@ -96,16 +96,17 @@ auto main(int, char **) -> int
     Eigen::Transform<float, 3, Eigen::Isometry> attachment_transform(Eigen::Translation<float, 3>(0.0f, 0.0f, 0.05f));
     vamp::collision::Attachment sphere_attachment(attachment_transform);
     sphere_attachment.spheres.emplace_back(vamp::collision::factory::sphere::array({0.0, 0.0, 0.0}, 0.03));
-    sphere_attachment.spheres.emplace_back(vamp::collision::factory::sphere::array({0.0, 0.0, 0.03}, 0.03));
+    sphere_attachment.spheres.emplace_back(vamp::collision::factory::sphere::array({0.03, 0.0, 0.0}, 0.03));
+    sphere_attachment.spheres.emplace_back(vamp::collision::factory::sphere::array({0.06, 0.0, 0.0}, 0.03));
 
-    // env_v.attach(sphere_attachment);
+    env_v.attach(sphere_attachment);
 
     std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-        -10.01, -10.01, -0.01, -0.01, -0.01, -0.01
+        -10.01, -10.01, -10.01, -0.01, -0.01, -0.01
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
-        10.01, 10.01, 0.01, 0.01, 0.01, 0.01
+        10.01, 10.01, 10.01, 0.01, 0.01, 0.01
     };
 
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 0.707107, 0, 0.707107, 0.354, 0.7, 0.243}};
@@ -144,6 +145,18 @@ auto main(int, char **) -> int
     rrtc_settings.dynamic_domain = false;
     rrtc_settings.projection_method = vamp::planning::ProjMethod::InnerLM;
     rrtc_settings.descend_rate = 1.0;
+    // rrtc_settings.radius = 4.0;
+
+    typename Robot::template ConfigurationBlock<rake> block;
+    for (auto i = 0U; i < Robot::dimension; ++i)
+        block[i] = Robot::Configuration(start).broadcast(i);
+    bool valid = Robot::template fkcc<rake>(env_v, block);
+    std::cout << "Start valid: " << valid << std::endl;
+
+    for (auto i = 0U; i < Robot::dimension; ++i)
+        block[i] = Robot::Configuration(goal).broadcast(i);
+    valid = Robot::template fkcc<rake>(env_v, block);
+    std::cout << "Goal valid: " << valid << std::endl;
 
 
 
@@ -154,16 +167,16 @@ auto main(int, char **) -> int
     {
 
         // Simplify path with default settings
-        vamp::planning::SimplifySettings simplify_settings;
-        auto simplify_result = vamp::planning::constraint::simplify_with_constraints<Robot, rake, Robot::resolution, decltype(tsr_constraint)>(
-            result.path, env_v, task_constraint, simplify_settings, rng);
+        // vamp::planning::SimplifySettings simplify_settings;
+        // auto simplify_result = vamp::planning::constraint::simplify_with_constraints<Robot, rake, Robot::resolution, decltype(tsr_constraint)>(
+        //     result.path, env_v, task_constraint, simplify_settings, rng);
 
 
         std::cout << "\nPrinting Result!! " << result.path.size() << std::endl;
         // Output configurations of simplified path
         std::cout << std::fixed << std::setprecision(3);
         std::ofstream outfile("/src/trajectory.txt");
-        for (const auto &config : simplify_result.path)
+        for (const auto &config : result.path)
         {
             const auto &array = config.to_array();
             Robot::ConfigurationArray soln;
@@ -189,6 +202,9 @@ auto main(int, char **) -> int
     else {
         std::cout << "Failed to plan " << std::endl;
     }
+
+
+
 
     return 0;
 }

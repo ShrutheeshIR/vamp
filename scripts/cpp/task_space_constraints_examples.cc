@@ -65,6 +65,29 @@ auto main(int, char **) -> int
         environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
     }
 
+    std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/shelf_drake.txt");
+    if (!infile.is_open()) {
+        std::cerr << "Failed to open file!" << std::endl;
+        return 1;
+    }
+
+    std::string line;
+    while (std::getline(infile, line)) {
+        std::istringstream iss(line);
+        char delim;
+        float x, y, z, dx, dy, dz;
+
+        if (!(iss >> x >> delim >> y >> delim >> z >> delim >> dx >> delim >> dy >> delim >> dz)) {
+            std::cerr << "Error reading line: " << line << std::endl;
+            continue;
+        }
+        // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
+        environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x, y, z}, {0.0, 0.0, 0.0}, {dx/2, dy/2, dz/2}));
+    }
+    infile.close();
+
+
+
     environment.sort();
     auto env_v = EnvironmentVector(environment);
     // Create RNG for planning
@@ -268,101 +291,160 @@ auto main(int, char **) -> int
     // }
 
 
-    Robot::ConfigurationArray holder;
-    typename Robot::template ConfigurationBlock<rake> block, projected_block, direction_vector_block;
-    for (auto i = 0U; i < Robot::dimension; ++i){
-        block[i] = Robot::Configuration(start).broadcast(i);
-    }
-    bimanual_task_constraint.print_robot_tsr_error(block);
-    bool startsuccess = bimanual_task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0);
-    std::cout << startsuccess <<std::endl;
-    bool first = true;
-    for (auto i = 0U; i < Robot::dimension; ++i){
-        holder[i] = projected_block[{i, 0}];
-        std::cout << holder[i] << ", ";
-        if (!first) outfile << ",";
-        outfile << holder[i];
-        first = false;
+    // Robot::ConfigurationArray holder;
+    // typename Robot::template ConfigurationBlock<rake> block, projected_block, direction_vector_block;
+    // for (auto i = 0U; i < Robot::dimension; ++i){
+    //     block[i] = Robot::Configuration(start).broadcast(i);
+    // }
+    // bimanual_task_constraint.print_robot_tsr_error(block);
+    // bool startsuccess = bimanual_task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0);
+    // std::cout << startsuccess <<std::endl;
+    // bool first = true;
+    // for (auto i = 0U; i < Robot::dimension; ++i){
+    //     holder[i] = projected_block[{i, 0}];
+    //     std::cout << holder[i] << ", ";
+    //     if (!first) outfile << ",";
+    //     outfile << holder[i];
+    //     first = false;
 
-    }
-    outfile << "\n";
-    std::cout << std::endl;
-    // // Eigen::Quaternionf q(Robot::eefk(holder)[0].linear());
+    // }
+    // outfile << "\n";
+    // std::cout << std::endl;
+    // // // Eigen::Quaternionf q(Robot::eefk(holder)[0].linear());
+    // // // std::cout << Robot::eefk(holder)[0].matrix() << std::endl;
+    // // // std::cout << q.w() << ", " << q.x() << ", " << q.y() << ", " << q.z() << std::endl;
+
+    // for (auto i = 0U; i < Robot::dimension; ++i)
+    //     block[i] = Robot::Configuration(goal).broadcast(i);
+    // bimanual_task_constraint.print_robot_tsr_error(block);
+    // bool goalsuccess = bimanual_task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0);
+    // std::cout << goalsuccess << std::endl;
+
+    // first = true;
+    // for (auto i = 0U; i < Robot::dimension; ++i){
+    //     holder[i] = projected_block[{i, 0}];
+    //     std::cout << holder[i] << ", ";
+    //     if (!first) outfile << ",";
+    //     outfile << holder[i];
+    //     first = false;
+
+    // }
+    // outfile << "\n";
+    // std::cout << std::endl;
     // // std::cout << Robot::eefk(holder)[0].matrix() << std::endl;
-    // // std::cout << q.w() << ", " << q.x() << ", " << q.y() << ", " << q.z() << std::endl;
+    // // Eigen::Quaternionf q2(Robot::eefk(holder)[0].linear());
+    // // std::cout << q2.w() << ", " << q2.x() << ", " << q2.y() << ", " << q2.z() << std::endl;
 
-    for (auto i = 0U; i < Robot::dimension; ++i)
-        block[i] = Robot::Configuration(goal).broadcast(i);
-    bimanual_task_constraint.print_robot_tsr_error(block);
-    bool goalsuccess = bimanual_task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0);
-    std::cout << goalsuccess << std::endl;
+    // auto vector = Robot::Configuration(start) - Robot::Configuration(goal);
+    // std::cout << vector << " with norm : " << vector.l2_norm() << std::endl;
+    // std::vector<Robot::Configuration> projected_vector;
+    // auto ret = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(Robot::Configuration(start), Robot::Configuration(goal), projected_vector, task_constraint, env_v);
 
-    first = true;
-    for (auto i = 0U; i < Robot::dimension; ++i){
-        holder[i] = projected_block[{i, 0}];
-        std::cout << holder[i] << ", ";
-        if (!first) outfile << ",";
-        outfile << holder[i];
-        first = false;
-
-    }
-    outfile << "\n";
-    std::cout << std::endl;
-    // std::cout << Robot::eefk(holder)[0].matrix() << std::endl;
-    // Eigen::Quaternionf q2(Robot::eefk(holder)[0].linear());
-    // std::cout << q2.w() << ", " << q2.x() << ", " << q2.y() << ", " << q2.z() << std::endl;
-
-    auto vector = Robot::Configuration(start) - Robot::Configuration(goal);
-    std::cout << vector << " with norm : " << vector.l2_norm() << std::endl;
-    std::vector<Robot::Configuration> projected_vector;
-    auto ret = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(Robot::Configuration(start), Robot::Configuration(goal), projected_vector, task_constraint, env_v);
-
-    // Robot::Configuration start_plus_percent = {-1.289,  1.039,  1.079, -2.12 ,  0.553,  2.082, -1.181,  1.165, 1.11 , -1.048, -2.128, -0.5  ,  2.138, -0.202};
-    Robot::ConfigurationArray test = {-1.289,  1.039,  1.079, -2.12 ,  0.553,  2.082, -1.181,  1.165, 1.11 , -1.048, -2.128, -0.5  ,  2.138, -0.202};
+    // // Robot::Configuration start_plus_percent = {-1.289,  1.039,  1.079, -2.12 ,  0.553,  2.082, -1.181,  1.165, 1.11 , -1.048, -2.128, -0.5  ,  2.138, -0.202};
+    // Robot::ConfigurationArray test = {-1.289,  1.039,  1.079, -2.12 ,  0.553,  2.082, -1.181,  1.165, 1.11 , -1.048, -2.128, -0.5  ,  2.138, -0.202};
 
 
-    for (auto i = 0U; i < Robot::dimension; ++i){
-        block[i] = Robot::Configuration(test).broadcast(i);
-    }
-    std::cout << "\n\n Running project for a single config : \n\n";
-    task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0);
-    std::cout << std::endl;
-    first = true;
-    for (auto i = 0U; i < Robot::dimension; ++i){
-        holder[i] = projected_block[{i, 0}];
-        std::cout << holder[i] << ", ";
-        if (!first) outfile << ",";
-        outfile << holder[i];
-        first = false;
-    }
-    outfile << "\n";
-    std::cout << std::endl;
+    // for (auto i = 0U; i < Robot::dimension; ++i){
+    //     block[i] = Robot::Configuration(test).broadcast(i);
+    // }
+    // std::cout << "\n\n Running project for a single config : \n\n";
+    // task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0);
+    // std::cout << std::endl;
+    // first = true;
+    // for (auto i = 0U; i < Robot::dimension; ++i){
+    //     holder[i] = projected_block[{i, 0}];
+    //     std::cout << holder[i] << ", ";
+    //     if (!first) outfile << ",";
+    //     outfile << holder[i];
+    //     first = false;
+    // }
+    // outfile << "\n";
+    // std::cout << std::endl;
 
+
+    // std::array<float, rake * Robot::dimension> diff_arr = {
+    //     -0.675179, -0.707267, -0.739355, -0.771444, -0.803532, -0.83562, -0.867708, -0.899796,
+    //     1.9179, 1.9202, 1.92249, 1.92478, 1.92707, 1.92937, 1.93166, 1.93395,
+    //     -1.74784, -1.69885, -1.64987, -1.60088, -1.5519, -1.50291, -1.45392, -1.40494,
+    //     1.29645, 1.29835, 1.30025, 1.30215, 1.30405, 1.30595, 1.30785, 1.30975,
+    //     0.011661, 0.0471565, 0.0826521, 0.118148, 0.153643, 0.189139, 0.224634, 0.26013,
+    //     -0.847029, -0.81709, -0.787152, -0.757214, -0.727276, -0.697338, -0.6674, -0.637461,
+    //     -1.66942, -1.63468, -1.59994, -1.5652, -1.53045, -1.49571, -1.46097, -1.42623,
+    //     0.701158, 0.68861, 0.676063, 0.663515, 0.650967, 0.638419, 0.625871, 0.613324,
+    //     1.93658, 1.90565, 1.87472, 1.84379, 1.81285, 1.78192, 1.75099, 1.72006,
+    //     1.68064, 1.63266, 1.58467, 1.53669, 1.48871, 1.44073, 1.39274, 1.34476,
+    //     1.24989, 1.20248, 1.15508, 1.10767, 1.06027, 1.01286, 0.965455, 0.918049,
+    //     0.150976, 0.138444, 0.125911, 0.113378, 0.100845, 0.0883125, 0.0757797, 0.063247,
+    //     -0.935916, -0.937838, -0.93976, -0.941682, -0.943604, -0.945526, -0.947448, -0.94937,
+    //     2.33129, 2.27653, 2.22176, 2.167, 2.11224, 2.05747, 2.00271, 1.94795 };
+
+    // typename Robot::template ConfigurationBlock<rake> configblock = typename Robot::template ConfigurationBlock<rake>(diff_arr);
+    // std::cout << configblock << std::endl;
+    // std::cout << "-----------------" << std::endl;
+    // bimanual_task_constraint.print_robot_tsr_error(block);
+    // task_constraint.print_robot_tsr_error(block);
+    // std::cout << "-----------------" << std::endl;
+
+    // task_constraint.projectConfiguration(configblock, projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0);
+
+    // for (auto r = 0U; r < rake; ++r){
+    //     bool first = true;
+    //     for (auto i = 0U; i < Robot::dimension; ++i){
+    //         holder[i] = projected_block[{i, r}];
+    //         std::cout << holder[i] << ", ";
+    //         if (!first) outfile << ",";
+    //         outfile << holder[i];
+    //         first = false;
+    //     }
+    //     outfile << "\n";
+
+    //     std::cout << std::endl;
+    // }
+
+
+
+
+
+
+    // Env collision
 
     std::array<float, rake * Robot::dimension> diff_arr = {
-        -0.675179, -0.707267, -0.739355, -0.771444, -0.803532, -0.83562, -0.867708, -0.899796,
-        1.9179, 1.9202, 1.92249, 1.92478, 1.92707, 1.92937, 1.93166, 1.93395,
-        -1.74784, -1.69885, -1.64987, -1.60088, -1.5519, -1.50291, -1.45392, -1.40494,
-        1.29645, 1.29835, 1.30025, 1.30215, 1.30405, 1.30595, 1.30785, 1.30975,
-        0.011661, 0.0471565, 0.0826521, 0.118148, 0.153643, 0.189139, 0.224634, 0.26013,
-        -0.847029, -0.81709, -0.787152, -0.757214, -0.727276, -0.697338, -0.6674, -0.637461,
-        -1.66942, -1.63468, -1.59994, -1.5652, -1.53045, -1.49571, -1.46097, -1.42623,
-        0.701158, 0.68861, 0.676063, 0.663515, 0.650967, 0.638419, 0.625871, 0.613324,
-        1.93658, 1.90565, 1.87472, 1.84379, 1.81285, 1.78192, 1.75099, 1.72006,
-        1.68064, 1.63266, 1.58467, 1.53669, 1.48871, 1.44073, 1.39274, 1.34476,
-        1.24989, 1.20248, 1.15508, 1.10767, 1.06027, 1.01286, 0.965455, 0.918049,
-        0.150976, 0.138444, 0.125911, 0.113378, 0.100845, 0.0883125, 0.0757797, 0.063247,
-        -0.935916, -0.937838, -0.93976, -0.941682, -0.943604, -0.945526, -0.947448, -0.94937,
-        2.33129, 2.27653, 2.22176, 2.167, 2.11224, 2.05747, 2.00271, 1.94795 };
+        -0.403432, -0.366984, -0.331752, -0.298451, -0.267298, -0.238762, -0.213108, -0.191564,
+        1.69565, 1.68167, 1.66841, 1.65586, 1.64462, 1.63579, 1.6301, 1.62914,
+        -1.89969, -1.86344, -1.82957, -1.79656, -1.76487, -1.73442, -1.70513, -1.67644,
+        1.31367, 1.29642, 1.28079, 1.26733, 1.25608, 1.24747, 1.24339, 1.2451,
+        0.557368, 0.573678, 0.588122, 0.601842, 0.614757, 0.626974, 0.638104, 0.648437,
+        -0.705096, -0.701172, -0.698225, -0.69642, -0.694438, -0.691636, -0.688377, -0.684507,
+        -0.950322, -0.980957, -1.01289, -1.04575, -1.08036, -1.11789, -1.15961, -1.2072,
+        0.775612, 0.806498, 0.837548, 0.868991, 0.90067, 0.932359, 0.964422, 0.99738,
+        1.87573, 1.81953, 1.76477, 1.71173, 1.66028, 1.61084, 1.56334, 1.51831,
+        1.44753, 1.41991, 1.39096, 1.36203, 1.3333, 1.30438, 1.27598, 1.24836,
+        1.19485, 1.21968, 1.2427, 1.26423, 1.28489, 1.3057, 1.32738, 1.35065,
+        0.416488, 0.425259, 0.43132, 0.436102, 0.439822, 0.441722, 0.442482, 0.442621,
+        -1.23367, -1.24659, -1.25942, -1.27226, -1.28447, -1.29571, -1.30617, -1.3156,
+        0.993843, 0.975268, 0.957488, 0.941579, 0.927595, 0.915492, 0.905809, 0.899031
+    };
 
     typename Robot::template ConfigurationBlock<rake> configblock = typename Robot::template ConfigurationBlock<rake>(diff_arr);
     std::cout << configblock << std::endl;
-    std::cout << "-----------------" << std::endl;
-    bimanual_task_constraint.print_robot_tsr_error(block);
-    task_constraint.print_robot_tsr_error(block);
-    std::cout << "-----------------" << std::endl;
 
-    task_constraint.projectConfiguration(configblock, projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0);
+    vamp::planning::EnvCollisionConstraint<Robot, rake> env_coll_constraint(env_v);
+    env_coll_constraint.print_robot_tsr_error(configblock);
+    typename Robot::template ConfigurationBlock<rake> block, projected_block, direction_vector_block, initial_projected_block;
+    std::array<double, 100> times;
+
+    for (auto i = 0U; i < 100; ++i){
+        auto start_time = std::chrono::steady_clock::now();
+        bool success = env_coll_constraint.projectConfiguration(configblock, projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0);
+        // env_coll_constraint.distanceToConstraint(configblock);
+        times[i] = vamp::utils::get_elapsed_nanoseconds(start_time);
+        std::cout << times[i]/1e3 << ", ";
+
+    }
+
+    bool success = env_coll_constraint.projectConfiguration(configblock, projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0);
+    Robot::ConfigurationArray holder;
+
 
     for (auto r = 0U; r < rake; ++r){
         bool first = true;
@@ -375,7 +457,7 @@ auto main(int, char **) -> int
         }
         outfile << "\n";
 
-        std::cout << std::endl;
+        std::cout << success << std::endl;
     }
 
     outfile.close();

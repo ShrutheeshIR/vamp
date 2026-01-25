@@ -56,13 +56,13 @@ auto main(int, char **) -> int
 
     vamp::planning::RRTCSettings rrtc_settings;
 
-    float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
+    float ranges[] = {1.0};
     // float ranges[] = {1.0};
     // float ranges[] = {0.5, 0.75};
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     // bool dd[] = {false};
-    bool dd[] = {false, true};
-    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM};
+    bool dd[] = {false};
+    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM} ; //, vamp::planning::ProjMethod::OuterLM};
     // vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM};
 
     auto start_eefk = Robot::eefk(start);
@@ -74,8 +74,8 @@ auto main(int, char **) -> int
     Eigen::Quaternionf goal_quat(goal_rel.linear());
     std::cout << goal_quat.coeffs().transpose() << " " << goal_rel.translation().transpose() << std::endl;
 
-    float descend_rates[] = {0.5, 0.75, 1.0};
-    // float descend_rates[] = {1.0};
+    // float descend_rates[] = {0.75};
+    float descend_rates[] = {1.0};
     // float descend_rates[] = {1.0};
     std::vector<Attempt> succ_attempts;
     for(const auto range: ranges){
@@ -147,13 +147,29 @@ auto main(int, char **) -> int
     rrtc_settings.dynamic_domain = dyndom;
     rrtc_settings.projection_method = pm;
     rrtc_settings.descend_rate = descent_rate;
-    rrtc_settings.radius = 4.0;
+    // rrtc_settings.radius = 4.0;
     // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
 
     vamp::planning::invalid_distance_counter_outside = 0;
     vamp::planning::invalid_distance_counter_inside = 0;
     vamp::planning::collision_counter = 0;
     vamp::planning::unable_to_project_counter = 0;
+    typename Robot::template ConfigurationBlock<rake> block;
+    for (auto i = 0U; i < Robot::dimension; ++i)
+        block[i] = Robot::Configuration(start).broadcast(i);
+    auto valid = Robot::template fkcc_debug<rake>(env_v, block);
+    std::cout << "Start valid: " << valid.first.size() << " " << valid.second.size() << std::endl;
+    for(auto i = 0U; i < valid.first.size(); ++i){
+        // for(auto j = 0U; j < valid.first[i].size(); ++j)
+        //     std::cout << valid.first[i][j] << " ";
+        std::cout << valid.first[i].size() << " ";
+    }
+    std::cout << std::endl;
+
+    for (auto i = 0U; i < Robot::dimension; ++i)
+        block[i] = Robot::Configuration(goal).broadcast(i);
+    valid = Robot::template fkcc_debug<rake>(env_v, block);
+    std::cout << "Goal valid: " << valid.first.size() << " " << valid.second.size() << std::endl;
 
     std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
     auto result =
