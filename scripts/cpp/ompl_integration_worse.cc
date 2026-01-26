@@ -144,13 +144,13 @@ inline static auto vamp_to_ompl(const Configuration &c, ob::State *state)
 class CustomConstraint : public ob::Constraint
 {
 public:
-    vamp::planning::TaskSpaceConstraint<Robot, rake>& original_taskspace_constraint;
+   mutable vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>> constraints;
 private:
     std::weak_ptr<ob::ProjectedStateSpace> ps_space_;
-public:
-    CustomConstraint(vamp::planning::TaskSpaceConstraint<Robot, rake>& x)
+   public:
+    CustomConstraint(vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>& x)
         : ob::Constraint(Robot::dimension, Robot::dimension - 6), 
-        original_taskspace_constraint(x)
+        constraints(x)
     {
     }
  
@@ -224,7 +224,7 @@ public:
         ConfigurationBlock block = turn_configuration_into_configuration_block(configuration);
         ConfigurationBlock last_projected_block;
         //std::cout << "After converted to configuration block, it is " << block << "\n";
-        bool result = original_taskspace_constraint.projectConfiguration(block, last_projected_block);
+        bool result = constraints.projectConfiguration(block, last_projected_block);
         //std::cout << "After pojection, the configuration block is " << block << "\n";
         //std::cout << "Result of projection is " << result << "\n";
         typename Robot::ConfigurationArray last_projected;
@@ -244,7 +244,7 @@ public:
     {
         ConfigurationBlock block =  turn_configuration_into_configuration_block(configuration);
         //std::cout << "block is" << block << "\n";
-        auto simd_float_vector = original_taskspace_constraint.distanceToConstraint(block);
+        auto simd_float_vector = constraints.distanceToConstraint(block);
         //std::cout << "distanceToConstraint returned " << simd_float_vector << "\n";
         //std::cout << "is the start position on the manifold?? Answer: " << simd_float_vector.test_all_less_equal(0.0001F) << "\n";
         double dist = simd_float_vector[{0, 0}];
@@ -365,9 +365,21 @@ struct VAMPMotionValidator : public ob::MotionValidator
 auto main(int argc, char **) -> int
 {
 
-    const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
-    const auto in_hand_pose = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
-    vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(in_hand_pose, target_pose, std::make_pair(lower_bound, upper_bound));
+    std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
+
+    eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
+    Eigen::Matrix<float, 4, 4> T_identity;
+    T_identity << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
+    
+    eef_transforms_ref_frame_w_world[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T_identity);
+
+
+    vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
+        eef_transforms_ref_frame_w_world,
+        eef_transforms,
+        std::make_pair(tsr_lower_bound, tsr_upper_bound)
+    );
 
     bool optimize = false;  // Flag - if true, will spend entire planning budget optimizing, otherwise exit on
                             // first solution
@@ -413,6 +425,9 @@ auto main(int argc, char **) -> int
     space->setBounds(bounds);
     
     // Set up the constraint manifold
+    vamp::planning::ComposableConstraints<Robot, rake, decltype(tsr_constraint)> task_constraint(
+        tsr_constraint
+    );
     std::shared_ptr<ob::Constraint> constraint = std::make_shared<CustomConstraint>(task_constraint);
 
 
@@ -478,7 +493,6 @@ auto main(int argc, char **) -> int
         outfile << std::fixed << std::setprecision(10);
         std::cout << "Raw path length: " << path->length() << std::endl;
         std::cout << "Raw path states: " << path->getStateCount() << std::endl;
-        std::cout << "Found solution in " << nanoseconds / 1e6 << "ms!\n";
 
         path->print(std::cout);
         for (std::size_t i = 0; i < path->getStateCount(); ++i)
@@ -498,7 +512,8 @@ auto main(int argc, char **) -> int
     // Only accept exact solutions
     if (solved == ob::PlannerStatus::EXACT_SOLUTION)
     {
-        std::cout << "Simplfying..." << std::endl;
+        std::cout << "Found solution in " << nanoseconds / 1e6 << "ms!\n";
+        /*std::cout << "Simplfying..." << std::endl;
 
         // Simplify the path using OMPL's path simplification
         const ob::PathPtr &path = pdef->getSolutionPath();
@@ -520,6 +535,7 @@ auto main(int argc, char **) -> int
         std::cout << "Simplified solution:" << std::endl;
 
         path_geometric.print(std::cout);
+        */
     }
     else
     {

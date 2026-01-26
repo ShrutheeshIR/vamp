@@ -46,7 +46,7 @@ using ConfigurationBlock = typename Robot::template ConfigurationBlock<rake>;
 
 // Maximum planning time
 static constexpr float planning_time = 30.0;
-static constexpr int maxIterations = 500;
+static constexpr int maxIterations = 10000;
 
 // Maximum simplification time
 static constexpr float simplification_time = 1.0;
@@ -146,7 +146,7 @@ inline static auto vamp_to_ompl(const Configuration &c, ob::State *state)
 class CustomConstraint : public ob::Constraint
 {
 public:
-     mutable vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>> constraints;
+    mutable vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>> constraints;
 
 private:
     std::weak_ptr<ob::ProjectedStateSpace> ps_space_;
@@ -547,6 +547,7 @@ auto main(int argc, char **) -> int
         std::cout << "Found solution in " << nanoseconds / 1e6 << "ms! Simplfying..." << std::endl;
 
         // Simplify the path using OMPL's path simplification
+        /*
         const ob::PathPtr &path = pdef->getSolutionPath();
         og::PathGeometric &path_geometric = static_cast<og::PathGeometric &>(*path);
 
@@ -566,6 +567,7 @@ auto main(int argc, char **) -> int
         std::cout << "Simplified solution:" << std::endl;
 
         path_geometric.print(std::cout);
+        */
     }
     else
     {
