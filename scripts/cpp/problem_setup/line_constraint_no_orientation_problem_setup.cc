@@ -1,4 +1,4 @@
-#include "line_constraint_problem_setup.hh"
+#include "line_constraint_no_orientation_problem_setup.hh"
 
 const Robot::ConfigurationArray start = {1.016, 0.688, 0.087, -1.281, -0.06, 1.955, 1.891};
 const Robot::ConfigurationArray goal = {-1.184, 0.689, 0.154, -1.274, -0.106, 1.955, -0.24};

@@ -28,8 +28,10 @@
 #include <ompl/base/ConstrainedSpaceInformation.h>
 #include <vamp/planning/task_space_constraint.hh>
 #include <vamp/planning/validate_constraint.hh>
+#include <ompl/base/PlannerTerminationCondition.h>
+#include <ompl/base/terminationconditions/IterationTerminationCondition.h>
 #include <csignal>
-#include "problem_setup/plane_constraint_problem_setup.hh"
+#include "problem_setup/plane_constraint_no_orientation_problem_setup.hh"
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
 
@@ -44,6 +46,7 @@ using ConfigurationBlock = typename Robot::template ConfigurationBlock<rake>;
 
 // Maximum planning time
 static constexpr float planning_time = 30.0;
+static constexpr int maxIterations = 500;
 
 // Maximum simplification time
 static constexpr float simplification_time = 1.0;
@@ -181,7 +184,6 @@ public:
     // for now, I left out the function, since it might not be necessary.
     bool project(ob::State *state) const override
     {
-        std::cout << "Our project state version is called!\n";
         std::shared_ptr<ob::ProjectedStateSpace> pss_ptr = getProjectedStateSpace();
         auto pss = pss_ptr.get();
         if (!pss) {
@@ -283,7 +285,6 @@ struct VAMPStateValidator : public ob::StateValidityChecker
     auto isValid(const ob::State *state) const -> bool override
     {
         // Convert OMPL to VAMP vector and validate
-        std::cout << "our implemtnation of is valid is called!\n";
        auto *pss = dynamic_cast<ob::ProjectedStateSpace*>(si_->getStateSpace().get());
         if (!pss)
             throw ompl::Exception("Expected ProjectedStateSpace");
@@ -301,7 +302,7 @@ struct VAMPStateValidator : public ob::StateValidityChecker
         //const ob::State *ambient = projState->getAmbientState();
         //si_->getStateSpace()->printState(ambient, std::cout);
         auto result = custom_constraint->isSatisfied(c);
-        std::cout << "At the end of isValid for stateValdiator, is valid returns " << result << "\n";
+        //std::cout << "At the end of isValid for stateValdiator, is valid returns " << result << "\n";
         return result;
     }
     
@@ -371,7 +372,7 @@ struct VAMPMotionValidator : public ob::MotionValidator
 auto main(int argc, char **) -> int
 {
 
-     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
+    std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
 
     eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
@@ -436,6 +437,29 @@ auto main(int argc, char **) -> int
     );
     std::shared_ptr<ob::Constraint> constraint = std::make_shared<CustomConstraint>(task_constraint);
 
+    // Code used for finding a feasible start and goal if the start and goal are not good
+    typename Robot::template ConfigurationBlock<rake> block, projected_block;
+    // HACK: broadcast() implicitly assumes that the rake is exactly VectorWidth
+
+    for (auto i = 0U; i < Robot::dimension; ++i)
+    {
+        block[i] = Robot::Configuration(goal).broadcast(i);
+    }
+
+    std::cout << "Block values: ";
+    for (auto i = 0U; i < Robot::dimension; ++i){
+        std::cout << block[{i, 0}] << ", ";
+    }
+    std::cout << std::endl;
+
+
+    bool ableToProject =  tsr_constraint.projectConfiguration(block, projected_block);
+
+    std::cout << "New Block values: ";
+    for (auto i = 0U; i < Robot::dimension; ++i){
+        std::cout << projected_block[{i, 0}] << ", ";
+    }
+    std::cout << std::endl;
 
     // Combine the ambient space and the constraint into a constrained state space.
     auto css = std::make_shared<ob::ProjectedStateSpace>(space, constraint);
@@ -483,12 +507,14 @@ auto main(int argc, char **) -> int
     auto planner = std::make_shared<og::RRTConnect>(csi);
 
     planner->setProblemDefinition(pdef);
-    planner->setRange(1.0);
+    planner->setRange(2.0);
     planner->setup();
 
     // Solve the problem
+    ompl::base::PlannerTerminationCondition ptc = ompl::base::IterationTerminationCondition(maxIterations);
     auto start_time = std::chrono::steady_clock::now();
-    ob::PlannerStatus solved = planner->ob::Planner::solve(planning_time);
+    
+    ob::PlannerStatus solved = planner->solve(ptc);
     auto nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
 
     if (solved)

@@ -19,3 +19,5 @@ venv/
 /resources/panda/*.pkl
 src/vamp/_core/*.pyi
 /.mypy_cache/
+/pyroki
+/ompl

@@ -1,4 +1,4 @@
-#include "plane_constraint_problem_setup.hh"
+#include "plane_constraint_no_orientation_problem_setup.hh"
 
 const Robot::ConfigurationArray start = {-0.855292,1.12975,0.0380571,-0.69921,0.0141439,1.73613,0.0000393391};
 const Robot::ConfigurationArray goal = {0.841046,1.13069,-0.0242863,-0.697919,-0.00982904,1.74158,0.000353813};
