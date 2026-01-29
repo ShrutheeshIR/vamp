@@ -140,13 +140,13 @@ endif()
 
 # C++ demos
 if(VAMP_BUILD_CPP_DEMO)
-    add_library(vamp_problem_setup
-    scripts/cpp/problem_setup/plane_constraint_no_orientation_problem_setup.cc
-    scripts/cpp/problem_setup/plane_constraint_no_orientation_problem_setup.hh
-    )
-    target_link_libraries(vamp_problem_setup
-    PUBLIC vamp_cpp
-    )
+    #add_library(vamp_problem_setup
+    #scripts/cpp/problem_setup/plane_constraint_problem_setup.cc
+    #scripts/cpp/problem_setup/plane_constraint_problem_setup.hh
+    #)
+    #target_link_libraries(vamp_problem_setup
+    #PUBLIC vamp_cpp
+    #)
     add_executable(vamp_rrtc_example scripts/cpp/rrtc_example.cc)
     target_link_libraries(vamp_rrtc_example PRIVATE vamp_cpp)
 
@@ -158,7 +158,7 @@ if(VAMP_BUILD_CPP_DEMO)
 
   add_executable(vamp_crrtc_spheres scripts/cpp/vamp_crrtc_spheres.cc)
   target_link_libraries(vamp_crrtc_spheres PRIVATE vamp_cpp)
-  target_link_libraries(vamp_crrtc_spheres PRIVATE vamp_problem_setup)
+  #target_link_libraries(vamp_crrtc_spheres PRIVATE vamp_problem_setup)
 
   add_executable(vamp_bimanual_constraint scripts/cpp/bimanual_constraint.cc)
   target_link_libraries(vamp_bimanual_constraint PRIVATE vamp_cpp)
@@ -173,11 +173,11 @@ if(VAMP_BUILD_OMPL_DEMO)
     if(ompl_FOUND)
         add_executable(vamp_ompl_integration scripts/cpp/ompl_integration.cc)
         target_link_libraries(vamp_ompl_integration PRIVATE ompl::ompl vamp_cpp)
-        target_link_libraries(vamp_ompl_integration PRIVATE vamp_problem_setup)
+        #target_link_libraries(vamp_ompl_integration PRIVATE vamp_problem_setup)
 
         add_executable(vamp_ompl_integration_worse scripts/cpp/ompl_integration_worse.cc)
         target_link_libraries(vamp_ompl_integration_worse PRIVATE ompl::ompl vamp_cpp)
-        target_link_libraries(vamp_ompl_integration_worse PRIVATE vamp_problem_setup)
+        #target_link_libraries(vamp_ompl_integration_worse PRIVATE vamp_problem_setup)
 
         # Disable strict warnings for demos to maintain compatibility
         if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")

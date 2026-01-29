@@ -30,7 +30,7 @@
 #include <vamp/planning/validate_constraint.hh>
 #include <ompl/base/PlannerTerminationCondition.h>
 #include <ompl/base/terminationconditions/IterationTerminationCondition.h>
-#include "problem_setup/plane_constraint_no_orientation_problem_setup.hh"
+#include "problem_setup/plane_constraint_problem_setup.hh"
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
 
@@ -479,7 +479,13 @@ auto main(int argc, char **) -> int
     planner->setProblemDefinition(pdef);
     planner->setRange(2.0);
     planner->setup();
-    ompl::base::PlannerTerminationCondition ptc = ompl::base::IterationTerminationCondition(maxIterations);
+    auto counter = std::make_shared<unsigned int>(0);
+
+    // Create a PlannerTerminationCondition with a lambda
+    ompl::base::PlannerTerminationCondition ptc([counter, maxIterations]() mutable {
+        (*counter)++;
+        return *counter >= maxIterations;
+    });
     // Solve the problem
     auto start_time = std::chrono::steady_clock::now();
     ob::PlannerStatus solved = planner->solve(ptc);
@@ -493,6 +499,7 @@ auto main(int argc, char **) -> int
         outfile << std::fixed << std::setprecision(10);
         std::cout << "Raw path length: " << path->length() << std::endl;
         std::cout << "Raw path states: " << path->getStateCount() << std::endl;
+        std::cout << "Number of iterations: " << *counter << "\n";
 
         path->print(std::cout);
         for (std::size_t i = 0; i < path->getStateCount(); ++i)

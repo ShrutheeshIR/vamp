@@ -45,12 +45,39 @@ struct Attempt {
 
 auto main(int, char **) -> int
 {
+    
+    //auto start_arr = extract_config(start, 0);  // config 0, lane 0
+    //auto goal_arr  = extract_config(goal, 0);
+    std::array<float, 7> block;
+    Robot::Configuration q(start);
+    // HACK: broadcast() implicitly assumes that the rake is exactly VectorWidth
+
+    for (auto i = 0U; i < Robot::dimension; ++i)
+    {
+        block[i] = static_cast<float>(q[{0, i}]);
+    }
+
+    std::cout << "Block values: ";
+    for (auto i = 0U; i < Robot::dimension; ++i){
+        std::cout << block[i] << ", ";
+    }
+    std::cout << std::endl;
 
 
+    auto result = Robot::eefk(block);
+
+    const auto& T = result[0];              // Isometry3f
+    Eigen::Vector3f pos = T.translation();  // XYZ
+
+    std::cout << "EEF position: "
+            << pos.x() << ", "
+            << pos.y() << ", "
+            << pos.z() << "\n";
+    //std::cout << "Start xyz is " << Robot::eefk(start_arr) << " and goal xyz is " << Robot::eefk(goal_arr ) << "\n";
     // Setup RRTC and plan
     vamp::planning::RRTCSettings rrtc_settings;
 
-    float ranges[] = {2.0};
+    float ranges[] = {1.0};
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     bool dd[] = {false, true};
     vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};

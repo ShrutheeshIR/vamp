@@ -1,15 +1,40 @@
 #pragma once
 #include <vector>
 #include <array>
+#include <Eigen/Dense>
 #include <vamp/robots/panda.hh>
 
 using Robot = vamp::robots::Panda;
-extern const Robot::ConfigurationArray goal;
-extern const Robot::ConfigurationArray start;
-extern const std::vector<std::array<float, 3>> problem;
-extern const float radius;
 
-extern const std::array<float, 6 * Robot::n_eef> tsr_lower_bound;
-extern const std::array<float, 6 * Robot::n_eef> tsr_upper_bound;
+inline const Robot::ConfigurationArray start = {-0.830087, 0.976207, 0.0227157, -0.991399, -0.0196006, 1.95428, -0.0185915};
 
-extern const Eigen::Matrix<float, 4, 4> T;
+inline const Robot::ConfigurationArray goal = {0.917846, 0.987762, -0.206241, -0.975562, 0.198935, 1.94586, 1.52356};
+
+inline const std::vector<std::array<float, 3>> problem = {
+    {0.543325, 0, 0.3},
+    {0.543325, 0.1, 0.4},
+    {0.543325, 0.1, 0.2},
+    {0.543325, 0.15, 0.47},
+    {0.543325, 0.15, 0.13},
+    {0.543325, 0.25, 0.40},
+    {0.543325, 0.25, 0},
+};
+
+inline constexpr float radius = 0.02f;
+
+inline const std::array<float, 6> tsr_lower_bound = {
+    -0.005, -10.01, -10.01, -0.01, -0.01, -0.01
+};
+
+inline const std::array<float, 6> tsr_upper_bound = {
+    0.005, 10.01, 10.01, 0.01, 0.01, 0.01
+};
+
+inline const Eigen::Matrix<float, 4, 4> T = []{
+    Eigen::Matrix<float, 4, 4> m;
+    m << 1,0,0,   0.543325,
+         0,-1,0,  0.570738,
+         0,0,-1,  0.121557,
+         0,0,0,   1;
+    return m;
+}();

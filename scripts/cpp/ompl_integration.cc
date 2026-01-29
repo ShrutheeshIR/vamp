@@ -31,7 +31,7 @@
 #include <ompl/base/PlannerTerminationCondition.h>
 #include <ompl/base/terminationconditions/IterationTerminationCondition.h>
 #include <csignal>
-#include "problem_setup/plane_constraint_no_orientation_problem_setup.hh"
+#include "problem_setup/plane_constraint_problem_setup.hh"
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
 
@@ -46,7 +46,7 @@ using ConfigurationBlock = typename Robot::template ConfigurationBlock<rake>;
 
 // Maximum planning time
 static constexpr float planning_time = 30.0;
-static constexpr int maxIterations = 10000;
+static constexpr int maxIterations = 5000;
 
 // Maximum simplification time
 static constexpr float simplification_time = 1.0;
@@ -224,8 +224,9 @@ public:
     {
         //std::cout << "Project: COnfiguration is " << configuration << "\n";
         ConfigurationBlock block = turn_configuration_into_configuration_block(configuration);
+        ConfigurationBlock last_projected_block;
         //std::cout << "After converted to configuration block, it is " << block << "\n";
-        bool result = constraints.projectConfiguration(block, block);
+        bool result = constraints.projectConfiguration(block, last_projected_block);
         //std::cout << "After pojection, the configuration block is " << block << "\n";
         //std::cout << "Result of projection is " << result << "\n";
         typename Robot::ConfigurationArray last_projected;
@@ -233,7 +234,7 @@ public:
         {
             for (auto j = 0U; j < Robot::dimension; j++)
             {
-                last_projected[j] = block[{j, i}];
+                last_projected[j] = last_projected_block[{j, i}];
             }
         }
         configuration = Robot::Configuration(last_projected);
@@ -443,7 +444,7 @@ auto main(int argc, char **) -> int
 
     for (auto i = 0U; i < Robot::dimension; ++i)
     {
-        block[i] = Robot::Configuration(goal).broadcast(i);
+        block[i] = Robot::Configuration(start).broadcast(i);
     }
 
     std::cout << "Block values: ";
@@ -507,11 +508,17 @@ auto main(int argc, char **) -> int
     auto planner = std::make_shared<og::RRTConnect>(csi);
 
     planner->setProblemDefinition(pdef);
-    planner->setRange(2.0);
+    planner->setRange(1.0);
     planner->setup();
 
     // Solve the problem
-    ompl::base::PlannerTerminationCondition ptc = ompl::base::IterationTerminationCondition(maxIterations);
+    auto counter = std::make_shared<unsigned int>(0);
+
+    // Create a PlannerTerminationCondition with a lambda
+    ompl::base::PlannerTerminationCondition ptc([counter, maxIterations]() mutable {
+        (*counter)++;
+        return *counter >= maxIterations;
+    });
     auto start_time = std::chrono::steady_clock::now();
     
     ob::PlannerStatus solved = planner->solve(ptc);
@@ -525,6 +532,7 @@ auto main(int argc, char **) -> int
         outfile << std::fixed << std::setprecision(10);
         std::cout << "Raw path length: " << path->length() << std::endl;
         std::cout << "Raw path states: " << path->getStateCount() << std::endl;
+        std::cout << "Number of iterations: " << *counter << "\n";
 
         path->print(std::cout);
         for (std::size_t i = 0; i < path->getStateCount(); ++i)
