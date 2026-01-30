@@ -30,7 +30,7 @@
 #include <vamp/planning/validate_constraint.hh>
 #include <ompl/base/PlannerTerminationCondition.h>
 #include <ompl/base/terminationconditions/IterationTerminationCondition.h>
-#include "problem_setup/plane_constraint_problem_setup.hh"
+#include "script_parameter_setup.hh"
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
 
@@ -45,7 +45,7 @@ using ConfigurationBlock = typename Robot::template ConfigurationBlock<rake>;
 
 // Maximum planning time
 static constexpr float planning_time = 1200.0;
-static constexpr int maxIterations = 1000;
+static constexpr int maxIterations = 10000;
 // Maximum simplification time
 static constexpr float simplification_time = 1.0;
 
@@ -345,7 +345,7 @@ struct VAMPMotionValidator : public ob::MotionValidator
 
         Configuration configuration2 = double_vector_to_vamp(extractStateReals(s2, css));
         if (!(custom_constraint->isSatisfied(configuration2))) {
-            std::cout << "configuration2 is not satisfied within checkMotion!\n";
+            //std::cout << "configuration2 is not satisfied within checkMotion!\n";
             return false;
         }
 
@@ -362,9 +362,9 @@ struct VAMPMotionValidator : public ob::MotionValidator
     }
 };
 
-auto main(int argc, char **) -> int
+auto main(int argc, char **argv) -> int
 {
-
+    ProgramParameters param = parse_args(argc, argv);
     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
 
     eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
@@ -381,19 +381,12 @@ auto main(int argc, char **) -> int
         std::make_pair(tsr_lower_bound, tsr_upper_bound)
     );
 
-    bool optimize = false;  // Flag - if true, will spend entire planning budget optimizing, otherwise exit on
-                            // first solution
-
-    // Set optimize flag if another argument is provided
-    if (argc == 2)
-    {
-        optimize = true;
-    }
 
     // Build sphere cage environment
     EnvironmentInput environment;
     std::ofstream outfile_sph("spheres.txt");
-    for (const auto &sphere : problem)
+    std::vector<std::array<float, 3>> obstacles = problem(param.obstacle_file);
+    for (const auto &sphere : obstacles)
     {
         outfile_sph << sphere[0] << "," << sphere[1] << "," << sphere[2] << "," << radius << "\n";
         environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
@@ -467,7 +460,7 @@ auto main(int argc, char **) -> int
     auto obj = std::make_shared<ob::PathLengthOptimizationObjective>(csi);
     pdef->setOptimizationObjective(obj);
 
-    if (not optimize)
+    if (not param.optimize)
     {
         // Set planner to terminate as soon as a solution is found.
         obj->setCostThreshold(obj->infiniteCost());
@@ -543,11 +536,11 @@ auto main(int argc, char **) -> int
 
         path_geometric.print(std::cout);
         */
+       return 0;
     }
     else
     {
         std::cout << "No solution found" << std::endl;
+        return 1;
     }
-
-    return 0;
 }

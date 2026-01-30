@@ -14,7 +14,7 @@
 #include <vamp/robots/panda.hh>
 #include <vamp/random/halton.hh>
 #include <fstream>
-#include "problem_setup/plane_constraint_problem_setup.hh"
+#include "script_parameter_setup.hh"
 
 using Robot = vamp::robots::Panda;
 static constexpr const std::size_t rake = vamp::FloatVectorWidth;
@@ -43,11 +43,12 @@ struct Attempt {
 //     return o << a.range << ", " << a.dynamic_domain << ", " << a.proj_method << ", " << a.descend_rate << ", " << a.planning_time/1e6 << ", " << a.planning_iterations << std::endl;
 // }
 
-auto main(int, char **) -> int
+auto main(int argc, char ** argv) -> int
 {
     
     //auto start_arr = extract_config(start, 0);  // config 0, lane 0
     //auto goal_arr  = extract_config(goal, 0);
+    /*
     std::array<float, 7> block;
     Robot::Configuration q(start);
     // HACK: broadcast() implicitly assumes that the rake is exactly VectorWidth
@@ -57,7 +58,7 @@ auto main(int, char **) -> int
         block[i] = static_cast<float>(q[{0, i}]);
     }
 
-    std::cout << "Block values: ";
+    std::cout << "Start Block values: ";
     for (auto i = 0U; i < Robot::dimension; ++i){
         std::cout << block[i] << ", ";
     }
@@ -69,15 +70,37 @@ auto main(int, char **) -> int
     const auto& T = result[0];              // Isometry3f
     Eigen::Vector3f pos = T.translation();  // XYZ
 
-    std::cout << "EEF position: "
+    std::cout << "EEF position for start: "
             << pos.x() << ", "
             << pos.y() << ", "
             << pos.z() << "\n";
-    //std::cout << "Start xyz is " << Robot::eefk(start_arr) << " and goal xyz is " << Robot::eefk(goal_arr ) << "\n";
-    // Setup RRTC and plan
-    vamp::planning::RRTCSettings rrtc_settings;
+    Robot::Configuration q1(goal);
+     for (auto i = 0U; i < Robot::dimension; ++i)
+    {
+        block[i] = static_cast<float>(q1[{0, i}]);
+    }
+     std::cout << "Goal Block values: ";
+    for (auto i = 0U; i < Robot::dimension; ++i){
+        std::cout << block[i] << ", ";
+    }
+    std::cout << std::endl;
 
-    float ranges[] = {1.0};
+
+    auto result1 = Robot::eefk(block);
+
+    const auto& T1 = result1[0];              // Isometry3f
+    Eigen::Vector3f pos1 = T1.translation();  // XYZ
+     std::cout << "EEF position for goal: "
+            << pos1.x() << ", "
+            << pos1.y() << ", "
+            << pos1.z() << "\n";
+    //std::cout << "Start xyz is " << Robot::eefk(start_arr) << " and goal xyz is " << Robot::eefk(goal_arr ) << "\n";
+    */
+    // Setup RRTC and plan
+
+    vamp::planning::RRTCSettings rrtc_settings;
+    ProgramParameters param = parse_args(argc, argv);
+    float ranges[] = {1.0, 2.0};
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     bool dd[] = {false, true};
     vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};
@@ -99,7 +122,8 @@ auto main(int, char **) -> int
     // Build sphere cage environment
     EnvironmentInput environment;
     std::ofstream outfile_sph("spheres.txt");
-    for (const auto &sphere : problem)
+    std::vector<std::array<float, 3>> obstacles = problem(param.obstacle_file);
+    for (const auto &sphere : obstacles)
     {
         outfile_sph << sphere[0] << "," << sphere[1] << "," << sphere[2] << "," << radius << "\n";
         environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
@@ -229,5 +253,5 @@ auto main(int, char **) -> int
     std::cout << std::endl << Robot::eefk(goal)[0].matrix() << std::endl;
     std::cout << std::endl << Robot::eefk(start)[0].matrix() << std::endl;
 
-    return 0;
+    return succ_attempts.empty() ? 1 : 0;
 }

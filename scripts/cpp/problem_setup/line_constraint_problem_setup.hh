@@ -10,26 +10,7 @@ inline const Robot::ConfigurationArray start = {1.016, 0.688, 0.087, -1.281, -0.
 
 inline const Robot::ConfigurationArray goal = {-1.184, 0.689, 0.154, -1.274, -0.106, 1.955, -0.24};
 
-inline const std::vector<std::array<float, 3>> problem = {
-    // {0.55, 0, 0.25},
-    // {0.55, 0, 0.50},
-    // {0.55, 0, 0.60},
-    {0.56, 0, 0.450},
-    {0.1, 0, 0.7},
-    // {0.35, 0.35, 0.25},
-    {0, 0.55, 0.25},
-    {-0.55, 0, 0.25},
-    {-0.35, -0.35, 0.25},
-    {0, -0.55, 0.25},
-    // {0.35, -0.35, 0.25},
-    {0.35, 0.35, 0.8},
-    {0, 0.55, 0.8},
-    {-0.35, 0.35, 0.8},
-    {-0.55, 0, 0.8},
-    {-0.35, -0.35, 0.8},
-    {0, -0.55, 0.8},
-    {0.35, -0.35, 0.8},
-};
+inline const std::string default_obstacle_filepath = "scripts/cpp/problem_setup/obstacle_files/line_constraint_problem.txt";
 
 inline constexpr float radius = 0.15;
 

@@ -31,7 +31,8 @@
 #include <ompl/base/PlannerTerminationCondition.h>
 #include <ompl/base/terminationconditions/IterationTerminationCondition.h>
 #include <csignal>
-#include "problem_setup/plane_constraint_problem_setup.hh"
+#include "script_parameter_setup.hh"
+
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
 
@@ -46,10 +47,11 @@ using ConfigurationBlock = typename Robot::template ConfigurationBlock<rake>;
 
 // Maximum planning time
 static constexpr float planning_time = 30.0;
-static constexpr int maxIterations = 5000;
+static constexpr int maxIterations = 900000;
 
 // Maximum simplification time
 static constexpr float simplification_time = 1.0;
+
 
 // Helper function to convert projected state into a double veector
 std::vector<double> extractStateReals(
@@ -370,9 +372,9 @@ struct VAMPMotionValidator : public ob::MotionValidator
     
 };
 
-auto main(int argc, char **) -> int
+auto main(int argc, char **argv) -> int
 {
-
+    ProgramParameters param = parse_args(argc, argv);
     std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
 
     eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
@@ -388,20 +390,13 @@ auto main(int argc, char **) -> int
         eef_transforms,
         std::make_pair(tsr_lower_bound, tsr_upper_bound)
     );
-    
-    bool optimize = false;  // Flag - if true, will spend entire planning budget optimizing, otherwise exit on
-                            // first solution
 
-    // Set optimize flag if another argument is provided
-    if (argc == 2)
-    {
-        optimize = true;
-    }
 
     // Build sphere cage environment
     EnvironmentInput environment;
     std::ofstream outfile_sph("spheres.txt");
-    for (const auto &sphere : problem)
+    std::vector<std::array<float, 3>> obstacles = problem(param.obstacle_file);
+    for (const auto &sphere : obstacles)
     {
         outfile_sph << sphere[0] << "," << sphere[1] << "," << sphere[2] << "," << radius << "\n";
         environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
@@ -439,6 +434,7 @@ auto main(int argc, char **) -> int
     std::shared_ptr<ob::Constraint> constraint = std::make_shared<CustomConstraint>(task_constraint);
 
     // Code used for finding a feasible start and goal if the start and goal are not good
+    /*
     typename Robot::template ConfigurationBlock<rake> block, projected_block;
     // HACK: broadcast() implicitly assumes that the rake is exactly VectorWidth
 
@@ -447,20 +443,41 @@ auto main(int argc, char **) -> int
         block[i] = Robot::Configuration(start).broadcast(i);
     }
 
-    std::cout << "Block values: ";
+    std::cout << "Start Block values: ";
     for (auto i = 0U; i < Robot::dimension; ++i){
         std::cout << block[{i, 0}] << ", ";
     }
     std::cout << std::endl;
 
 
-    bool ableToProject =  tsr_constraint.projectConfiguration(block, projected_block);
+    bool ableToProject = task_constraint.projectConfiguration(block, projected_block);
 
-    std::cout << "New Block values: ";
+    std::cout << "New STart Block values: ";
     for (auto i = 0U; i < Robot::dimension; ++i){
         std::cout << projected_block[{i, 0}] << ", ";
     }
     std::cout << std::endl;
+
+    for (auto i = 0U; i < Robot::dimension; ++i)
+    {
+        block[i] = Robot::Configuration(goal).broadcast(i);
+    }
+
+    std::cout << "Goal Block values: ";
+    for (auto i = 0U; i < Robot::dimension; ++i){
+        std::cout << block[{i, 0}] << ", ";
+    }
+    std::cout << std::endl;
+
+
+    ableToProject =  task_constraint.projectConfiguration(block, projected_block);
+
+    std::cout << "New Goal Block values: ";
+    for (auto i = 0U; i < Robot::dimension; ++i){
+        std::cout << projected_block[{i, 0}] << ", ";
+    }
+    std::cout << std::endl;
+    */
 
     // Combine the ambient space and the constraint into a constrained state space.
     auto css = std::make_shared<ob::ProjectedStateSpace>(space, constraint);
@@ -498,7 +515,7 @@ auto main(int argc, char **) -> int
     auto obj = std::make_shared<ob::PathLengthOptimizationObjective>(csi);
     pdef->setOptimizationObjective(obj);
 
-    if (not optimize)
+    if (not param.optimize)
     {
         // Set planner to terminate as soon as a solution is found.
         obj->setCostThreshold(obj->infiniteCost());
@@ -508,7 +525,7 @@ auto main(int argc, char **) -> int
     auto planner = std::make_shared<og::RRTConnect>(csi);
 
     planner->setProblemDefinition(pdef);
-    planner->setRange(1.0);
+    planner->setRange(2.0);
     planner->setup();
 
     // Solve the problem
@@ -576,12 +593,14 @@ auto main(int argc, char **) -> int
 
         path_geometric.print(std::cout);
         */
+       return 0;
     }
     else
     {
         std::cout << "No solution found" << std::endl;
+        return 1;
     }
 
-    return 0;
+    
 }
 

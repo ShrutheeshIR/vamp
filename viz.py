@@ -479,8 +479,8 @@ def add_spheres(server, sphere_positions = None):
 def add_constraint_plane(server):
     box_handle = server.scene.add_box(  
         name="my_cuboid",  
-        dimensions=(0.02, 5.0, 5.0),  # (width, height, depth)  
-        position=(0.54, 0.0, 0.0),  
+        dimensions=(0.02, 5.0, 0.02),  # (width, height, depth)  
+        position=(0.3486, 0.647752, 0.24),  
         color=(0, 255, 0),  # Green color  
         opacity=0.5
     )    
