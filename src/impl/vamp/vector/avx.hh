@@ -309,6 +309,34 @@ namespace vamp
             return _mm256_sub_ps(l, r);
         }
 
+        // Computes inter-lane differences: (v0-start, v1-v0, v2-v1, ..., v7-v6)
+        template <unsigned int = 0>
+        inline static constexpr auto inter_lane_distance(VectorT v, ScalarT start) noexcept -> VectorT
+        {
+            // Build a vector of previous-lane values, with lane0 set to `start`.
+            // Start by permuting to [v0, v0, v1, v2, v3, v4, v5, v6]
+            const __m256 shifted = _mm256_permutevar8x32_ps(v, _mm256_setr_epi32(0, 0, 1, 2, 3, 4, 5, 6));
+
+            // Replace lane0 with `start` while keeping the other lanes as-is.
+            const __m256 start_vec = _mm256_set1_ps(start);
+            const __m256i mask = _mm256_setr_epi32(-1, 0, 0, 0, 0, 0, 0, 0);
+            const __m256 prev = _mm256_blendv_ps(shifted, start_vec, _mm256_castsi256_ps(mask));
+
+            // Subtract previous-lane vector from the original to get per-lane deltas.
+            return _mm256_sub_ps(v, prev);
+        }
+
+        // Overload: start value provided as a VectorT (only lane0 used). Computes (v0-start_vec[0], v1-v0, ..., v7-v6)
+        // template <unsigned int = 0>
+        // inline static constexpr auto inter_lane_distance(VectorT v, VectorT start_vec) noexcept -> VectorT
+        // {
+        //     // Build a vector of previous-lane values, with lane0 set to start_vec[0].
+        //     const __m256 shifted = _mm256_permutevar8x32_ps(v, _mm256_setr_epi32(0, 0, 1, 2, 3, 4, 5, 6));
+        //     const __m256i mask = _mm256_setr_epi32(-1, 0, 0, 0, 0, 0, 0, 0);
+        //     const __m256 prev = _mm256_blendv_ps(shifted, start_vec, _mm256_castsi256_ps(mask));
+        //     return _mm256_sub_ps(v, prev);
+        // }
+
         template <unsigned int = 0>
         inline static constexpr auto mul(VectorT l, VectorT r) noexcept -> VectorT
         {
@@ -461,6 +489,24 @@ namespace vamp
         inline static constexpr auto max(VectorT v, VectorT other) noexcept -> VectorT
         {
             return _mm256_max_ps(v, other);
+        }
+
+        // Horizontal max across lanes: returns the maximum element in the SIMD vector
+        template <unsigned int = 0>
+        inline static constexpr auto hmax(VectorT v) noexcept -> ScalarT
+        {
+            // Reduce within 128-bit halves
+            __m128 vlow = _mm256_castps256_ps128(v);
+            __m128 vhigh = _mm256_extractf128_ps(v, 1);
+            __m128 max1 = _mm_max_ps(vlow, vhigh);
+
+            // Shuffle and reduce
+            __m128 shuf1 = _mm_movehdup_ps(max1);            // (x3, x3, x1, x1)
+            __m128 max2 = _mm_max_ps(max1, shuf1);           // max of pairs
+            __m128 shuf2 = _mm_movehl_ps(shuf1, max2);       // move high lanes
+            __m128 max3 = _mm_max_ss(max2, shuf2);           // final max in lowest lane
+
+            return _mm_cvtss_f32(max3);
         }
 
         template <unsigned int = 0>

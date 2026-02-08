@@ -364,6 +364,23 @@ namespace vamp
             return D(apply<S::template floor<0>>(d()->data));
         }
 
+        inline constexpr auto inter_lane_distance(typename S::ScalarT start) const noexcept -> D
+        {
+            return D(apply<S::template inter_lane_distance<0>>(d()->data, start));
+        }
+
+        // inline constexpr auto inter_lane_distance(typename S::VectorT start_vec) const noexcept -> D
+        // {
+        //     return D(apply<S::template inter_lane_distance<0>>(d()->data, start_vec));
+        // }
+
+        // // Provide a per-row start when there is only a single SIMD vector in D
+        // template <std::size_t n_v = num_vectors, typename = std::enable_if_t<n_v == 1, bool>>
+        // inline constexpr auto inter_lane_distance(const D &start) const noexcept -> D
+        // {
+        //     return inter_lane_distance(start.data[0]);
+        // }
+
         inline constexpr auto clamp(typename S::VectorT lower, typename S::VectorT upper) const noexcept -> D
         {
             return D(apply<S::template clamp<0>>(d()->data, lower, upper));
@@ -421,6 +438,17 @@ namespace vamp
         inline constexpr auto hsum() const noexcept -> typename S::ScalarT
         {
             return S::hsum(unpack::sum_(d()->data));
+        }
+
+        inline constexpr auto hmax() const noexcept -> typename S::ScalarT
+        {
+            typename S::ScalarT m = S::hmax(d()->data[0]);
+            for (std::size_t i = 1; i < num_vectors; ++i)
+            {
+                const auto mi = S::hmax(d()->data[i]);
+                m = (m >= mi) ? m : mi;
+            }
+            return m;
         }
 
         inline constexpr auto l2_norm() const noexcept -> typename S::ScalarT
@@ -942,6 +970,17 @@ namespace vamp
                 else
                 {
                     Interface::pack(scalar_data.data());
+                }
+            }
+        }
+
+        constexpr Vector(const std::array<RowT, num_rows> &rows) noexcept
+        {
+            for (std::size_t r = 0; r < num_rows; ++r)
+            {
+                for (std::size_t v = 0; v < num_vectors_per_row; ++v)
+                {
+                    data[r * num_vectors_per_row + v] = rows[r].data[v];
                 }
             }
         }

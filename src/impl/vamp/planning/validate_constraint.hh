@@ -18,6 +18,33 @@ namespace vamp::planning
     static int unable_to_project_inside_counter = 0;
     static int collision_inside_counter = 0;
 
+    template <std::size_t rake, std::size_t dimension>
+    inline constexpr auto inter_lane_distance_block(const vamp::FloatVector<rake, dimension> &block,
+                                                    const vamp::FloatVector<dimension> &start) -> vamp::FloatVector<rake, dimension>
+    {
+        auto out = block;
+        for (std::size_t i = 0; i < dimension; ++i)
+        {
+            auto svec = start.broadcast(i);
+            out[i] = out[i].inter_lane_distance(svec[{0, 0}]);
+        }
+        return out;
+    }
+
+    // template <std::size_t rake, std::size_t dimension>
+    // inline constexpr auto inter_lane_distance_block(const vamp::FloatVector<rake, dimension> &block,
+    //                                                 const vamp::FloatVector<dimension> &start) -> vamp::FloatVector<rake, dimension>
+    // {
+    //     auto out = block;
+    //     for (std::size_t i = 0; i < dimension; ++i)
+    //     {
+    //         // Avoid element(i) on flattened buffers by using broadcast, which is shape-safe
+    //         const auto start_vec = start.broadcast(i);
+    //         out[i] = out[i].S::template inter_lane_distance<0>(out[i].d()->data[0], start_vec.d()->data[0]);
+    //     }
+    //     return out;
+    // }
+
     template <typename Robot, std::size_t rake, std::size_t resolution, typename... Constraints>
     inline constexpr auto project_constraint_vector(
         const typename Robot::Configuration &start,
@@ -37,13 +64,11 @@ namespace vamp::planning
         typename Robot::template ConfigurationBlock<rake> block;
         typename Robot::template ConfigurationBlock<rake> projected_block;
         typename Robot::template ConfigurationBlock<rake> initial_projected_block;
-        typename Robot::template ConfigurationBlock<rake> start_block;
 
         // HACK: broadcast() implicitly assumes that the rake is exactly VectorWidth
         for (auto i = 0U; i < Robot::dimension; ++i)
         {
             block[i] = start.broadcast(i) + (vector.broadcast(i) * percents);
-            start_block[i] = start.broadcast(i);
         }
 
         std::size_t n = std::max(std::ceil(distance / static_cast<float>(rake) * resolution), 1.F);
@@ -60,35 +85,50 @@ namespace vamp::planning
 
 
 
-        float max_inter_dist = 0.F;
+        // float max_inter_dist = 0.F;
 
-        // Compute inter-rake differences
-        std::array<vamp::FloatT, Robot::dimension * rake> diff_arr;
-        for (auto i = 0U; i < rake; i++)
+        auto shifted_block = inter_lane_distance_block(initial_projected_block, start);
+        auto inter_rake_distance = shifted_block[0] * shifted_block[0];
+        for (auto dim = 1U; dim < Robot::dimension; dim++)
         {
-            float inter_distance = 0.F;
-            for (auto j = 0U; j < Robot::dimension; j++)
-            {
-                if (i == 0)
-                {
-                    diff_arr[i + j * rake] = initial_projected_block[{j, i}] - start_block[{j, i}];
-                }
-                else
-                {
-                    diff_arr[i + j * rake] = initial_projected_block[{j, i}] - initial_projected_block[{j, i-1}];
-                }
-                inter_distance = inter_distance + diff_arr[i + j * rake] * diff_arr[i + j * rake];
-            }
-            if (inter_distance > 4 * (distance / rake) * (distance / rake))
+            inter_rake_distance = inter_rake_distance + shifted_block[dim] * shifted_block[dim];
+            if (inter_rake_distance.test_any_greater_equal(4 * (distance / rake) * (distance / rake)))
             {
                 invalid_distance_counter_outside++;
                 // std::cout << "Invalid config due to distance constraint" << inter_distance << " at " << i << " with max distance allowed is " << 4 * (distance / rake) * (distance / rake) << std::endl;
                 return false;
             }
-            max_inter_dist = std::max(max_inter_dist, inter_distance);
+
         }
-        max_inter_dist = std::sqrt(max_inter_dist);
-        typename Robot::template ConfigurationBlock<rake> shifted_block = typename Robot::template ConfigurationBlock<rake>(diff_arr);
+        // auto max_inter_dist = inter_rake_distance.sqrt();
+
+        // Compute inter-rake differences
+        // std::array<vamp::FloatT, Robot::dimension * rake> diff_arr;
+        // for (auto i = 0U; i < rake; i++)
+        // {
+        //     float inter_distance = 0.F;
+        //     for (auto j = 0U; j < Robot::dimension; j++)
+        //     {
+        //         if (i == 0)
+        //         {
+        //             diff_arr[i + j * rake] = initial_projected_block[{j, i}] - start_block[{j, i}];
+        //         }
+        //         else
+        //         {
+        //             diff_arr[i + j * rake] = initial_projected_block[{j, i}] - initial_projected_block[{j, i-1}];
+        //         }
+        //         inter_distance = inter_distance + diff_arr[i + j * rake] * diff_arr[i + j * rake];
+        //     }
+        //     if (inter_distance > 4 * (distance / rake) * (distance / rake))
+        //     {
+        //         invalid_distance_counter_outside++;
+        //         // std::cout << "Invalid config due to distance constraint" << inter_distance << " at " << i << " with max distance allowed is " << 4 * (distance / rake) * (distance / rake) << std::endl;
+        //         return false;
+        //     }
+        //     max_inter_dist = std::max(max_inter_dist, inter_distance);
+        // }
+        // max_inter_dist = std::sqrt(max_inter_dist);
+        // typename Robot::template ConfigurationBlock<rake> shifted_block = typename Robot::template ConfigurationBlock<rake>(diff_arr);
 
 
         bool valid = (environment.eef_attachments.size()) ?
@@ -106,7 +146,7 @@ namespace vamp::planning
         }
         // std::cout << initial_projected_block << std::endl;
 
-        if (not valid or max_inter_dist < (distance / rake))
+        if (not valid or inter_rake_distance.test_all_less_equal(distance * distance / (rake * rake)))
         {
             if (not valid)
                 collision_counter++;
@@ -114,7 +154,7 @@ namespace vamp::planning
             return valid;
         }
 
-
+        auto max_inter_dist = std::sqrt(inter_rake_distance.hmax());
         n = std::max(std::ceil(max_inter_dist * resolution), 1.F);
 
         for (auto i = 1U; i < n; ++i)
