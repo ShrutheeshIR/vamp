@@ -145,8 +145,9 @@ namespace vamp::planning
             projected_vector.push_back(typename Robot::Configuration(last_projected));
         }
         // std::cout << initial_projected_block << std::endl;
+        auto max_inter_dist = std::sqrt(inter_rake_distance.hmax());
 
-        if (not valid or inter_rake_distance.test_all_less_equal(distance * distance / (rake * rake)))
+        if (not valid or max_inter_dist < (distance / rake))
         {
             if (not valid)
                 collision_counter++;
@@ -154,7 +155,6 @@ namespace vamp::planning
             return valid;
         }
 
-        auto max_inter_dist = std::sqrt(inter_rake_distance.hmax());
         n = std::max(std::ceil(max_inter_dist * resolution), 1.F);
 
         for (auto i = 1U; i < n; ++i)
