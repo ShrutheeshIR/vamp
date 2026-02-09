@@ -785,10 +785,10 @@ namespace vamp::planning
             //     std::cout << short_jac_proj_inp.J[{i, 0}] << " ";
             // }
             // std::cout << std::endl;
-            // std::cout << "Error : " << std::endl;
-            // for(auto i=0U; i < 6 * 2; i++)
-            //     std::cout << short_jac_proj_inp.err[{i, 0}] << " ";
-            // std::cout << std::endl;
+            std::cout << "TSR Error : ";
+            for(auto i=0U; i < 6 * Robot::n_eef; i++)
+                std::cout << jac_proj_inp.err[{i, 0}] << " ";
+            std::cout << std::endl;
 
             return dist;
 

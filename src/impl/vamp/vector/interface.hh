@@ -291,9 +291,19 @@ namespace vamp
             return (*d() <= o).any();
         }
 
+        inline constexpr auto test_any_less(D o) const noexcept -> bool
+        {
+            return (*d() < o).any();
+        }
+
         inline constexpr auto test_any_greater_equal(D o) const noexcept -> bool
         {
             return (*d() >= o).any();
+        }
+
+        inline constexpr auto test_any_greater(D o) const noexcept -> bool
+        {
+            return (*d() > o).any();
         }
 
         inline constexpr auto test_all_equal(D o) const noexcept -> bool

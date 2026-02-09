@@ -92,10 +92,10 @@ namespace vamp::planning
         for (auto dim = 1U; dim < Robot::dimension; dim++)
         {
             inter_rake_distance = inter_rake_distance + shifted_block[dim] * shifted_block[dim];
-            if (inter_rake_distance.test_any_greater_equal(4 * (distance / rake) * (distance / rake)))
+            if (inter_rake_distance.test_any_greater(4 * (distance / rake) * (distance / rake)))
             {
                 invalid_distance_counter_outside++;
-                // std::cout << "Invalid config due to distance constraint" << inter_distance << " at " << i << " with max distance allowed is " << 4 * (distance / rake) * (distance / rake) << std::endl;
+                // std::cout << "Invalid config due to distance constraint" << inter_rake_distance <<  " with max distance allowed is " << 4 * (distance / rake) * (distance / rake) << std::endl;
                 return false;
             }
 
@@ -130,7 +130,7 @@ namespace vamp::planning
         // max_inter_dist = std::sqrt(max_inter_dist);
         // typename Robot::template ConfigurationBlock<rake> shifted_block = typename Robot::template ConfigurationBlock<rake>(diff_arr);
 
-
+        // std::cout << "Attachment: " << environment.eef_attachments.size() << std::endl;
         bool valid = (environment.eef_attachments.size()) ?
                          Robot::template fkcc_attach<rake>(environment, initial_projected_block) :
                          Robot::template fkcc<rake>(environment, initial_projected_block);
@@ -147,11 +147,10 @@ namespace vamp::planning
         // std::cout << initial_projected_block << std::endl;
         auto max_inter_dist = std::sqrt(inter_rake_distance.hmax());
 
-        if (not valid or max_inter_dist < (distance / rake))
+        if (not valid or max_inter_dist <= (distance / rake))
         {
             if (not valid)
                 collision_counter++;
-            // std::cout << "Invalid config " << valid << std::endl;
             return valid;
         }
 
@@ -169,7 +168,7 @@ namespace vamp::planning
             auto q_dist = (projected_block[0] - initial_projected_block[0]) * (projected_block[0] - initial_projected_block[0]);
             for(auto j = 1U; j < Robot::dimension; j++)
                 q_dist = q_dist + (projected_block[j] - initial_projected_block[j]) * (projected_block[j] - initial_projected_block[j]);
-            if (q_dist.test_any_greater_equal(4 * max_inter_dist / n * max_inter_dist / n))
+            if (q_dist.test_any_greater(4 * max_inter_dist / n * max_inter_dist / n))
             {
                 invalid_distance_counter_inside++;
                 // std::cout << q_dist << " " << q_dist.sqrt() << " " << max_inter_dist << std::endl;
@@ -178,10 +177,14 @@ namespace vamp::planning
             }
 
 
+            bool valid_inside = (environment.eef_attachments.size()) ?
+                             Robot::template fkcc_attach<rake>(environment, projected_block) :
+                             Robot::template fkcc<rake>(environment, projected_block);
 
-            if (not Robot::template fkcc<rake>(environment, projected_block))
+            if (not valid_inside)
             {
                 collision_inside_counter++;
+                // std::cout << "Collision Detected Inside" << std::endl;
                 return false;
             }
 
