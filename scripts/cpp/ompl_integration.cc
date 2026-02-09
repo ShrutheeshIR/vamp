@@ -47,7 +47,7 @@ using ConfigurationBlock = typename Robot::template ConfigurationBlock<rake>;
 
 // Maximum planning time
 static constexpr float planning_time = 30.0;
-static constexpr int maxIterations = 900000;
+static constexpr int maxIterations = 100000;
 
 // Maximum simplification time
 static constexpr float simplification_time = 1.0;
@@ -306,7 +306,16 @@ struct VAMPStateValidator : public ob::StateValidityChecker
         //si_->getStateSpace()->printState(ambient, std::cout);
         auto result = custom_constraint->isSatisfied(c);
         //std::cout << "At the end of isValid for stateValdiator, is valid returns " << result << "\n";
-        return result;
+        if (!result) {
+            return result;
+        }
+        typename Robot::template ConfigurationBlock<rake> temp_block;
+        for (std::size_t i = 0; i < Robot::dimension; ++i)
+        {
+            temp_block[i] = c.broadcast(i);
+        }
+
+        return Robot::template fkcc<rake>(env_v, temp_block);
     }
     
 };

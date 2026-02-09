@@ -45,7 +45,7 @@ using ConfigurationBlock = typename Robot::template ConfigurationBlock<rake>;
 
 // Maximum planning time
 static constexpr float planning_time = 1200.0;
-static constexpr int maxIterations = 10000;
+static constexpr int maxIterations = 100000;
 // Maximum simplification time
 static constexpr float simplification_time = 1.0;
 

@@ -25,49 +25,43 @@ def create_obstacles(filepath: str, n: int):
     print(f"{n} obstacles written to {filepath}")
 
 def run_executables(filepath):
-    exit_codes = {}
+    mask = 0
 
-    # First executable
-    result = subprocess.run(
+    # 0th bit
+    proc = subprocess.run(
         ["./build/vamp_crrtc_spheres", "--obstacles", filepath],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
-    exit_codes["vamp_crrtc_spheres"] = result.returncode
+    print(f"vamp_crrtc_spheres exited with {proc.returncode}")
+    if proc.returncode != 0:
+        mask |= 1 << 0
 
-    # Environment for the next two
     env = os.environ.copy()
     env["LD_LIBRARY_PATH"] = "/home/liu3447/ompl_install/lib"
 
-    # Second executable
-    result = subprocess.run(
+    # 1st bit
+    proc = subprocess.run(
         ["./build/vamp_ompl_integration", "--obstacles", filepath],
         env=env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
-    exit_codes["vamp_ompl_integration"] = result.returncode
+    print(f"vamp_ompl_integration exited with {proc.returncode}")
+    if proc.returncode != 0:
+        mask |= 1 << 1
 
-    # Third executable
-    result = subprocess.run(
+    # 2nd bit
+    proc = subprocess.run(
         ["./build/vamp_ompl_integration_worse", "--obstacles", filepath],
         env=env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
-    exit_codes["vamp_ompl_integration_worse"] = result.returncode
-
-    # Print results
-    print("Exit codes:")
-    result = 1
-    for exe, code in exit_codes.items():
-        print(f"{exe}: {code}")
-        result = result and code
-
-
-    return result
-
-    
+    print(f"vamp_ompl_integration_worse exited with {proc.returncode}")
+    if proc.returncode != 0:
+        mask |= 1 << 2
+    return mask
 
 
 def main():
@@ -87,14 +81,17 @@ def main():
     result = run_executables(filepath)
     print("\nAll executables finished.")
 
-    if (result == 0):
+    if (result < 7):
         print("At least one succeeded! File saved")
     else:
         if os.path.exists(filepath):
             os.remove(filepath)
         print("Problem is infeasible, file deleted")
-        
+
+    return result
+            
 
 
 if __name__ == "__main__":
-    main()
+    exit_code = main()
+    sys.exit(exit_code)

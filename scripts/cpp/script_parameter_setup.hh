@@ -3,12 +3,13 @@
 #include <stdexcept>
 #include <iostream>
 #include <cstdlib>
-#include "problem_setup/line_constraint_no_orientation_problem_setup.hh"
+#include "problem_setup/plane_constraint_no_orientation_problem_setup.hh"
 #include "problem_setup/parse_obstacle_textfile.hh"
 
 struct ProgramParameters
 {
     bool optimize = false;
+    //comes from the problem setup file
     std::string obstacle_file = default_obstacle_filepath;
 };
 

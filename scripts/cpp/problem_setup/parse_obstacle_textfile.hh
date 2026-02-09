@@ -4,10 +4,11 @@
 #include <filesystem>
 
 
-inline std::vector<std::array<float, 3>> problem(const std::string& filename= "scripts/cpp/problem_setup/obstacle_files/plane_constraint_no_orientation_problem.txt")
+inline std::vector<std::array<float, 3>> problem(const std::string& filename)
 {
     //std::cout << "Current working directory: "
     //          << std::filesystem::current_path() << std::endl;
+    std::cout << "Building the obstacles using the file " << filename << "\n";
     std::ifstream file(filename);
     if (!file)
         throw std::runtime_error("Could not open obstacle file: " + filename);
