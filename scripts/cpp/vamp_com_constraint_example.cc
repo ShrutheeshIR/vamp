@@ -9,7 +9,6 @@
 #include <vamp/planning/crrtc.hh>
 #include <vamp/planning/task_space_constraint.hh>
 #include <vamp/planning/validate_constraint.hh>
-#include <vamp/planning/simplify_constraints.hh>
 
 // #include <vamp/planning/simplify.hh>
 #include <vamp/robots/g1_unitree.hh>
@@ -61,8 +60,8 @@ auto main(int, char **) -> int
     vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM};
     // vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM};
 
-    float descend_rates[] = {0.25, 0.5, 0.75, 1.0};
-    // float descend_rates[] = {0.75, 1.0};
+    // float descend_rates[] = {0.25, 0.5, 0.75, 1.0};
+    float descend_rates[] = {0.75, 1.0};
     // float descend_rates[] = {1.0};
     std::vector<Attempt> succ_attempts;
     for(const auto range: ranges){
@@ -81,7 +80,7 @@ auto main(int, char **) -> int
     //     environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
     // }
     // outfile_sph.close();
-    std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/shelf_drake.txt");
+    std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/humanoid_shelf.txt");
     if (!infile.is_open()) {
         std::cerr << "Failed to open file!" << std::endl;
         return 1;
@@ -97,7 +96,7 @@ auto main(int, char **) -> int
             std::cerr << "Error reading line: " << line << std::endl;
             continue;
         }
-        std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
+        // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
         environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x, y, z}, {0.0, 0.0, 0.0}, {dx/2, dy/2, dz/2}));
     }
     infile.close();
@@ -113,30 +112,22 @@ auto main(int, char **) -> int
 
 
     std::array<float, 8> polygon_points = {
-        // 1.0, -0.05, 1.0, 0.05, 0.0, 0.05, 0.0, -0.05
         0.08, -0.045, 0.08, 0.045, 0.06, 0.045, 0.06, -0.045
-        // 10.20, -10.25, 10.20, 10.25, -10.05, 10.25, -10.05, -10.25
-        // 0.0, 0.2, 1.0, 0.2, 1.0, 1.0, 0.0, 1.0
     };
 
     std::array<float, 6> lower_bound = {
-        -0.001, -0.001, -0.001, -0.001, -0.001, -0.001
+        -0.001, -0.001, -0.001, -0.5, -0.001, -0.001
     };
     std::array<float, 6> upper_bound = {
-        0.001, 0.001, 0.001, 0.001, 0.001, 0.001
+        0.001, 0.001, 0.001, 0.5, 0.001, 0.001
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-        -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -0.01, -0.01, -0.01, -0.05, -0.05, -0.05, -0.01, -0.01, -0.01, -0.05, -0.05, -0.05
+        -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -0.01, -0.01, -0.01, -0.005, -0.005, -0.005, -0.01, -0.01, -0.01, -0.005, -0.005, -0.005
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
-        10.0, 10.0, 10.0, 10.0, 10.0, 10.0,
-        10.0, 10.0, 10.0, 10.0, 10.0, 10.0,
-        0.01, 0.01, 0.01,
-        0.05, 0.05, 0.05,
-        0.01, 0.01, 0.01,
-        0.05, 0.05, 0.05
+        10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.01, 0.01, 0.01, 0.005, 0.005, 0.005, 0.01, 0.01, 0.01, 0.005, 0.005, 0.005
     };
 
 
@@ -164,10 +155,10 @@ auto main(int, char **) -> int
     // eef_transforms_ref_frame_w_world[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
 
 
-    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{{1.,     0.0005, 0.0005, 0.0005,   0, 0, 0}, {1.,     0.0005, 0.0005, 0.0005,   0.0, 0.0, 0.0}, {1.,     0.0005, 0.0005, 0.0005, 0.12, 0.11, -0.0}, {1.,     0.0005, 0.0005, 0.0005, 0.12, -0.11, -0.0}}};
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{{1, 0,0,0,   0, 0, 0}, {1, 0,0,0,   0.0, 0.0, 0.0}, {1.0, 0.0, 0.0, 0.0, 0.12, 0.11, -0.0}, {1.0, 0.0, 0.0, 0.0, 0.12, -0.11, -0.0}}};
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{{1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}}};
 
-    vamp::planning::TaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
+    vamp::planning::FeetTaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
         eef_transforms_ref_frame_w_world,
         eef_transforms,
         tsr_lower_bound,
@@ -208,6 +199,14 @@ auto main(int, char **) -> int
     rrtc_settings.dynamic_domain = dyndom;
     rrtc_settings.projection_method = pm;
     rrtc_settings.descend_rate = descent_rate;
+
+    vamp::planning::invalid_distance_counter_outside = 0;
+    vamp::planning::invalid_distance_counter_inside = 0;
+    vamp::planning::collision_counter = 0;
+    vamp::planning::unable_to_project_counter = 0;
+
+
+
     // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
     auto result =
@@ -232,11 +231,6 @@ auto main(int, char **) -> int
         if((succ_attempts.size() == 0) || (succ_attempts.size() > 0 && a < succ_attempts[0])){
 
         std::cout << "\nPrinting Result!! " << result.path.size() << std::endl;
-        vamp::planning::SimplifySettings simplify_settings;
-        auto simplify_result = vamp::planning::constraint::simplify_with_constraints<Robot, rake, Robot::resolution, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint)>(
-            result.path, env_v, task_constraint, simplify_settings, rng);
-        std::cout << "Simplify took " << result.nanoseconds / 1e6 << " ms" << std::endl;
-
         // Output configurations of simplified path
         std::cout << std::fixed << std::setprecision(3);
         std::ofstream outfile("/src/trajectory.txt");
