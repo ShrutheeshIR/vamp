@@ -61,8 +61,8 @@ auto main(int, char **) -> int
     // vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM};
 
     // float descend_rates[] = {0.25, 0.5, 0.75, 1.0};
-    float descend_rates[] = {0.75, 1.0};
-    // float descend_rates[] = {1.0};
+    // float descend_rates[] = {0.75, 1.0};
+    float descend_rates[] = {1.0};
     std::vector<Attempt> succ_attempts;
     for(const auto range: ranges){
         for(const auto dyndom: dd){
@@ -123,11 +123,11 @@ auto main(int, char **) -> int
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-        -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -0.01, -0.01, -0.01, -0.005, -0.005, -0.005, -0.01, -0.01, -0.01, -0.005, -0.005, -0.005
+        -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -0.01, -0.01, -0.01, -0.05, -0.05, -0.05, -0.01, -0.01, -0.01, -0.05, -0.05, -0.05
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
-        10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.01, 0.01, 0.01, 0.005, 0.005, 0.005, 0.01, 0.01, 0.01, 0.005, 0.005, 0.005
+        10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.01, 0.01, 0.01, 0.05, 0.05, 0.05, 0.01, 0.01, 0.01, 0.05, 0.05, 0.05
     };
 
 

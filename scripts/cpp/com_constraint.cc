@@ -26,7 +26,13 @@ using AttachmentInput = vamp::collision::Attachment<float>;
 // static constexpr Robot::ConfigurationArray start = {0.697778, -0.5024, -1.256, -1.94109, -2.12554, -2.36424, -2.44589, -0.204884, -2.35822, 0.113728, -0.793422, -0.234981, -2.26647, -2.81113, -2.53907, 0.0183405, -0.824602, -0.245389, -2.46313, -0.490082, -0.492354, -2.94348, -1.4976, -2.50464, -0.98188, -1.8918, -1.55106, -1.55222, -2.98216, -2.18801, -2.53406, -0.999044, -1.91263, -1.56892, -1.56953};
 
 static constexpr Robot::ConfigurationArray start = {-0.01691,-0.00008,0.52435,-0.00002,0.00087,0.00058,-0.89966,-0.00864,0.01527,1.75038,-0.87267,0.01757,-0.89936,0.00875,-0.01522,1.75040,-0.87267,-0.01753,1.59564,0.14700,0.37000,0.00002,0.00014,0.00009,-0.00003,-0.00006,0.00000,-0.00001,-0.00001,0.00017,0.00007,-0.00000,0.00003,0.00000,0.00002};
-static constexpr Robot::ConfigurationArray goal = {0.03977,-0.00000,0.72049,0.00000,0.03753,-0.00002,-0.31120,0.00002,0.00004,0.64394,-0.41457,-0.00000,-0.31121,-0.00004,0.00000,0.64394,-0.41456,-0.00000,-0.00002,-0.00000,-0.24500,-0.00031,-0.00532,-0.00196,-0.00210,0.00362,-0.00156,0.00867,-0.00646,0.00363,-0.00701,0.00148,-0.00521,0.00134,0.01348};
+static constexpr Robot::ConfigurationArray goal = {-0.0804749 , -0.222722  ,  0.329562  ,  0.0752235 , -0.234729  ,
+       -0.187489  , -0.540513  ,  0.159474  ,  0.036218  ,  1.20727   ,
+       -0.508012  , -0.00816858, -0.55574   , -0.25357   ,  0.255191  ,
+        1.33009   , -0.561027  , -0.0319013 ,  0.578079  ,  0.0344014 ,
+        0.0243313 , -0.355914  , -0.118091  , -0.25972   , -0.0948007 ,
+       -0.253484  ,  0.0772362 ,  0.174869  ,  0.171759  ,  0.0892086 ,
+        0.124599  ,  0.0630061 ,  0.118393  ,  0.0219054 ,  0.0661802};
 
 // static constexpr Robot::ConfigurationArray goal = {-0.045,0.0,-0.03,0.0,-0.264,0.0,0.0,0.0,0.0,0.456,0.0,0.0,0.0,0.0,0.0,0.486,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
@@ -106,31 +112,47 @@ auto main(int, char **) -> int
 
     std::cout << "Hands : " << (isometries[0].inverse() * isometries[1]).matrix() << std::endl;
     std::array<float, 8> polygon_points = {
-        // 1.0, -0.05, 1.0, 0.05, 0.0, 0.05, 0.0, -0.05
-        0.08, -0.045, 0.08, 0.045, 0.065, 0.045, 0.065, -0.045
-        // 10.20, -10.25, 10.20, 10.25, -10.05, 10.25, -10.05, -10.25
-        // 0.0, 0.2, 1.0, 0.2, 1.0, 1.0, 0.0, 1.0
+        0.08, -0.045, 0.08, 0.045, 0.06, 0.045, 0.06, -0.045
     };
 
     std::array<float, 6> lower_bound = {
-        -0.001, -0.001, -0.001, -0.001, -0.001, -0.001
+        -0.001, -0.001, -0.001, -0.5, -0.001, -0.001
     };
     std::array<float, 6> upper_bound = {
-        0.001, 0.001, 0.001, 0.001, 0.001, 0.001
+        0.001, 0.001, 0.001, 0.5, 0.001, 0.001
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-        -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -0.001, -10.001, -0.001, -10.05, -10.05, -10.05, -0.001, -10.001, -0.001, -10.05, -10.05, -10.05
+        -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -0.01, -0.01, -0.01, -0.05, -0.05, -0.05, -0.01, -0.01, -0.01, -0.05, -0.05, -0.05
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
-        10.0, 10.0, 10.0, 10.0, 10.0, 10.0,
-        10.0, 10.0, 10.0, 10.0, 10.0, 10.0,
-        0.001, 10.001, 0.001,
-        10.05, 10.05, 10.05,
-        0.001, 10.001, 0.001,
-        10.05, 10.05, 10.05
+        10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.01, 0.01, 0.01, 0.05, 0.05, 0.05, 0.01, 0.01, 0.01, 0.05, 0.05, 0.05
     };
+
+
+    // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
+    // Eigen::Matrix<float, 4, 4> T;
+    // T << 0.9999990, -0.0009995,  0.0010005, 0.0, 0.0010005,  0.9999990, -0.0009995, -0.303, -0.0009995,  0.0010005,  0.9999990, 0.0, 0.0, 0.0, 0.0, 1.0;
+    // const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
+
+    // std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
+
+    // T << 0.9999990, -0.0009995,  0.0010005, 0.13, 0.0010005,  0.9999990, -0.0009995, 0.11, -0.0009995,  0.0010005,  0.9999990, -0.725, 0.0, 0.0, 0.0, 1.0;
+    // eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    // T << 0.9999990, -0.0009995,  0.0010005, 0.13, 0.0010005,  0.9999990, -0.0009995, 0.11, -0.0009995,  0.0010005,  0.9999990, -0.725, 0.0, 0.0, 0.0, 1.0;
+    // eef_transforms[1] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    // T << 0.9999990, -0.0009995,  0.0010005, 0.13, 0.0010005,  0.9999990, -0.0009995, 0.11, -0.0009995,  0.0010005,  0.9999990, -0.725, 0.0, 0.0, 0.0, 1.0;
+    // eef_transforms[2] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    // T << 0.9999990, -0.0009995,  0.0010005, 0.13, 0.0010005,  0.9999990, -0.0009995, -0.11, -0.0009995,  0.0010005,  0.9999990, -0.725, 0.0, 0.0, 0.0, 1.0;
+    // eef_transforms[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+
+    // std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
+    // T << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
+    // eef_transforms_ref_frame_w_world[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    // eef_transforms_ref_frame_w_world[1] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    // eef_transforms_ref_frame_w_world[2] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    // eef_transforms_ref_frame_w_world[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
 
 
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{{1, 0,0,0,   0, 0, 0}, {1, 0,0,0,   0.0, 0.0, 0.0}, {1.0, 0.0, 0.0, 0.0, 0.12, 0.11, -0.0}, {1.0, 0.0, 0.0, 0.0, 0.12, -0.11, -0.0}}};
@@ -162,12 +184,11 @@ auto main(int, char **) -> int
 
     // vamp::planning::SelfCollisionConstraint<Robot, rake> self_collision_constraint;
 
-    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint)> task_constraint(
+    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint) > task_constraint(
         feet_tsr_constraint,
         com_constraint,
         bimanual_task_constraint
     );
-
     // vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(
     //     eef_transforms_ref_frame_w_world,
     //     eef_transforms,
@@ -261,11 +282,13 @@ auto main(int, char **) -> int
 
     outfile << "\n";
 
+    std::cout << " \n\n ------------Goal-----------------\n\n";
+
     for (auto i = 0U; i < Robot::dimension; ++i)
         block[i] = Robot::Configuration(goal).broadcast(i);
 
     first = true;
-    success = task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM, 35.0, 1.0);
+    success = task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM, 1.0, 1.0);
     for(auto i=0U; i < Robot::dimension; i++)
         std::cout << projected_block[{i, 0}] << ",";
     std::cout << success <<std::endl;

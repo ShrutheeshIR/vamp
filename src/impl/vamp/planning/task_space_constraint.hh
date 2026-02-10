@@ -1819,16 +1819,17 @@ namespace vamp::planning
                     }
 
                     // std::cout << q_dist_from_prev << " " << dist << std::endl;
-                    if (q_dist_from_prev.test_all_less_equal(0.00001F))  // if i make no forward progress
+                    if (q_dist_from_prev.test_all_less_equal(0.000001F))  // if i make no forward progress
                     {
-                        // std::cout << "Minimal progress " << dist << q_dist_from_prev << std::endl;
+                        std::cout << "Minimal progress " << dist << q_dist_from_prev << std::endl;
                         break;
                     }
 
-                    if (q_dist_from_prev.test_any_greater_equal(4 * max_q_dist * max_q_dist))  // from triangle
+                    if (q_dist_from_prev.test_any_greater(4 * max_q_dist * max_q_dist))  // from triangle
                                                                                                 // inequality
                     {
-                        // std::cout << "Too large step " << std::endl;
+                        // std::cout << "Too large step " << q_dist_from_prev << std::endl;
+                        // std::cout << q_old << std::endl;
                         break;
                     }
                     q_old = q_new + 0.0;
