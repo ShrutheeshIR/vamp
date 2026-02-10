@@ -7,6 +7,8 @@ import json
 import vamp
 from fire import Fire
 from scipy.spatial.transform import Rotation as R
+import itertools
+
 np.set_printoptions(suppress = True)
 # Starting configuration
 a = [-0.88021, 0.53120, -0.20601, -1.61905, 0.11733, 2.14908, 1.19294]
@@ -166,6 +168,31 @@ def main(
     add_trajectory(
         server, simple.path.numpy(), robot, attachment_sph_groups, attachment_positions
     )
+    ranges = [0.5, 0.75]
+    dyndoms = [False, True]
+    all_combinations = list(itertools.product(ranges, dyndoms))
+    planning_times = {
+        combination : [] for combination in all_combinations
+    }
+    for _ in range(1):
+        for combination in all_combinations:
+            plan_settings.range = combination[0]
+            plan_settings.dynamic_domain = combination[1]
+            result = planner_func(a, b, e, plan_settings, constraints, sampler)
+            print(result.nanoseconds / 1e3)
+            planning_times[combination].append(result.nanoseconds/1e6)
+
+            attachment_positions = [get_attachment_pos(pos) for pos in result.path.numpy()]
+
+            add_trajectory(
+                server, result.path.numpy(), robot, attachment_sph_groups, attachment_positions
+            )
+
+    print("Execution completed")
+    print("Planning times for each combination:")
+    for combination, times in planning_times.items():
+        print(f"Combination {combination}: {np.mean(times)} ms {np.std(times)} ms {np.min(times)} ms {np.max(times)} ms {np.median(times)} ms")
+
 
     # display
     while True:
