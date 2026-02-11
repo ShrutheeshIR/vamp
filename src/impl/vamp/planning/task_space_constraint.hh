@@ -43,12 +43,13 @@ namespace vamp::planning
     public:
         // virtual vamp::FloatVector<rake, 1> distanceToConstraint(const ConfigurationBlock &q) = 0;
 
-        void integrateJointConfiguration(
+        inline auto integrateJointConfiguration(
             const ConfigurationBlock &q,
             ConfigurationBlock &q_new,
             const ConfigurationBlock &gradient,
             float alpha = 1.0F)
         {
+            // ConfigurationBlock q_new;
             for (size_t i = 0; i < Robot::dimension; i++)
             {
                 q_new[i] = q[i] - gradient[i] * alpha;
@@ -56,6 +57,7 @@ namespace vamp::planning
             Robot::descale_configuration_block(q_new);
             q_new = q_new.clamp(0.F, 1.F);
             Robot::scale_configuration_block(q_new);
+            // return q_new;
         }
 
         // virtual vamp::FloatVector<rake, 1> projectStep(
@@ -733,37 +735,33 @@ namespace vamp::planning
             const ConfigurationBlock &q,
             ConfigurationBlock &q_new,
             ProjMethod projection_method = ProjMethod::InnerLM,
-            bool update_q = true,
             float alpha = 1.0F)
         {
             auto dist = distanceToConstraint(q);
-            if (update_q)
+            ConfigurationBlock grad;
+
+            if (projection_method == ProjMethod::InnerLM)
             {
-                ConfigurationBlock grad;
+                // Robot::template solve_2_eef_tsr_error_lm_inner<rake>(short_jac_proj_inp, grad);
+                // grad = grad.zero_out_nans();
 
-                if (projection_method == ProjMethod::InnerLM)
-                {
-                    // Robot::template solve_2_eef_tsr_error_lm_inner<rake>(short_jac_proj_inp, grad);
-                    // grad = grad.zero_out_nans();
-
-                    Robot::template solve_tsr_error_lm_inner<rake>(jac_proj_inp, grad);
-                    // std::cout << "Grad for TSR constraint: "  ;
-                    // for (auto i = 0U; i < Robot::dimension; i++)
-                    //         std::cout << grad[i] << " ";
-                    // std::cout << std::endl;
-                }
-                if (projection_method == ProjMethod::OuterLM)
-                {
-                    // Robot::template solve_2_eef_tsr_error_lm_outer<rake>(short_jac_proj_inp, grad);
-                    Robot::template solve_tsr_error_lm_outer<rake>(jac_proj_inp, grad);
-                }
-                if (projection_method == ProjMethod::GradDesc)
-                {
-                    // Robot::template solve_2_eef_tsr_error_gradient_descent<rake>(short_jac_proj_inp, grad);
-                    Robot::template solve_tsr_error_gradient_descent<rake>(jac_proj_inp, grad);
-                }
-                RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
+                grad = Robot::template solve_tsr_error_lm_inner<rake>(jac_proj_inp);
+                // std::cout << "Grad for TSR constraint: "  ;
+                // for (auto i = 0U; i < Robot::dimension; i++)
+                //         std::cout << grad[i] << " ";
+                // std::cout << std::endl;
             }
+            if (projection_method == ProjMethod::OuterLM)
+            {
+                // Robot::template solve_2_eef_tsr_error_lm_outer<rake>(short_jac_proj_inp, grad);
+                grad = Robot::template solve_tsr_error_lm_outer<rake>(jac_proj_inp);
+            }
+            if (projection_method == ProjMethod::GradDesc)
+            {
+                // Robot::template solve_2_eef_tsr_error_gradient_descent<rake>(short_jac_proj_inp, grad);
+                grad = Robot::template solve_tsr_error_gradient_descent<rake>(jac_proj_inp);
+            }
+            RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
             return dist;
         }
 
@@ -999,17 +997,18 @@ namespace vamp::planning
             // std::cout << std::endl;
 
 
-            // std::cout << "TSR Error : " << std::endl;
-            // for(auto i=0U; i < 6 * 2 * Robot::dimension; i++){
-            //     if(i % Robot::dimension == 0)
-            //         std::cout << std::endl << "J[" << i / Robot::dimension << "] : ";
-            //     std::cout << short_jac_proj_inp.J[{i, 0}] << " ";
-            // }
-            // std::cout << std::endl;
+            std::cout << "TSR Error : " << std::endl;
+            for(auto i=0U; i < 6 * 2 * Robot::dimension; i++){
+                if(i % Robot::dimension == 0)
+                    std::cout << std::endl << "J[" << i / Robot::dimension << "] : ";
+                std::cout << short_jac_proj_inp.J[{i, 0}] << " ";
+            }
+            std::cout << std::endl;
             std::cout << "Error : " << std::endl;
             for(auto i=0U; i < 6 * 2; i++)
                 std::cout << short_jac_proj_inp.err[{i, 0}] << " ";
             std::cout << std::endl;
+
 
             return dist;
 
@@ -1412,13 +1411,12 @@ namespace vamp::planning
             const ConfigurationBlock &q,
             ConfigurationBlock &q_new,
             ProjMethod projection_method = ProjMethod::InnerLM,
-            bool update_q = true,
             float alpha = 1.0f)
         {
             ConfigurationBlock q_in = q;
 
             std::apply([&](auto&... c) {
-                ((c.projectStep(q_in, q_new, projection_method, update_q), q_in = q_new), ...);
+                ((c.projectStep(q_in, q_new, projection_method, alpha), q_in = q_new), ...);
             }, constraints_);
 
             return distanceToConstraint(q_new);
@@ -1455,7 +1453,7 @@ namespace vamp::planning
 
                 while ((project_iter < num_projection_iterations) and (not dist.test_all_less_equal(0.0001F)))
                 {
-                    dist = projectStep(q_old, q_new, projection_method, true, descend_rate);
+                    dist = projectStep(q_old, q_new, projection_method, descend_rate);
                     // std::cout << "Iteration " << project_iter << " Distance: " << dist << std::endl;
                     // std::cout << q_old << q_new << std::endl;
                     auto q_dist_from_prev = (q_new[0] - q_old[0]) * (q_new[0] - q_old[0]);

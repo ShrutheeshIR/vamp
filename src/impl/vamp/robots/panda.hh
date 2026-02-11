@@ -16681,11 +16681,11 @@ namespace vamp::robots
             }
         }
 
-        template <std::size_t rake, typename InputVector, typename OutputVector>
-        inline static auto solve_tsr_error_lm_inner(const InputVector &x, OutputVector &out)
+        template <std::size_t rake, typename InputVector>
+        inline static auto solve_tsr_error_lm_inner(const InputVector &x)
         {
             std::array<FloatVector<rake, 1>, 26> v;
-            std::array<FloatVector<rake, 1>, 7> y;
+            FloatVector<rake, 7> y;
 
             v[0] = sqrt(
                 1e-06 + x[0] * x[0] + x[1] * x[1] + x[2] * x[2] + x[3] * x[3] + x[4] * x[4] + x[5] * x[5] +
@@ -16782,14 +16782,11 @@ namespace vamp::robots
             y[6] =
                 x[41] * v[25] + x[34] * v[24] + x[27] * v[21] + x[20] * v[20] + x[13] * v[19] + x[6] * v[18];
 
-            for (size_t i = 0; i < 7; i++)
-            {
-                out[i] = y[i];
-            }
+            return y;
         }
 
-        template <std::size_t rake, typename InputVector, typename OutputVector>
-        inline static auto solve_tsr_error_lm_outer(const InputVector &x, OutputVector &out)
+        template <std::size_t rake, typename InputVector>
+        inline static auto solve_tsr_error_lm_outer(const InputVector &x)
         {
             std::array<FloatVector<rake, 1>, 34> v;
             std::array<FloatVector<rake, 1>, 7> y;
@@ -16914,17 +16911,14 @@ namespace vamp::robots
                     v[27] * y[6]) /
                    v[0];
 
-            for (size_t i = 0; i < 7; i++)
-            {
-                out[i] = y[i];
-            }
+            return y;
         }
 
-        template <std::size_t rake, typename InputVector, typename OutputVector>
-        inline static auto solve_tsr_error_gradient_descent(const InputVector &x, OutputVector &out)
+        template <std::size_t rake, typename InputVector>
+        inline static auto solve_tsr_error_gradient_descent(const InputVector &x)
         {
             std::array<FloatVector<rake, 1>, 0> v;
-            std::array<FloatVector<rake, 1>, 7> y;
+            FloatVector<rake, 7> y;
 
             y[0] =
                 x[35] * x[47] + x[28] * x[46] + x[21] * x[45] + x[14] * x[44] + x[7] * x[43] + x[0] * x[42];
@@ -16941,10 +16935,7 @@ namespace vamp::robots
             y[6] =
                 x[41] * x[47] + x[34] * x[46] + x[27] * x[45] + x[20] * x[44] + x[13] * x[43] + x[6] * x[42];
 
-            for (size_t i = 0; i < 7; i++)
-            {
-                out[i] = y[i];
-            }
+            return y;
         }
 
         template <std::size_t rake, typename InputVector, typename OutputVector>
@@ -17249,11 +17240,11 @@ namespace vamp::robots
             }
         }
 
-        template <std::size_t rake, typename InputVector, typename OutputVector>
-        inline static auto solve_com_function_lm_inner(const InputVector &x, OutputVector &out)
+        template <std::size_t rake, typename InputVector>
+        inline static auto solve_com_function_lm_inner(const InputVector &x)
         {
             std::array<FloatVector<rake, 1>, 4> v;
-            std::array<FloatVector<rake, 1>, 7> y;
+            FloatVector<rake, 7> y;
 
             v[0] = sqrt(
                 1e-06 + x[0] * x[0] + x[1] * x[1] + x[2] * x[2] + x[3] * x[3] + x[4] * x[4] + x[5] * x[5] +
@@ -17275,17 +17266,14 @@ namespace vamp::robots
             y[5] = x[12] * v[3] + x[5] * v[2];
             y[6] = x[13] * v[3] + x[6] * v[2];
 
-            for (size_t i = 0; i < 7; i++)
-            {
-                out[i] = y[i];
-            }
+            return y;
         }
 
-        template <std::size_t rake, typename InputVector, typename OutputVector>
-        inline static auto solve_com_function_lm_outer(const InputVector &x, OutputVector &out)
+        template <std::size_t rake, typename InputVector>
+        inline static auto solve_com_function_lm_outer(const InputVector &x)
         {
             std::array<FloatVector<rake, 1>, 34> v;
-            std::array<FloatVector<rake, 1>, 7> y;
+            FloatVector<rake, 7> y;
 
             v[0] = sqrt(1e-06 + x[0] * x[0] + x[7] * x[7]);
             v[1] = (x[7] * x[15] + x[0] * x[14]) / v[0];
@@ -17350,17 +17338,14 @@ namespace vamp::robots
                     v[27] * y[6]) /
                    v[0];
 
-            for (size_t i = 0; i < 7; i++)
-            {
-                out[i] = y[i];
-            }
+            return y;
         }
 
-        template <std::size_t rake, typename InputVector, typename OutputVector>
-        inline static auto solve_com_function_gradient_descent(const InputVector &x, OutputVector &out)
+        template <std::size_t rake, typename InputVector>
+        inline static auto solve_com_function_gradient_descent(const InputVector &x)
         {
             std::array<FloatVector<rake, 1>, 0> v;
-            std::array<FloatVector<rake, 1>, 7> y;
+            FloatVector<rake, 7> y;
 
             y[0] = x[7] * x[15] + x[0] * x[14];
             y[1] = x[8] * x[15] + x[1] * x[14];
@@ -17370,10 +17355,7 @@ namespace vamp::robots
             y[5] = x[12] * x[15] + x[5] * x[14];
             y[6] = x[13] * x[15] + x[6] * x[14];
 
-            for (size_t i = 0; i < 7; i++)
-            {
-                out[i] = y[i];
-            }
+            return y;
         }
 
         template <std::size_t rake, typename InputVector, typename OutputVector>
@@ -18927,11 +18909,11 @@ namespace vamp::robots
             }
         }
 
-        template <std::size_t rake, typename InputVector, typename OutputVector>
-        inline static auto solve_self_collision_error_lm_inner(const InputVector &x, OutputVector &out)
+        template <std::size_t rake, typename InputVector>
+        inline static auto solve_self_collision_error_lm_inner(const InputVector &x)
         {
             std::array<FloatVector<rake, 1>, 76> v;
-            std::array<FloatVector<rake, 1>, 7> y;
+            FloatVector<rake, 7> y;
 
             v[0] = sqrt(
                 1e-06 + x[0] * x[0] + x[1] * x[1] + x[2] * x[2] + x[3] * x[3] + x[4] * x[4] + x[5] * x[5] +
@@ -19228,17 +19210,14 @@ namespace vamp::robots
                    x[41] * v[68] + x[34] * v[67] + x[27] * v[66] + x[20] * v[65] + x[13] * v[64] +
                    x[6] * v[63];
 
-            for (size_t i = 0; i < 7; i++)
-            {
-                out[i] = y[i];
-            }
+            return y;
         }
 
-        template <std::size_t rake, typename InputVector, typename OutputVector>
-        inline static auto solve_self_collision_error_lm_outer(const InputVector &x, OutputVector &out)
+        template <std::size_t rake, typename InputVector>
+        inline static auto solve_self_collision_error_lm_outer(const InputVector &x)
         {
             std::array<FloatVector<rake, 1>, 34> v;
-            std::array<FloatVector<rake, 1>, 7> y;
+            FloatVector<rake, 7> y;
 
             v[0] = sqrt(
                 1e-06 + x[0] * x[0] + x[7] * x[7] + x[14] * x[14] + x[21] * x[21] + x[28] * x[28] +
@@ -19395,18 +19374,14 @@ namespace vamp::robots
                     v[27] * y[6]) /
                    v[0];
 
-            for (size_t i = 0; i < 7; i++)
-            {
-                out[i] = y[i];
-            }
+            return y;
         }
 
-        template <std::size_t rake, typename InputVector, typename OutputVector>
-        inline static auto
-        solve_self_collision_error_gradient_descent(const InputVector &x, OutputVector &out)
+        template <std::size_t rake, typename InputVector>
+        inline static auto solve_self_collision_error_gradient_descent(const InputVector &x)
         {
             std::array<FloatVector<rake, 1>, 0> v;
-            std::array<FloatVector<rake, 1>, 7> y;
+            FloatVector<rake, 7> y;
 
             y[0] = x[70] * x[87] + x[63] * x[86] + x[56] * x[85] + x[49] * x[84] + x[42] * x[83] +
                    x[35] * x[82] + x[28] * x[81] + x[21] * x[80] + x[14] * x[79] + x[7] * x[78] +
@@ -19430,10 +19405,7 @@ namespace vamp::robots
                    x[41] * x[82] + x[34] * x[81] + x[27] * x[80] + x[20] * x[79] + x[13] * x[78] +
                    x[6] * x[77];
 
-            for (size_t i = 0; i < 7; i++)
-            {
-                out[i] = y[i];
-            }
+            return y;
         }
     };
 }  // namespace vamp::robots
