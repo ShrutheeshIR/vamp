@@ -54,7 +54,7 @@ namespace vamp::planning
         ComposableConstraints<Robot, rake, Constraints...> &constraint,
         const collision::Environment<FloatVector<rake>> &environment,
         ProjMethod projection_method = ProjMethod::InnerLM,
-        float projection_descent_rate = 1.0,
+        float projection_descent_rate = 1.0F,
         int num_projection_iterations = 25,
         bool insert_all_to_tree = false) -> bool
     {
@@ -213,7 +213,7 @@ namespace vamp::planning
         ComposableConstraints<Robot, rake, Constraints...> &constraint,
         const collision::Environment<FloatVector<rake>> &environment,
         ProjMethod projection_method = ProjMethod::InnerLM,
-        float projection_descent_rate = 1.0,
+        float projection_descent_rate = 1.0F,
         int num_projection_iterations = 25,
         bool insert_all_to_tree = false) -> bool
     {
