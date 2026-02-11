@@ -53,7 +53,7 @@ auto main(int, char **) -> int
 
     vamp::planning::RRTCSettings rrtc_settings;
 
-    float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
+    float ranges[] = {0.5, 0.75, 1.0};
     // float ranges[] = {1.0};
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     // bool dd[] = {false};
@@ -63,8 +63,8 @@ auto main(int, char **) -> int
     // vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM};
 
     // float descend_rates[] = {0.25, 0.5, 0.75, 1.0};
-    // float descend_rates[] = {0.75, 1.0};
-    float descend_rates[] = {1.0};
+    float descend_rates[] = {0.75, 1.0};
+    // float descend_rates[] = {1.0};
     int num_projection_iterations[] = {5, 10, 25, 50, 100};
     bool insert_all_to_tree[] = {false, true};
 
