@@ -124,23 +124,33 @@ auto main(int, char **) -> int
     };
 
 
-    std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
-    Eigen::Matrix<float, 4, 4> T;
-    T << 1,0,0,   0.3486,   0,-1,0,      0.647752,   0,0,-1,    0.24,          0,           0,           0,           1;;
-    eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
-    T << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
-    eef_transforms_ref_frame_w_world[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    // std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
+    // Eigen::Matrix<float, 4, 4> T;
+    // T << 1,0,0,   0.3486,   0,-1,0,      0.647752,   0,0,-1,    0.24,          0,           0,           0,           1;;
+    // eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    // std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
+    // T << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
+    // eef_transforms_ref_frame_w_world[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
 
+
+    // vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
+    //     eef_transforms_ref_frame_w_world,
+    //     eef_transforms,
+    //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
+    // );
+
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 1,0,0,   0.3486, 0.647752, 0.2399}};
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
 
     vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
         eef_transforms_ref_frame_w_world,
         eef_transforms,
-        std::make_pair(tsr_lower_bound, tsr_upper_bound)
+        tsr_lower_bound,
+        tsr_upper_bound
     );
 
 
-    vamp::planning::ComposableConstraints<Robot, rake, decltype(tsr_constraint)> task_constraint(
+    vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>> task_constraint(
         tsr_constraint
     );
 
@@ -152,10 +162,10 @@ auto main(int, char **) -> int
     rrtc_settings.descend_rate = descent_rate;
     // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
-    vamp::planning::invalid_distance_counter_outside = 0;
-    vamp::planning::invalid_distance_counter_inside = 0;
-    vamp::planning::collision_counter = 0;
-    vamp::planning::unable_to_project_counter = 0;
+    // vamp::planning::invalid_distance_counter_outside = 0;
+    // vamp::planning::invalid_distance_counter_inside = 0;
+    // vamp::planning::collision_counter = 0;
+    // vamp::planning::unable_to_project_counter = 0;
 
 
     auto result =

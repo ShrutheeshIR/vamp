@@ -9,6 +9,7 @@
 #include <vamp/planning/crrtc.hh>
 #include <vamp/planning/task_space_constraint.hh>
 #include <vamp/planning/validate_constraint.hh>
+#include <vamp/planning/simplify_constraints.hh>
 
 // #include <vamp/planning/simplify.hh>
 #include <vamp/robots/panda.hh>
@@ -63,13 +64,27 @@ auto main(int, char **) -> int
 
 
     EnvironmentInput environment;
-    std::ofstream outfile_sph("/src/spheres.txt");
-    for (const auto &sphere : problem)
-    {
-        outfile_sph << sphere[0] << "," << sphere[1] << "," << sphere[2] << "," << radius << "\n";
-        environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
+    std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/shelf_panda.txt");
+    if (!infile.is_open()) {
+        std::cerr << "Failed to open file!" << std::endl;
+        return 1;
     }
-    outfile_sph.close();
+
+    std::string line;
+    while (std::getline(infile, line)) {
+        std::istringstream iss(line);
+        char delim;
+        float x, y, z, dx, dy, dz;
+
+        if (!(iss >> x >> delim >> y >> delim >> z >> delim >> dx >> delim >> dy >> delim >> dz)) {
+            std::cerr << "Error reading line: " << line << std::endl;
+            continue;
+        }
+        ;
+        // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
+        environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x, y, z}, {0.0, 0.0, 0.0}, {dx/2, dy/2, dz/2}));
+    }
+    infile.close();
 
     environment.sort();
     auto env_v = EnvironmentVector(environment);
@@ -83,7 +98,7 @@ auto main(int, char **) -> int
     sphere_attachment.spheres.emplace_back(vamp::collision::factory::sphere::array({0.0, 0.0, 0.0}, 0.03));
     sphere_attachment.spheres.emplace_back(vamp::collision::factory::sphere::array({0.0, 0.0, 0.03}, 0.03));
 
-    env_v.attach(sphere_attachment);
+    // env_v.attach(sphere_attachment);
 
     std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
         -10.01, -10.01, -0.01, -0.01, -0.01, -0.01
@@ -93,21 +108,30 @@ auto main(int, char **) -> int
         10.01, 10.01, 0.01, 0.01, 0.01, 0.01
     };
 
-
-    std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
-    Eigen::Matrix<float, 4, 4> T;
-    T << 0,0,1,   0.354,   0,-1,0,      0.700,   1,0,0,    0.243,          0,           0,           0,           1;
-    eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-    std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
-    T << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
-    eef_transforms_ref_frame_w_world[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 0.707107, 0, 0.707107, 0.354, 0.7, 0.243}};
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
 
     vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
         eef_transforms_ref_frame_w_world,
         eef_transforms,
-        std::make_pair(tsr_lower_bound, tsr_upper_bound)
+        tsr_lower_bound,
+        tsr_upper_bound
     );
+
+    // std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
+    // Eigen::Matrix<float, 4, 4> T;
+    // T << 0,0,1,   0.354,   0,-1,0,      0.700,   1,0,0,    0.243,          0,           0,           0,           1;
+    // eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+    // std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
+    // T << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
+    // eef_transforms_ref_frame_w_world[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
+
+
+    // vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
+    //     eef_transforms_ref_frame_w_world,
+    //     eef_transforms,
+    //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
+    // );
 
 
     vamp::planning::ComposableConstraints<Robot, rake, decltype(tsr_constraint)> task_constraint(
@@ -128,11 +152,18 @@ auto main(int, char **) -> int
 
     if(result.path.size() > 0)
     {
+
+        // Simplify path with default settings
+        vamp::planning::SimplifySettings simplify_settings;
+        auto simplify_result = vamp::planning::constraint::simplify_with_constraints<Robot, rake, Robot::resolution, decltype(tsr_constraint)>(
+            result.path, env_v, task_constraint, simplify_settings, rng);
+
+
         std::cout << "\nPrinting Result!! " << result.path.size() << std::endl;
         // Output configurations of simplified path
         std::cout << std::fixed << std::setprecision(3);
         std::ofstream outfile("/src/trajectory.txt");
-        for (const auto &config : result.path)
+        for (const auto &config : simplify_result.path)
         {
             const auto &array = config.to_array();
             Robot::ConfigurationArray soln;

@@ -3,6 +3,10 @@
 #include <utility>
 #include <iostream>
 #include <iomanip>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <nlohmann/json.hpp>
 
 #include <vamp/collision/factory.hh>
 // #include <vamp/planning/validate.hh>
@@ -13,7 +17,6 @@
 // #include <vamp/planning/simplify.hh>
 #include <vamp/robots/panda.hh>
 #include <vamp/random/halton.hh>
-#include <fstream>
 
 using Robot = vamp::robots::Panda;
 static constexpr const std::size_t rake = vamp::FloatVectorWidth;
@@ -30,8 +33,8 @@ using AttachmentInput = vamp::collision::Attachment<float>;
 
 
 // static constexpr Robot::ConfigurationArray start = {0.99,1.43,-0.05,-0.28,0.33,1.98,1.42};
-static constexpr Robot::ConfigurationArray start = {-0.75,0.21,-0.05,-2.29,-0.32,2.44,1.64};
-static constexpr Robot::ConfigurationArray goal = {1.31,0.67,-0.05,-1.58,-0.32,2.3,-0.81};
+static constexpr Robot::ConfigurationArray start = {-0.88021, 0.53120, -0.20601, -1.61905, 0.11733, 2.14908, 1.19294};
+static constexpr Robot::ConfigurationArray goal = {1.40490, 0.35201, -0.22762, -1.90963, 0.10796, 2.26183, 0.22238};
 
 // static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
 // static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
@@ -79,6 +82,68 @@ struct Attempt {
     }
 };
 
+/// Parse the JSON file which is expected to be an array of objects. For each object,
+/// extract x,y,z,dx,dy,dz and optional roll,pitch,yaw and append a cuboid to environment.
+/// Uses nlohmann::json for robust parsing.
+static bool load_cuboids_from_json(EnvironmentInput &environment, const std::string &path) {
+    std::ifstream ifs(path);
+    if (!ifs.is_open()) {
+        std::cerr << "Failed to open JSON file: " << path << std::endl;
+        return false;
+    }
+
+    nlohmann::json j;
+    try {
+        ifs >> j;
+    } catch (const std::exception &e) {
+        std::cerr << "Failed to parse JSON file: " << path << " error: " << e.what() << std::endl;
+        return false;
+    }
+
+    if (!j.is_array()) {
+        std::cerr << "Expected top-level JSON array in: " << path << std::endl;
+        return false;
+    }
+
+    for (const auto &obj : j) {
+        if (!obj.is_object()) {
+            std::cerr << "Skipping non-object element in array" << std::endl;
+            continue;
+        }
+
+        // required fields
+        if (!obj.contains("x") || !obj.contains("y") || !obj.contains("z") ||
+            !obj.contains("dx") || !obj.contains("dy") || !obj.contains("dz")) {
+            std::cerr << "Skipping object missing required fields (x,y,z,dx,dy,dz)" << std::endl;
+            continue;
+        }
+
+        try {
+            float x = obj.at("x").get<float>();
+            float y = obj.at("y").get<float>();
+            float z = obj.at("z").get<float>();
+            float dx = obj.at("dx").get<float>();
+            float dy = obj.at("dy").get<float>();
+            float dz = obj.at("dz").get<float>();
+
+            float roll = 0.0f, pitch = 0.0f, yaw = 0.0f;
+            if (obj.contains("roll")) roll = obj.at("roll").get<float>();
+            if (obj.contains("pitch")) pitch = obj.at("pitch").get<float>();
+            if (obj.contains("yaw")) yaw = obj.at("yaw").get<float>();
+
+            std::array<float,3> posf = {x, y, z};
+            std::array<float,3> rotf = {roll, pitch, yaw};
+            std::array<float,3> sizef = {dx / 2, dy / 2, dz / 2};
+            // std::cout << "Creating cuboid at position: " << posf[0] << ", " << posf[1] << ", " << posf[2] << " with size: " << sizef[0] << ", " << sizef[1] << ", " << sizef[2] << std::endl;
+            environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array(posf, rotf, sizef));
+        } catch (const std::exception &e) {
+            std::cerr << "Error reading object fields: " << e.what() << " -- skipping object" << std::endl;
+            continue;
+        }
+    }
+
+    return true;
+}
 
 auto main(int, char **) -> int
 {
@@ -86,7 +151,8 @@ auto main(int, char **) -> int
     // Setup RRTC and plan
     vamp::planning::RRTCSettings rrtc_settings;
 
-    float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
+    float ranges[] = {0.5, 0.75, 1.0, 0.1, 0.2};
+    // float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
     // float ranges[] = {0.5, 0.75};
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     // bool dd[] = {false};
@@ -104,47 +170,40 @@ auto main(int, char **) -> int
 
                 // if(pm < 2) continue;
 
-    // Build sphere cage environment
+    // Build environment from JSON cuboids
     EnvironmentInput environment;
-    // std::ofstream outfile_sph("spheres.txt");
-    // for (const auto &sphere : problem)
-    // {
-    //     outfile_sph << sphere[0] << "," << sphere[1] << "," << sphere[2] << "," << radius << "\n";
-    //     environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
-    // }
-    // outfile_sph.close();
-    std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/maze_cuboids.txt");
-    if (!infile.is_open()) {
-        std::cerr << "Failed to open file!" << std::endl;
+
+    // Try a few likely paths for the JSON file
+    const std::vector<std::string> candidate_paths = {
+        "/src/myfork/vamp/resources/environments/cuboids/real_maze.json",
+    };
+
+    bool loaded = false;
+    for (const auto &p : candidate_paths) {
+        if (load_cuboids_from_json(environment, p)) {
+            std::cout << "Loaded cuboids from: " << p << std::endl;
+            loaded = true;
+            break;
+        }
+    }
+    if (!loaded) {
+        std::cerr << "Failed to load cuboids JSON from any candidate path. Exiting." << std::endl;
         return 1;
     }
 
-    std::string line;
-    while (std::getline(infile, line)) {
-        std::istringstream iss(line);
-        char delim;
-        float x, y, z, dx, dy, dz;
-
-        if (!(iss >> x >> delim >> y >> delim >> z >> delim >> dx >> delim >> dy >> delim >> dz)) {
-            std::cerr << "Error reading line: " << line << std::endl;
-            continue;
-        }
-        // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
-        environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x + 0.1, y + 1.0, z + 0.11}, {0.0, 0.0, 0.0}, {dx, dy, dz}));
-    }
-    infile.close();
-
-
-
     environment.sort();
-    // attach a stick
+
+    std::vector<vamp::collision::Sphere<float>> spheres;
+    for(auto i=0U; i < 10; i++){
+        spheres.push_back(vamp::collision::Sphere<float>(0.0, 0.0, i * 0.02, 0.02));
+    }
     auto attach_transform = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
-    attach_transform.translation().z() = 0.02;
+    attach_transform.translation().z() = 0.0;
     AttachmentInput attachment(attach_transform);
-    // attachment.add_
-    std::vector<vamp::collision::Sphere<float>> spheres = {vamp::collision::Sphere<float>(0.0, 0.0, 0.0, 0.03), vamp::collision::Sphere<float>(0.0, 0.0, 0.05, 0.03), vamp::collision::Sphere<float>(0.0, 0.0, 0.09, 0.03)};
+
     attachment.spheres.insert(attachment.spheres.end(), spheres.cbegin(), spheres.cend());
-    // environment.attach(attachment, 0);
+    environment.attach(attachment, 0);
+
 
 
     auto env_v = EnvironmentVector(environment);
@@ -152,31 +211,28 @@ auto main(int, char **) -> int
     auto rng = std::make_shared<vamp::rng::Halton<Robot>>();
 
 
-    std::array<float, 6> lower_bound = {
-        -10.01, -10.01, -0.01, -0.3, -0.3, -10.1
-    };
-    std::array<float, 6> upper_bound = {
-        10.03, 10.01, 0.01, 0.3, 0.3, 10.1
+    std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
+        -10.01, -10.01, -0.01, -0.01, -0.01, -10.01
     };
 
+    std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
+        10.01, 10.01, 0.01, 0.01, 0.01, 10.01
+    };
 
-    // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
-    Eigen::Matrix<float, 4, 4> T;
-    // T << 1,  0.000398119,  7.35017e-08,      0.30702,  0.000398119,           -1, -6.92765e-12, -5.94873e-12,  7.35017e-08,  3.61875e-11,           -1,      0.48527,            0,            0,            0,            1;
-    // T <<  0.99086916, -0.13428134,  0.01211568,  0.48284483, -0.13408315, -0.99084246, -0.01591116, -0.6341026,  0.0141413,   0.01414137, -0.9998001,   0.34187168,  0.,          0.,          0.,          1.;
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 1.0, 0, 0.0, 0.29276255, -0.55347496, 0.20607783}};
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
 
-    // T <<   1,0,0,   0.48284483,   0,1,0,     -0.6341026,   0,0,1,    0.34187168,          0,           0,           0,           1;
-    T << -1,0,0,   0.246,   0,1,0,      0.670,   0,0,-1,    0.151 ,          0,           0,           0,           1;
-
-    // T <<   -0.537748,    0.711259,     -0.4527,   0.48284483,   0.543885,     0.70293,    0.458344,     -0.6341026,   0.644218, 0.000256485,   -0.764842,    0.34187168,          0,           0,           0,           1;
-    // T << 1,  0.000398163,  4.62412e-17, 5.0781602e-01, 0.000398163, -1, -6.92765e-12, 6.1428678e-01, -2.7121e-15,  6.92765e-12, -1, 3.4187165e-01, 0.0, 0.0, 0.0, 1;
-    const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
-    // std::cout << "Target pose is : " << target_pose.translation().transpose() << std::endl;
-    const auto in_hand_pose = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
-    vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(in_hand_pose, target_pose, std::make_pair(lower_bound, upper_bound));
+    vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
+        eef_transforms_ref_frame_w_world,
+        eef_transforms,
+        tsr_lower_bound,
+        tsr_upper_bound
+    );
 
 
-
+    vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>> task_constraint(
+        tsr_constraint
+    );
 
     rrtc_settings.range = range;
     rrtc_settings.max_iterations = 100000;
@@ -185,8 +241,13 @@ auto main(int, char **) -> int
     rrtc_settings.descend_rate = descent_rate;
     // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
+    vamp::planning::invalid_distance_counter_outside = 0;
+    vamp::planning::invalid_distance_counter_inside = 0;
+    vamp::planning::collision_counter = 0;
+    vamp::planning::unable_to_project_counter = 0;
+
     auto result =
-        CRRTC::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
+        vamp::planning::CRRTC<Robot, rake, Robot::resolution, decltype(tsr_constraint)>::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
 
     if(result.path.size() > 0)
     {

@@ -40,7 +40,7 @@ def main(
     ):
 
     (vamp_module, planner_func, plan_settings,
-     simp_settings) = vamp.configure_robot_and_planner_with_kwargs("bimanualpanda", planner, **kwargs)
+     simp_settings) = vamp.configure_robot_and_planner_with_kwargs("bimanual_panda", planner, **kwargs)
 
     # Create an attachment offset on the Z-axis from the end-effector frame
     tf = np.identity(4)

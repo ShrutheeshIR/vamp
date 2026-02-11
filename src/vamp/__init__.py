@@ -91,6 +91,12 @@ def configure_robot_and_planner_with_kwargs(robot_name: str, planner_name: str, 
         if robot_name in ROBOT_RRT_RANGES:
             plan_settings.rrtc.range = ROBOT_RRT_RANGES[robot_name]
 
+    elif planner_name == "crrtc":
+        plan_settings = RRTCSettings()
+        if robot_name in ROBOT_RRT_RANGES:
+            plan_settings.range = ROBOT_RRT_RANGES[robot_name]
+            plan_settings.dynamic_domain = False
+
     else:
         raise NotImplementedError(f"Automatic setup for planner {planner_name} is not implemented yet!")
 
