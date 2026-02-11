@@ -153,7 +153,9 @@ namespace vamp::planning
                         constraint,
                         environment,
                         static_cast<ProjMethod>(settings.projection_method),
-                        settings.descend_rate
+                        settings.descend_rate,
+                        settings.num_projection_iterations,
+                        settings.insert_all_to_tree
                     ))
 
                 {

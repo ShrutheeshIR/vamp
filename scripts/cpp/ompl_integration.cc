@@ -163,24 +163,37 @@ auto main(int argc, char **) -> int
     // Create OMPL state space
     auto space = std::make_shared<ob::RealVectorStateSpace>(dimension);
 
+    std::cout << "Creating OMPL state space with dimension " << dimension << std::endl;
+
     // Get bounds from VAMP Robot information, scale 0/1 config to min/max
     static constexpr std::array<float, dimension> zeros = {0., 0., 0., 0., 0., 0., 0.};
     static constexpr std::array<float, dimension> ones = {1., 1., 1., 1., 1., 1., 1.};
 
+    std::cout << "Getting bounds from VAMP Robot information" << std::endl;
+
     auto zero_v = Configuration(zeros);
     auto one_v = Configuration(ones);
+
+    std::cout << "Scaling 0/1 configuration to min/max" << std::endl;
 
     Robot::scale_configuration(zero_v);
     Robot::scale_configuration(one_v);
 
+    std::cout << "Setting bounds for OMPL state space" << std::endl;
+
     ob::RealVectorBounds bounds(dimension);
-    for (auto i = 0U; i < dimension; ++i)
+
+    std::cout << "Got bounds " << dimension << std::endl;
+    for (auto d = 0U; d < dimension; ++d)
     {
-        bounds.setLow(i, zero_v[{i, 0}]);
-        bounds.setHigh(i, one_v[{i, 0}]);
+        std::cout << "Setting bounds for dimension " << d << std::endl;
+        bounds.setLow(d, zero_v[{d, 0}]);
+        bounds.setHigh(d, one_v[{d, 0}]);
     }
+    std::cout << "Setting space bounds for OMPL state space" << std::endl;
 
     space->setBounds(bounds);
+    std::cout << "Setting space info" << std::endl;
 
     // Create space information and set state validator and custom VAMP motion validator
     auto si = std::make_shared<ob::SpaceInformation>(space);
@@ -196,6 +209,7 @@ auto main(int argc, char **) -> int
         start_ompl[i] = start[i];
         goal_ompl[i] = goal[i];
     }
+    std::cout << "Setting start and goal states" << std::endl;
 
     auto pdef = std::make_shared<ob::ProblemDefinition>(si);
     pdef->setStartAndGoalStates(start_ompl, goal_ompl);

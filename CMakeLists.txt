@@ -8,7 +8,7 @@ option(VAMP_BUILD_PYTHON_BINDINGS "Build VAMP Python bindings" ON)
 option(VAMP_INSTALL_CPP_LIBRARY "Install VAMP C++ library (disable for Python wheel builds)" ON)
 
 option(VAMP_BUILD_CPP_DEMO "Build VAMP C++ Demo Scripts" ON)
-option(VAMP_BUILD_OMPL_DEMO "Build VAMP C++ OMPL Integration Demo Scripts" OFF)
+option(VAMP_BUILD_OMPL_DEMO "Build VAMP C++ OMPL Integration Demo Scripts" ON)
 option(VAMP_OMPL_PATH "Search Path for OMPL Installation - Only Needed for Demo Script" "")
 add_compile_options(-w)
 
@@ -150,8 +150,8 @@ find_package(nlohmann_json REQUIRED)
   add_executable(vamp_crrtc_example scripts/cpp/vamp_crrtc_example.cc)
   target_link_libraries(vamp_crrtc_example PRIVATE vamp_cpp nlohmann_json::nlohmann_json)
 
-  # add_executable(vamp_crrtc_spheres scripts/cpp/vamp_crrtc_spheres.cc)
-  # target_link_libraries(vamp_crrtc_spheres PRIVATE vamp_cpp)
+  add_executable(vamp_crrtc_spheres scripts/cpp/vamp_crrtc_spheres.cc)
+  target_link_libraries(vamp_crrtc_spheres PRIVATE vamp_cpp)
 
 # add_executable(vamp_crrtc_transport_mug scripts/cpp/vamp_crrtc_transport_mug.cc)
 # target_link_libraries(vamp_crrtc_transport_mug PRIVATE vamp_cpp)
@@ -194,7 +194,11 @@ if(VAMP_BUILD_OMPL_DEMO)
     add_executable(vamp_ompl_integration scripts/cpp/ompl_integration.cc)
     target_link_libraries(vamp_ompl_integration PRIVATE ompl::ompl vamp_cpp)
 
-    # Disable strict warnings for demos to maintain compatibility
+  add_executable(vamp_constrained_ompl_integration scripts/cpp/constrained_ompl_integration.cc)
+  target_link_libraries(vamp_constrained_ompl_integration PRIVATE ompl::ompl vamp_cpp)
+
+
+  # Disable strict warnings for demos to maintain compatibility
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
       target_compile_options(vamp_ompl_integration PRIVATE -Wno-c++11-narrowing -Wno-sign-compare)
     endif()

@@ -32,9 +32,8 @@ using AttachmentInput = vamp::collision::Attachment<float>;
 // static constexpr Robot::ConfigurationArray start = {-1.314, 1.339, 1.095, -2.495, 0.513, 2.551, -1.495, 1.294, 1.309, -1.055, -2.493, -0.713, 2.500, -3.014 };
 // static constexpr Robot::ConfigurationArray goal = {-1.068, 0.602, 1.329, -1.797, 1.059, 1.959, -1.149, 1.033, 0.446, -1.224, -1.837, -1.286, 1.917, 2.813};
 
-static constexpr Robot::ConfigurationArray start = {-0.88021, 0.53120, -0.20601, -1.61905, 0.11733, 2.14908, 1.19294};
-static constexpr Robot::ConfigurationArray goal = {1.40490, 0.35201, -0.22762, -1.90963, 0.10796, 2.26183, 0.22238};
-
+static constexpr Robot::ConfigurationArray start = {-1.45508 , -0.718918,  2.46299 , -0.29207 , -0.396585,  2.28344 , -0.613603};
+static constexpr Robot::ConfigurationArray goal = {0.2013, 0.0540317, -2.7026, -0.138382, -0.902814, 3.35919, -1.78867};
 
 static bool load_cuboids_from_json(EnvironmentInput &environment, const std::string &path) {
     std::ifstream ifs(path);
@@ -151,14 +150,13 @@ auto main(int, char **) -> int
     auto rng = std::make_shared<vamp::rng::Halton<Robot>>();
 
     std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-        -10.01, -10.01, -0.001, -0.01, -0.01, -10.01
+        -0.01, -10.01, -0.01, -0.01, -0.01, -0.01
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
-        10.01, 10.01, 0.001, 0.01, 0.01, 10.01
+        0.01, 10.01, 0.01, 0.01, 0.01, 0.01
     };
-
-    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 1.0, 0, 0.0, 0.29276255, -0.55347496, 0.20607783}};
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 1,0,0,   0.3486, 0.647752, 0.2399}};
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
 
     vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
@@ -167,8 +165,6 @@ auto main(int, char **) -> int
         tsr_lower_bound,
         tsr_upper_bound
     );
-
-
     vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>> task_constraint(
         tsr_constraint
     );
@@ -185,10 +181,11 @@ auto main(int, char **) -> int
     // // std::cout << "Dist to constraint" << "->" << vamp::utils::get_elapsed_nanoseconds(start_time);
     // std::cout << "From block : " << dist << std::endl;
     // task_constraint.print_robot_tsr_error(block);
-    // Eigen::Quaternionf qstart(Robot::eefk(start)[0].linear());
-    // Eigen::Quaternionf qgoal(Robot::eefk(goal)[0].linear());
+    Eigen::Quaternionf qstart(Robot::eefk(start)[0].linear());
+    Eigen::Quaternionf qgoal(Robot::eefk(goal)[0].linear());
     std::cout << Robot::eefk(start)[0].matrix() << std::endl;
     std::cout << Robot::eefk(goal)[0].matrix() << std::endl;
+    std::cout << "-----------------" << std::endl;
 
     // auto start_eefk = Robot::eefk(start);
     // std::cout << (start_eefk[0].inverse() * start_eefk[1]).matrix()  << std::endl;
@@ -205,8 +202,8 @@ auto main(int, char **) -> int
     // std::cout << q2.w() << ", " << q2.x() << ", " << q2.y() << ", " << q2.z() << ", " << lTr_goal.translation().transpose() << std::endl;
 
 
-    // std::cout << qstart.w() << ", " << qstart.x() << ", " << qstart.y() << ", " << qstart.z() << std::endl;
-    // std::cout << qgoal.w() << ", " << qgoal.x() << ", " << qgoal.y() << ", " << qgoal.z() << std::endl;
+    std::cout << qstart.w() << ", " << qstart.x() << ", " << qstart.y() << ", " << qstart.z() << std::endl;
+    std::cout << qgoal.w() << ", " << qgoal.x() << ", " << qgoal.y() << ", " << qgoal.z() << std::endl;
 
 
     auto vector = Robot::Configuration(goal) - Robot::Configuration(start);
@@ -361,7 +358,7 @@ auto main(int, char **) -> int
     //     outfile << "\n";
     // }
 
-
+    std::cout << "Projecting start and goal\n\n";
     Robot::ConfigurationArray holder;
     // typename Robot::template ConfigurationBlock<rake> block, projected_block, direction_vector_block;
     for (auto i = 0U; i < Robot::dimension; ++i){
@@ -369,7 +366,7 @@ auto main(int, char **) -> int
     }
     task_constraint.print_robot_tsr_error(block);
     bool startsuccess = task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0);
-    std::cout << startsuccess <<std::endl;
+    std::cout << "Start success : " <<startsuccess <<std::endl;
     bool first = true;
     for (auto i = 0U; i < Robot::dimension; ++i){
         holder[i] = projected_block[{i, 0}];
@@ -384,12 +381,12 @@ auto main(int, char **) -> int
     // // Eigen::Quaternionf q(Robot::eefk(holder)[0].linear());
     // // std::cout << Robot::eefk(holder)[0].matrix() << std::endl;
     // // std::cout << q.w() << ", " << q.x() << ", " << q.y() << ", " << q.z() << std::endl;
-
+    std::cout << "\n\nProjecting goal\n\n";
     for (auto i = 0U; i < Robot::dimension; ++i)
         block[i] = Robot::Configuration(goal).broadcast(i);
     task_constraint.print_robot_tsr_error(block);
     bool goalsuccess = task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0);
-    std::cout << goalsuccess << std::endl;
+    std::cout << "Goal success : " << goalsuccess << std::endl;
 
     first = true;
     for (auto i = 0U; i < Robot::dimension; ++i){
@@ -406,75 +403,75 @@ auto main(int, char **) -> int
     // Eigen::Quaternionf q2(Robot::eefk(holder)[0].linear());
     // std::cout << q2.w() << ", " << q2.x() << ", " << q2.y() << ", " << q2.z() << std::endl;
 
-    auto vector2 = Robot::Configuration(start) - Robot::Configuration(goal);
-    std::cout << vector2 << " with norm : " << vector2.l2_norm() << std::endl;
-    std::vector<Robot::Configuration> projected_vector2, projected_vector_inside;
-    auto ret = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(Robot::Configuration(start), Robot::Configuration(goal), projected_vector2, task_constraint, env_v);
-    std::cout << ret << std::endl;
+    // auto vector2 = Robot::Configuration(start) - Robot::Configuration(goal);
+    // std::cout << vector2 << " with norm : " << vector2.l2_norm() << std::endl;
+    // std::vector<Robot::Configuration> projected_vector2, projected_vector_inside;
+    // auto ret = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(Robot::Configuration(start), Robot::Configuration(goal), projected_vector2, task_constraint, env_v);
+    // std::cout << ret << std::endl;
 
 
-    for(auto& proj_vec : projected_vector2){
-        first = true;
-        for (auto i = 0U; i < Robot::dimension; ++i){
-            holder[i] = proj_vec.broadcast(i)[{0, 0}];
-            std::cout << holder[i] << ", ";
-            if (!first) outfile << ",";
-            outfile << holder[i];
-            first = false;
-        }
-        outfile << "\n";
-        std::cout << std::endl;
-    }
+    // for(auto& proj_vec : projected_vector2){
+    //     first = true;
+    //     for (auto i = 0U; i < Robot::dimension; ++i){
+    //         holder[i] = proj_vec.broadcast(i)[{0, 0}];
+    //         std::cout << holder[i] << ", ";
+    //         if (!first) outfile << ",";
+    //         outfile << holder[i];
+    //         first = false;
+    //     }
+    //     outfile << "\n";
+    //     std::cout << std::endl;
+    // }
 
-    // now try with attachment
-    std::vector<vamp::collision::Sphere<float>> spheres;
-    for(auto i=0U; i < 10; i++){
-        spheres.push_back(vamp::collision::Sphere<float>(0.0, 0.0, i * 0.02, 0.02));
-    }
-    auto attach_transform = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
-    attach_transform.translation().z() = 0.0;
-    AttachmentInput attachment(attach_transform);
+    // // now try with attachment
+    // std::vector<vamp::collision::Sphere<float>> spheres;
+    // for(auto i=0U; i < 10; i++){
+    //     spheres.push_back(vamp::collision::Sphere<float>(0.0, 0.0, i * 0.02, 0.02));
+    // }
+    // auto attach_transform = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
+    // attach_transform.translation().z() = 0.0;
+    // AttachmentInput attachment(attach_transform);
 
-    attachment.spheres.insert(attachment.spheres.end(), spheres.cbegin(), spheres.cend());
-    environment.attach(attachment, 0);
-    env_v = EnvironmentVector(environment);
+    // attachment.spheres.insert(attachment.spheres.end(), spheres.cbegin(), spheres.cend());
+    // environment.attach(attachment, 0);
+    // env_v = EnvironmentVector(environment);
 
-    ret = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(Robot::Configuration(start), Robot::Configuration(goal), projected_vector2, task_constraint, env_v);
-    std::cout << ret << std::endl;
-    std::cout << Robot::eefk(start)[0].matrix() << std::endl;
-    std::cout << Robot::eefk(goal)[0].matrix() << std::endl;
+    // ret = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(Robot::Configuration(start), Robot::Configuration(goal), projected_vector2, task_constraint, env_v);
+    // std::cout << ret << std::endl;
+    // std::cout << Robot::eefk(start)[0].matrix() << std::endl;
+    // std::cout << Robot::eefk(goal)[0].matrix() << std::endl;
 
-    // testing start
-    std::cout << "Testing start configuration:" << std::endl;
-    for (auto i = 0U; i < Robot::dimension; ++i){
-        block[i] = Robot::Configuration(start).broadcast(i);
-    }
-    std::cout << Robot::fkcc_attach(env_v, block) << std::endl;
+    // // testing start
+    // std::cout << "Testing start configuration:" << std::endl;
+    // for (auto i = 0U; i < Robot::dimension; ++i){
+    //     block[i] = Robot::Configuration(start).broadcast(i);
+    // }
+    // std::cout << Robot::fkcc_attach(env_v, block) << std::endl;
 
-    // testing goal
-    std::cout << "Testing goal configuration:" << std::endl;
-    for (auto i = 0U; i < Robot::dimension; ++i){
-        block[i] = Robot::Configuration(goal).broadcast(i);
-    }
-    std::cout << Robot::fkcc_attach(env_v, block) << std::endl;
+    // // testing goal
+    // std::cout << "Testing goal configuration:" << std::endl;
+    // for (auto i = 0U; i < Robot::dimension; ++i){
+    //     block[i] = Robot::Configuration(goal).broadcast(i);
+    // }
+    // std::cout << Robot::fkcc_attach(env_v, block) << std::endl;
 
 
-    for(auto& proj_vec : projected_vector2){
-        ret = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(proj_vec, proj_vec, projected_vector_inside, task_constraint, env_v);
-        std::cout << "Projected Motion: " << ret << " -- ";
+    // for(auto& proj_vec : projected_vector2){
+    //     ret = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(proj_vec, proj_vec, projected_vector_inside, task_constraint, env_v);
+    //     std::cout << "Projected Motion: " << ret << " -- ";
 
-        first = true;
-        for (auto i = 0U; i < Robot::dimension; ++i){
-            holder[i] = proj_vec.broadcast(i)[{0, 0}];
-            std::cout << holder[i] << ", ";
-            if (!first) outfile << ",";
-            outfile << holder[i];
-            first = false;
-        }
+    //     first = true;
+    //     for (auto i = 0U; i < Robot::dimension; ++i){
+    //         holder[i] = proj_vec.broadcast(i)[{0, 0}];
+    //         std::cout << holder[i] << ", ";
+    //         if (!first) outfile << ",";
+    //         outfile << holder[i];
+    //         first = false;
+    //     }
 
-        outfile << "\n";
-        std::cout << std::endl;
-    }
+    //     outfile << "\n";
+    //     std::cout << std::endl;
+    // }
 
 
     // Robot::Configuration start_plus_percent = {-1.289,  1.039,  1.079, -2.12 ,  0.553,  2.082, -1.181,  1.165, 1.11 , -1.048, -2.128, -0.5  ,  2.138, -0.202};
