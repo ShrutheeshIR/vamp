@@ -67,7 +67,7 @@ def add_json_cuboids(server, e, filename, color=(12, 89, 178)):
 
 def main(
     obstacle_radius: float = 0.2,
-    attachment_radius: float = 0.01,
+    attachment_radius: float = 0.015,
     planner: str = "crrtc",
     **kwargs,
     ):
@@ -81,7 +81,7 @@ def main(
     attachment = vamp.Attachment(tf)
 
     attach_positions = np.zeros((10, 3))
-    attach_positions[:, 2] = np.linspace(0, 0.18, len(attach_positions))
+    attach_positions[:, 2] = np.linspace(0, 0.16, len(attach_positions))
     print(attach_positions)
 
     # Add a single sphere to the attachment - spheres are added in the attachment's local frame
@@ -168,7 +168,7 @@ def main(
     add_trajectory(
         server, simple.path.numpy(), robot, attachment_sph_groups, attachment_positions
     )
-    ranges = [0.5, 0.75]
+    ranges = [0.1, 0.2, 0.5, 0.75]
     dyndoms = [False, True]
     all_combinations = list(itertools.product(ranges, dyndoms))
     planning_times = {

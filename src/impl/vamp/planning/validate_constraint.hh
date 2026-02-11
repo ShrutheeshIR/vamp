@@ -54,7 +54,9 @@ namespace vamp::planning
         ComposableConstraints<Robot, rake, Constraints...> &constraint,
         const collision::Environment<FloatVector<rake>> &environment,
         ProjMethod projection_method = ProjMethod::InnerLM,
-        float projection_descent_rate = 1.0) -> bool
+        float projection_descent_rate = 1.0,
+        int num_projection_iterations = 25,
+        bool insert_all_to_tree = false) -> bool
     {
         projected_vector.clear();
 
@@ -76,7 +78,7 @@ namespace vamp::planning
 
         // std::cout << "Proj method " << projection_method << std::endl;
 
-        bool ableToProject = constraint.projectConfiguration(block, initial_projected_block, projection_method, distance, projection_descent_rate);
+        bool ableToProject = constraint.projectConfiguration(block, initial_projected_block, projection_method, distance, projection_descent_rate, num_projection_iterations);
         if (not ableToProject)
         {
             // std::cout << "Unable to project " << std::endl;
@@ -137,7 +139,8 @@ namespace vamp::planning
                          Robot::template fkcc<rake>(environment, initial_projected_block);
 
         typename Robot::ConfigurationArray last_projected;
-        for (auto i = 0U; i < rake; i++)
+        size_t start_add = insert_all_to_tree ? 0 : rake - 1;
+        for (auto i = start_add; i < rake; i++)
         {
             for (auto j = 0U; j < Robot::dimension; j++)
             {
@@ -161,7 +164,7 @@ namespace vamp::planning
         {
 
             initial_projected_block = initial_projected_block - shifted_block / n;
-            if (not constraint.projectConfiguration(initial_projected_block, projected_block, projection_method, max_inter_dist * rake, projection_descent_rate))
+            if (not constraint.projectConfiguration(initial_projected_block, projected_block, projection_method, max_inter_dist * rake, projection_descent_rate, num_projection_iterations))
             {
                 unable_to_project_inside_counter++;
                 return false;
@@ -210,7 +213,9 @@ namespace vamp::planning
         ComposableConstraints<Robot, rake, Constraints...> &constraint,
         const collision::Environment<FloatVector<rake>> &environment,
         ProjMethod projection_method = ProjMethod::InnerLM,
-        float projection_descent_rate = 1.0) -> bool
+        float projection_descent_rate = 1.0,
+        int num_projection_iterations = 25,
+        bool insert_all_to_tree = false) -> bool
     {
         auto vector = goal - start;
         return project_constraint_vector<Robot, rake, resolution>(

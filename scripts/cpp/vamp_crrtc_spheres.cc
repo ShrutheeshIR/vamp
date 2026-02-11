@@ -22,8 +22,8 @@ using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution>;
 
 
-static constexpr Robot::ConfigurationArray start = {1.016, 0.688, 0.087, -1.281, -0.06, 1.955, 1.891};
-static constexpr Robot::ConfigurationArray goal = {-1.184, 0.689, 0.154, -1.274, -0.106, 1.955, -0.24};
+static constexpr Robot::ConfigurationArray start = {1.01600, 0.68800, 0.08700, -1.28100, -0.06000, 1.95500, 1.89100};
+static constexpr Robot::ConfigurationArray goal = {-1.18400, 0.68900, 0.15400, -1.27400, -0.10600, 1.95500, -0.24000};
 
 
 
@@ -58,6 +58,8 @@ struct Attempt {
     bool dynamic_domain;
     vamp::planning::ProjMethod proj_method;
     float descend_rate;
+    int num_projection_iterations;
+    bool insert_all_to_tree;
     bool success;
     std::size_t planning_time;
     std::size_t planning_iterations;
@@ -88,7 +90,9 @@ auto main(int, char **) -> int
     // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
     float descend_rates[] = {0.75, 1.0};
     // float descend_rates[] = {1.0};
-
+    //
+    int num_projection_iterations[] = {5, 10, 25, 50, 100};
+    bool insert_all_to_tree[] = {false, true};
 
     std::vector<Attempt> succ_attempts;
 
@@ -96,6 +100,8 @@ auto main(int, char **) -> int
         for(const auto dyndom: dd){
             for(const auto &pm: projection_method){
                 for(const auto descent_rate: descend_rates){
+                    for(const auto num_projection_iterations: num_projection_iterations){
+                        for(const auto insert_all_to_tree: insert_all_to_tree){
 
                 // if(pm < 2) continue;
 
@@ -160,12 +166,15 @@ auto main(int, char **) -> int
     rrtc_settings.dynamic_domain = dyndom;
     rrtc_settings.projection_method = pm;
     rrtc_settings.descend_rate = descent_rate;
+    rrtc_settings.radius = 1.0;
+    rrtc_settings.num_projection_iterations = num_projection_iterations;
+    rrtc_settings.insert_all_to_tree = insert_all_to_tree;
     // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
-    // vamp::planning::invalid_distance_counter_outside = 0;
-    // vamp::planning::invalid_distance_counter_inside = 0;
-    // vamp::planning::collision_counter = 0;
-    // vamp::planning::unable_to_project_counter = 0;
+    vamp::planning::invalid_distance_counter_outside = 0;
+    vamp::planning::invalid_distance_counter_inside = 0;
+    vamp::planning::collision_counter = 0;
+    vamp::planning::unable_to_project_counter = 0;
 
 
     auto result =
@@ -178,6 +187,8 @@ auto main(int, char **) -> int
             dyndom,
             pm,
             descent_rate,
+            num_projection_iterations,
+            insert_all_to_tree,
             true,
             result.nanoseconds,
             result.iterations,
@@ -224,10 +235,12 @@ auto main(int, char **) -> int
         }
     }
     }
+        }
+    }
     std::cout << "------Final Result --------" << std::endl;
     std::sort(succ_attempts.rbegin(), succ_attempts.rend());
     for (const auto &a : succ_attempts) {
-        std::cout << a.range << ", " << a.dynamic_domain << ", " << a.proj_method << ", " << a.descend_rate << ", " << a.planning_time/1e6 << ", " << a.planning_iterations << ", " << a.path_length << std::endl;
+        std::cout << a.range << ", " << a.dynamic_domain << ", " << a.proj_method << ", " << a.descend_rate << ", " << a.num_projection_iterations << ", " << a.insert_all_to_tree << ", " << a.planning_time/1e6 << ", " << a.planning_iterations << ", " << a.path_length << std::endl;
 
     }
     std::cout << "---------------------------" << std::endl;

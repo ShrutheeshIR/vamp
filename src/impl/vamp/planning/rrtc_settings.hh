@@ -20,6 +20,8 @@ namespace vamp::planning
         int projection_method = 0;
 
         float descend_rate = 1.0;
+        int num_projection_iterations = 50;
+        bool insert_all_to_tree = false;
 
 
         void display() const
@@ -35,7 +37,9 @@ namespace vamp::planning
             std::cout << "Max Samples: " << max_samples << ", ";
             std::cout << "Start Tree First: " << start_tree_first << ", ";
             std::cout << "Projection Method: " << projection_method << ", ";
-            std::cout << "Descend Rate: " << descend_rate << "\n";
+            std::cout << "Descend Rate: " << descend_rate << ", ";
+            std::cout << "Num Projection Iterations: " << num_projection_iterations << ", ";
+            std::cout << "Insert All to Tree: " << insert_all_to_tree << "\n";
         }
     };
 }  // namespace vamp::planning

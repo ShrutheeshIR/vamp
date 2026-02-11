@@ -88,7 +88,7 @@ def main(
     #     position=(0, 0, 0),
 
     # )
-    ranges = [0.5, 0.75]
+    ranges = [0.2, 0.5, 0.75, 1.0, 1.5]
     dyndoms = [False, True]
     all_combinations = list(itertools.product(ranges, dyndoms))
     planning_times = {

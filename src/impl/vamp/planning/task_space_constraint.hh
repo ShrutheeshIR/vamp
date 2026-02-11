@@ -831,9 +831,6 @@ namespace vamp::planning
             // std::cout << std::endl;
 
 
-            // for(int i = 0U; i < 6 * Robot::n_eef; i++)
-            //     std::cout << jac_proj_inp.err[{i, 0}] << ", ";
-            // std::cout << std::endl;
 
             // for(int i = 0U; i < 6 * 2; i++)
             //     std::cout << short_jac_proj_inp.err[{i, 0}] << ", ";
@@ -845,6 +842,11 @@ namespace vamp::planning
             {
                 d = d + jac_proj_inp.err[i] * jac_proj_inp.err[i];
             }
+
+            // for(int i = 0U; i < 6 * Robot::n_eef; i++)
+            //     std::cout << jac_proj_inp.err[{i, 0}] << ", ";
+            // std::cout << std::endl;
+
             // std::cout << "TSR Error : ";
             // for(auto i=0U; i < 6 * 2; i++)
             //     std::cout << short_jac_proj_inp.err[{i, 0}] << " ";
@@ -869,12 +871,12 @@ namespace vamp::planning
                 {
                     // Robot::template solve_2_eef_tsr_error_lm_inner<rake>(short_jac_proj_inp, grad);
                     // grad = grad.zero_out_nans();
-                    // std::cout << "Grad for TSR constraint: "  ;
-                    // for (auto i = 0U; i < Robot::dimension; i++)
-                    //         std::cout << q[{i, 0}] << " -- " <<grad[{i, 0}] << " ";
-                    // std::cout << std::endl;
 
                     Robot::template solve_tsr_error_lm_inner<rake>(jac_proj_inp, grad);
+                    // std::cout << "Grad for TSR constraint: "  ;
+                    // for (auto i = 0U; i < Robot::dimension; i++)
+                    //         std::cout << grad[i] << " ";
+                    // std::cout << std::endl;
                 }
                 if (projection_method == ProjMethod::OuterLM)
                 {
@@ -1709,81 +1711,52 @@ namespace vamp::planning
     class ComposableConstraints : public RobotConstraint<Robot, rake>
     {
         std::tuple<Constraints...> constraints_;
-        protected:
-            using ConfigurationBlock = typename Robot::ConfigurationBlock<rake>;
-            ConfigurationBlock q_old;
 
-        public:
-            using ConstraintPack = std::tuple<Constraints...>;
+    protected:
+        using ConfigurationBlock = typename Robot::ConfigurationBlock<rake>;
+        ConfigurationBlock q_old;
 
-            static constexpr std::size_t total_size =
-                (Constraints::size + ...);
+    public:
+        using ConstraintPack = std::tuple<Constraints...>;
+        static constexpr std::size_t total_size = (Constraints::size + ...);
 
-            explicit ComposableConstraints(Constraints... cs)
-                : constraints_(std::move(cs)...) {}
+        explicit ComposableConstraints(Constraints... cs)
+            : constraints_(std::move(cs)...) {}
 
+        vamp::FloatVector<rake, 1> distanceToConstraint(const ConfigurationBlock &q) const {
+            return std::apply([&](const auto&... c) {
+                return (c.distanceToConstraint(q) + ...);
+            }, constraints_);
+        }
 
-            vamp::FloatVector<rake, 1> distanceToConstraint(const ConfigurationBlock &q) const{
+        void print_robot_tsr_error(const ConfigurationBlock &q) const {
+            std::apply([&](const auto&... c) { (c.print_robot_tsr_error(q), ...); }, constraints_);
+        }
 
-                return std::apply(
-                    [&](const auto&... c) {
-                        return (c.distanceToConstraint(q) + ...);
-                    },
-                    constraints_
-                );
-            }
+        vamp::FloatVector<rake, 1> projectStep(
+            const ConfigurationBlock &q,
+            ConfigurationBlock &q_new,
+            ProjMethod projection_method = ProjMethod::InnerLM,
+            bool update_q = true,
+            float alpha = 1.0f)
+        {
+            ConfigurationBlock q_in = q;
 
-            auto print_robot_tsr_error(const ConfigurationBlock &q) const{
+            std::apply([&](auto&... c) {
+                ((c.projectStep(q_in, q_new, projection_method, update_q), q_in = q_new), ...);
+            }, constraints_);
 
-                std::apply(
-                    [&](const auto&... c) {
-                        (c.print_robot_tsr_error(q), ...); // safe if distance2() is const
-                    },
-                    constraints_
-                );
-            }
-
-            vamp::FloatVector<rake, 1> projectStep(
-                const ConfigurationBlock &q,
-                ConfigurationBlock &q_new,
-                ProjMethod projection_method = ProjMethod::InnerLM,
-                bool update_q = true,
-                float alpha = 1.0)
-            {
-                ConfigurationBlock q_in = q + 0.0;
-
-                std::apply(
-                    [&](auto&... c) {
-                        (
-                            [&] {
-                                // std::cout << std::endl << "Running for " << c.name << ": with input ";
-                                // for (auto i = 0U; i < Robot::dimension; i++)
-                                //     std::cout << q_in[{i, 0}] << " ";
-                                // std::cout << std::endl;
-                                // std::cout << "Feeding " << alpha << " for " << c.name << std::endl;
-                                c.projectStep(q_in, q_new, projection_method, update_q);
-                                q_in = q_new;     // advance state
-                                // std::cout << "Finished running constraint " << c.name << " with output ";
-                                // for (auto i = 0U; i < Robot::dimension; i++)
-                                //     std::cout << q_new[{i, 0}] << " ";
-                                // std::cout << std::endl;
-                            }(),
-                            ...
-                        );
-                    },
-                    constraints_
-                );
-                // std::cout << "Finished running all constraints." << q_new << std::endl;
-                return distanceToConstraint(q_new);
-                // std::cout << "Finished projectStep." << std::endl;
-            }
+            return distanceToConstraint(q_new);
+        }
 
             bool projectConfiguration(
                 const ConfigurationBlock &q,
                 ConfigurationBlock &q_new,
                 ProjMethod projection_method = ProjMethod::InnerLM,
                 float max_q_dist = 5.0,
-                float descend_rate = 1.0)
+                float descend_rate = 1.0,
+                int num_projection_iterations = 25,
+                bool verbose = false)
             {
                 /**
                 * project a configuration block in parallel onto the constraint manifold
@@ -1800,16 +1773,16 @@ namespace vamp::planning
                 auto dist = distanceToConstraint(q);
 
                 size_t project_iter = 0;
-                for (size_t i = 0; i < Robot::dimension; i++)
-                {
-                    q_new[i] = q[i];
-                    q_old[i] = q[i];
-                }
+                q_new = q;
+                q_old = q;
 
-                while ((project_iter < 25) and (not dist.test_all_less_equal(0.0001F)))
+                // std::cout << q << std::endl;
+
+                while ((project_iter < num_projection_iterations) and (not dist.test_all_less_equal(0.0001F)))
                 {
-                    // std::cout << "Iteration " << project_iter << " Distance: " << dist << q_old << std::endl;
                     dist = projectStep(q_old, q_new, projection_method, true, descend_rate);
+                    // std::cout << "Iteration " << project_iter << " Distance: " << dist << std::endl;
+                    // std::cout << q_old << q_new << std::endl;
                     auto q_dist_from_prev = (q_new[0] - q_old[0]) * (q_new[0] - q_old[0]);
                     auto q_dist_from_start = (q_new[0] - q[0]) * (q_new[0] - q[0]);
 
@@ -1822,7 +1795,7 @@ namespace vamp::planning
                     // std::cout << q_dist_from_prev << " " << dist << std::endl;
                     if (q_dist_from_prev.test_all_less_equal(0.000001F))  // if i make no forward progress
                     {
-                        std::cout << "Minimal progress " << dist << q_dist_from_prev << std::endl;
+                        // std::cout << "Minimal progress " << dist << q_dist_from_prev << std::endl << q << std::endl;
                         break;
                     }
 
@@ -1833,14 +1806,17 @@ namespace vamp::planning
                         // std::cout << q_old << std::endl;
                         break;
                     }
-                    q_old = q_new + 0.0;
+                    q_old = q_new;
                     project_iter += 1;
                 }
                 if (dist.test_all_less_equal(0.0001F))
                 {
                     success = true;
                 }
-                // std::cout << "Num projection steps : " << project_iter << " "<< dist << " and success : " << success << " " << std::endl;
+                if (verbose)
+                {
+                    std::cout << "Num projection steps : " << project_iter << " "<< dist << " and success : " << success << " " << std::endl;
+                }
                 // std::cout << "Num steps : " << project_iter << " and success : " << success << " " << " dist " << dist << " q " << q << " q_new " << q_new << std::endl;
 
                 return success;
