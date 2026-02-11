@@ -11,28 +11,26 @@
 #include <vamp/planning/validate_constraint.hh>
 
 // #include <vamp/planning/simplify.hh>
-#include <vamp/robots/g1_unitree.hh>
+#include <vamp/robots/digit.hh>
 #include <vamp/random/halton.hh>
 #include <fstream>
+#include <random>
 
-using Robot = vamp::robots::G1Unitree;
+
+using Robot = vamp::robots::Digit;
 static constexpr const std::size_t rake = vamp::FloatVectorWidth;
 using EnvironmentInput = vamp::collision::Environment<float>;
 using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 // using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution, 4>;
 using AttachmentInput = vamp::collision::Attachment<float>;
 
-// Start and goal configurations
-// static constexpr Robot::ConfigurationArray start = {0.697778, -0.5024, -1.256, -1.94109, -2.12554, -2.36424, -2.44589, -0.204884, -2.35822, 0.113728, -0.793422, -0.234981, -2.26647, -2.81113, -2.53907, 0.0183405, -0.824602, -0.245389, -2.46313, -0.490082, -0.492354, -2.94348, -1.4976, -2.50464, -0.98188, -1.8918, -1.55106, -1.55222, -2.98216, -2.18801, -2.53406, -0.999044, -1.91263, -1.56892, -1.56953};
+static constexpr Robot::ConfigurationArray start = {
+    0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31631,-0.01347,-0.28807,0.11635,-0.00983,-0.36544,0.00508,-0.29158,-0.31758,0.01345,0.28939,-0.11670,0.01291,-0.33541,0.14400,-0.10236,-0.11785,-0.33750,-0.00587,-0.10680,-0.00553
+};
 
-static constexpr Robot::ConfigurationArray start = {-0.01691,-0.00008,0.52435,-0.00002,0.00087,0.00058,-0.89966,-0.00864,0.01527,1.75038,-0.87267,0.01757,-0.89936,0.00875,-0.01522,1.75040,-0.87267,-0.01753,1.59564,0.14700,0.37000,0.00002,0.00014,0.00009,-0.00003,-0.00006,0.00000,-0.00001,-0.00001,0.00017,0.00007,-0.00000,0.00003,0.00000,0.00002};
-static constexpr Robot::ConfigurationArray goal = {-0.0804749 , -0.222722  ,  0.329562  ,  0.0752235 , -0.234729  ,
-       -0.187489  , -0.540513  ,  0.159474  ,  0.036218  ,  1.20727   ,
-       -0.508012  , -0.00816858, -0.55574   , -0.25357   ,  0.255191  ,
-        1.33009   , -0.561027  , -0.0319013 ,  0.578079  ,  0.0344014 ,
-        0.0243313 , -0.355914  , -0.118091  , -0.25972   , -0.0948007 ,
-       -0.253484  ,  0.0772362 ,  0.174869  ,  0.171759  ,  0.0892086 ,
-        0.124599  ,  0.0630061 ,  0.118393  ,  0.0219054 ,  0.0661802};
+static constexpr Robot::ConfigurationArray goal = {
+    -0.03391,0.00026,-0.48973,-0.00640,0.22621,0.01055,0.35910,-0.03271,-0.64898,-0.84229,-0.04940,0.87402,-0.55091,-0.06622,-0.36672,0.01895,0.66644,0.86380,0.05172,-0.86609,0.50342,0.05169,-0.33541,0.14399,-0.10235,-0.11784,-0.33750,-0.00587,-0.10680,-0.00554
+};
 
 // static constexpr Robot::ConfigurationArray goal = {-0.045,0.0,-0.03,0.0,-0.264,0.0,0.0,0.0,0.0,0.456,0.0,0.0,0.0,0.0,0.0,0.486,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
@@ -92,34 +90,58 @@ auto main(int, char **) -> int
 
     auto isometries = Robot::eefk(start);
     std::cout << "Start pose eef poses " << std::endl;
-    std::cout << "Left hand " << isometries[0].matrix() << std::endl;
-    std::cout << "Right hand " << isometries[1].matrix() << std::endl;
-    std::cout << "Left foot " << isometries[2].matrix() << std::endl;
-    std::cout << "Right foot " << isometries[3].matrix() << std::endl;
+    // std::cout << "Left hand " << isometries[0].matrix() << std::endl;
+    // std::cout << "Right hand " << isometries[1].matrix() << std::endl;
+    // std::cout << "Left foot " << isometries[2].matrix() << std::endl;
+    // std::cout << "Right foot " << isometries[3].matrix() << std::endl;
+    Eigen::Quaternionf q_hand(isometries[0].linear());
+    std::cout << q_hand.w() << ", " << q_hand.x() << ", " << q_hand.y() << ", " << q_hand.z() << " , " << isometries[0].translation().transpose() << std::endl;
+    q_hand = Eigen::Quaternionf(isometries[1].linear());
+    std::cout << q_hand.w() << ", " << q_hand.x() << ", " << q_hand.y() << ", " << q_hand.z() << " , " << isometries[1].translation().transpose() << std::endl;
 
-    std::cout << "Relative pose between left and right hand " << (isometries[0].inverse() * isometries[1]).matrix() << std::endl;
+
+    // std::cout << "Relative pose between left and right hand " << (isometries[0].inverse() * isometries[1]).matrix() << std::endl;
+    Eigen::Quaternionf q_foot(isometries[2].linear());
+    std::cout << q_foot.w() << ", " << q_foot.x() << ", " << q_foot.y() << ", " << q_foot.z() << " , " << isometries[2].translation().transpose() << std::endl;
+    q_foot = Eigen::Quaternionf(isometries[3].linear());
+    std::cout << q_foot.w() << ", " << q_foot.x() << ", " << q_foot.y() << ", " << q_foot.z() << " , " << isometries[3].translation().transpose() << std::endl;
+
+    auto left_right = isometries[0].inverse() * isometries[1];
+    Eigen::Quaternionf q_left_right(left_right.linear());
+    std::cout << q_left_right.w() << ", " << q_left_right.x() << ", " << q_left_right.y() << ", " << q_left_right.z() << left_right.translation().transpose() << std::endl;
+
 
     isometries = Robot::eefk(goal);
     std::cout << "Goal pose eef poses " << std::endl;
-    std::cout << "Left hand " << isometries[0].matrix() << std::endl;
-    std::cout << "Right hand " << isometries[1].matrix() << std::endl;
-    std::cout << "Left foot " << isometries[2].matrix() << std::endl;
-    std::cout << "Right foot " << isometries[3].matrix() << std::endl;
+    // std::cout << "Left hand " << isometries[0].matrix() << std::endl;
+    // std::cout << "Right hand " << isometries[1].matrix() << std::endl;
+    // std::cout << "Left foot " << isometries[2].matrix() << std::endl;
+    // std::cout << "Right foot " << isometries[3].matrix() << std::endl;
 
-    std::cout << "Relative pose between left and right hand " << (isometries[0].inverse() * isometries[1]).matrix() << std::endl;
+    q_hand = Eigen::Quaternionf(isometries[0].linear());
+    std::cout << q_hand.w() << ", " << q_hand.x() << ", " << q_hand.y() << ", " << q_hand.z() << " , " << isometries[0].translation().transpose() << std::endl;
+    q_hand = Eigen::Quaternionf(isometries[1].linear());
+    std::cout << q_hand.w() << ", " << q_hand.x() << ", " << q_hand.y() << ", " << q_hand.z() << " , " << isometries[1].translation().transpose() << std::endl;
 
-    // std::cout << isometries[0].matrix() << std::endl<< isometries[1].matrix() << std::endl<< isometries[2].matrix() << std::endl<< isometries[3].matrix() << std::endl;
+    // std::cout << "Relative pose between left and right hand " << (isometries[0].inverse() * isometries[1]).matrix() << std::endl;
+    q_foot = Eigen::Quaternionf(isometries[2].linear());
+    std::cout << q_foot.w() << ", " << q_foot.x() << ", " << q_foot.y() << ", " << q_foot.z() << " , " << isometries[2].translation().transpose() << std::endl;
+    q_foot = Eigen::Quaternionf(isometries[3].linear());
+    std::cout << q_foot.w() << ", " << q_foot.x() << ", " << q_foot.y() << ", " << q_foot.z() << " , " << isometries[3].translation().transpose() << std::endl;
 
-    std::cout << "Hands : " << (isometries[0].inverse() * isometries[1]).matrix() << std::endl;
+    left_right = isometries[0].inverse() * isometries[1];
+    q_left_right = Eigen::Quaternionf(left_right.linear());
+    std::cout << q_left_right.w() << ", " << q_left_right.x() << ", " << q_left_right.y() << ", " << q_left_right.z() << " , " << left_right.translation().transpose() << std::endl;
+
     std::array<float, 8> polygon_points = {
-        0.08, -0.045, 0.08, 0.045, 0.06, 0.045, 0.06, -0.045
+        0.04, -0.1, 0.04, 0.1, -0.04, 0.1, -0.04, -0.1
     };
 
     std::array<float, 6> lower_bound = {
-        -0.001, -0.001, -0.001, -0.5, -0.001, -0.001
+        -0.001, -0.001, -0.001, -0.5, -0.01, -0.01
     };
     std::array<float, 6> upper_bound = {
-        0.001, 0.001, 0.001, 0.5, 0.001, 0.001
+        0.001, 0.001, 0.001, 0.5, 0.01, 0.01
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
@@ -155,7 +177,7 @@ auto main(int, char **) -> int
     // eef_transforms_ref_frame_w_world[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
 
 
-    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{{1, 0,0,0,   0, 0, 0}, {1, 0,0,0,   0.0, 0.0, 0.0}, {1.0, 0.0, 0.0, 0.0, 0.12, 0.11, -0.0}, {1.0, 0.0, 0.0, 0.0, 0.12, -0.11, -0.0}}};
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{{1, 0,0,0,   0, 0, 0}, {1, 0,0,0,   0.0, 0.0, 0.0}, {0.603, 0.36, 0.36, 0.603, -0.04302,  0.10080, -0.96013}, {0.603, -0.36, 0.36, -0.603 , -0.04288, -0.09895, -0.96033}}};
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{{1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}}};
 
     vamp::planning::FeetTaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
@@ -171,7 +193,7 @@ auto main(int, char **) -> int
     //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
     // );
 
-    std::array<float, 7> transform = {1.,     0.0005, 0.0005, 0.0005, 0.0, -0.303, 0.0};
+    std::array<float, 7> transform = {0.00005,     1.0, 0.0005, 0.0005, -0.04565, -0.03598, -0.38851};
     vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_task_constraint(transform, lower_bound, upper_bound);
 
     // vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_constraint(
@@ -224,7 +246,7 @@ auto main(int, char **) -> int
     // // vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4> task_constraint(polygon_points);
     // auto startcc = rng->next();
     bool success;
-    Robot::ConfigurationArray test = {-0.05756, -0.10361, -0.30607, -0.22192, -0.22951, -0.23933, -1.01621, -0.03210, -0.22167, 1.59964, -0.86941, -0.02150, -1.02993, -0.24976, -0.22910, 1.59571, -0.87069, -0.02193, 1.23762, -0.29675, 0.43134, -0.26073, -0.13340, -0.22137, -0.08773, -0.16697, -0.13678, -0.13683, -0.26232, -0.19178, -0.22258, -0.08843, -0.16783, -0.13752, -0.13754};
+    // Robot::ConfigurationArray test = {-0.05756, -0.10361, -0.30607, -0.22192, -0.22951, -0.23933, -1.01621, -0.03210, -0.22167, 1.59964, -0.86941, -0.02150, -1.02993, -0.24976, -0.22910, 1.59571, -0.87069, -0.02193, 1.23762, -0.29675, 0.43134, -0.26073, -0.13340, -0.22137, -0.08773, -0.16697, -0.13678, -0.13683, -0.26232, -0.19178, -0.22258, -0.08843, -0.16783, -0.13752, -0.13754};
     typename Robot::template ConfigurationBlock<rake> block;
     for (auto i = 0U; i < Robot::dimension; ++i)
         block[i] = Robot::Configuration(start).broadcast(i);
@@ -310,7 +332,6 @@ auto main(int, char **) -> int
     }
 
     outfile << "\n";
-    outfile.close();
 
     task_constraint.distanceToConstraint(block);
     task_constraint.print_robot_tsr_error(block);
@@ -331,12 +352,12 @@ auto main(int, char **) -> int
     // // bool success;
 
 
-    // auto startc = Robot::Configuration(start);
-    // // auto goalc = Robot::Configuration(goal);
+    auto startc = Robot::Configuration(start);
+    auto goalc = Robot::Configuration(goal);
 
 
     // std::cout << startc << ", " << goalc << std::endl;
-    // auto extension_vector = goalc - startc;
+    auto extension_vector = goalc - startc;
     // std::cout << extension_vector << std::endl;
     // extension_vector = extension_vector / extension_vector.l2_norm();
     // std::cout << extension_vector << std::endl;
@@ -345,52 +366,54 @@ auto main(int, char **) -> int
     // // std::cout << std::fixed << std::setprecision(3);
     // // std::ofstream outfile("/src/trajectory.txt");
 
+    std::default_random_engine generator;
+    std::normal_distribution<double> dist(0.0, 0.1);
 
-    // for(size_t ext = 0; ext < 11; ext++){
-    //     std::cout << "\nExtension attempt " << ext << " " << std::endl;
-    //     auto cfg = startc + extension_vector * ext / 10;
-    //     for (auto i = 0U; i < Robot::dimension; ++i)
-    //         block[i] = cfg.broadcast(i) + 0.0;
-    //     for(auto i=0U; i < Robot::dimension; i++)
-    //         std::cout << block[{i, 0}] << ", ";
-    //     std::cout << std::endl;
+    for(size_t ext = 0; ext < 11; ext++){
+        std::cout << "\nExtension attempt " << ext << " " << std::endl;
+        auto cfg = startc + extension_vector * ext / 10;
+        for (auto i = 0U; i < Robot::dimension; ++i)
+            block[i] = cfg.broadcast(i) + dist(generator);
+        for(auto i=0U; i < Robot::dimension; i++)
+            std::cout << block[{i, 0}] << ", ";
+        std::cout << std::endl;
 
-    //     typename Robot::template ConfigurationBlock<rake> projected_block;
-    //     success = task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0);
+        typename Robot::template ConfigurationBlock<rake> projected_block;
+        success = task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM, 1.0, 1.0);
 
-    //     bool valid = Robot::template fkcc<rake>(env_v, projected_block);
-    //     bool valid_og = Robot::template fkcc<rake>(env_v, block);
+        bool valid = Robot::template fkcc<rake>(env_v, projected_block);
+        bool valid_og = Robot::template fkcc<rake>(env_v, block);
 
-    //     for(auto i=0U; i < Robot::dimension; i++)
-    //         std::cout << projected_block[{i, 0}] << ", ";
-    //     std::cout << " --> " << success << " -- " << valid << "-- " << valid_og << std::endl;
+        for(auto i=0U; i < Robot::dimension; i++)
+            std::cout << projected_block[{i, 0}] << ", ";
+        std::cout << " --> " << success << " -- " << valid << "-- " << valid_og << std::endl;
 
 
-    //     bool first = true;
-    //     for (auto i = 0U; i < Robot::dimension; ++i)
-    //     {
-    //         if (!first) outfile << ",";
-    //         outfile << block[{i, 0}];
-    //         first = false;
-    //     }
+        bool first = true;
+        for (auto i = 0U; i < Robot::dimension; ++i)
+        {
+            if (!first) outfile << ",";
+            outfile << block[{i, 0}];
+            first = false;
+        }
 
-    //     outfile << "\n";
+        outfile << "\n";
 
-    //     first = true;
-    //     for (auto i = 0U; i < Robot::dimension; ++i)
-    //     {
-    //         if (!first) outfile << ",";
-    //         outfile << projected_block[{i, 0}];
-    //         first = false;
-    //     }
+        first = true;
+        for (auto i = 0U; i < Robot::dimension; ++i)
+        {
+            if (!first) outfile << ",";
+            outfile << projected_block[{i, 0}];
+            first = false;
+        }
 
-    //     // auto fka = Robot::eefk(soln);
-    //     // std::cout <<std::endl << fka.matrix() <<std::endl;
-    //     // std::cout << std::endl;
-    //     outfile << "\n";
-    //     // task_constraint.distanceToConstraint(projected_block);
-    // }
-    // outfile.close();
+        // auto fka = Robot::eefk(soln);
+        // std::cout <<std::endl << fka.matrix() <<std::endl;
+        // std::cout << std::endl;
+        outfile << "\n";
+        // task_constraint.distanceToConstraint(projected_block);
+    }
+    outfile.close();
 
 
 

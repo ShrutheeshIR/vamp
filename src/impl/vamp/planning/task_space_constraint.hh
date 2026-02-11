@@ -1191,17 +1191,18 @@ namespace vamp::planning
             // std::cout << std::endl;
 
 
-            // std::cout << "TSR Error : " << std::endl;
-            // for(auto i=0U; i < 6 * 2 * Robot::dimension; i++){
-            //     if(i % Robot::dimension == 0)
-            //         std::cout << std::endl << "J[" << i / Robot::dimension << "] : ";
-            //     std::cout << short_jac_proj_inp.J[{i, 0}] << " ";
-            // }
-            // std::cout << std::endl;
+            std::cout << "TSR Error : " << std::endl;
+            for(auto i=0U; i < 6 * 2 * Robot::dimension; i++){
+                if(i % Robot::dimension == 0)
+                    std::cout << std::endl << "J[" << i / Robot::dimension << "] : ";
+                std::cout << short_jac_proj_inp.J[{i, 0}] << " ";
+            }
+            std::cout << std::endl;
             std::cout << "Error : " << std::endl;
             for(auto i=0U; i < 6 * 2; i++)
                 std::cout << short_jac_proj_inp.err[{i, 0}] << " ";
             std::cout << std::endl;
+
 
             return dist;
 
@@ -1828,7 +1829,7 @@ namespace vamp::planning
                     if (q_dist_from_prev.test_any_greater(4 * max_q_dist * max_q_dist))  // from triangle
                                                                                                 // inequality
                     {
-                        // std::cout << "Too large step " << q_dist_from_prev << std::endl;
+                        std::cout << "Too large step " << q_dist_from_prev << std::endl;
                         // std::cout << q_old << std::endl;
                         break;
                     }
