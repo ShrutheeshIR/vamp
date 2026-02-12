@@ -203,7 +203,7 @@ auto main(int, char **) -> int
 
     std::vector<vamp::collision::Sphere<float>> spheres;
     for(auto i=0U; i < 9; i++){
-        spheres.push_back(vamp::collision::Sphere<float>(0.0, 0.0, i * 0.02, 0.02));
+        spheres.push_back(vamp::collision::Sphere<float>(0.0, 0.0, i * 0.02, 0.01));
     }
     auto attach_transform = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
     attach_transform.translation().z() = 0.0;

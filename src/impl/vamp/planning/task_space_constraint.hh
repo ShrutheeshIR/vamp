@@ -31,7 +31,7 @@ namespace vamp::planning
         using ConfigurationBlock = typename Robot::ConfigurationBlock<rake>;
 
         template <std::size_t dim>
-        inline static auto assignBlock(std::array<float, dim> src, vamp::FloatVector<rake, dim> &dest)
+        inline static void assignBlock(std::array<float, dim> src, vamp::FloatVector<rake, dim> &dest)
         {
             for (size_t i = 0; i < dim; i++)
             {
@@ -43,12 +43,13 @@ namespace vamp::planning
     public:
         // virtual vamp::FloatVector<rake, 1> distanceToConstraint(const ConfigurationBlock &q) = 0;
 
-        void integrateJointConfiguration(
+        inline void integrateJointConfiguration(
             const ConfigurationBlock &q,
             ConfigurationBlock &q_new,
             const ConfigurationBlock &gradient,
             float alpha = 1.0F)
         {
+            // ConfigurationBlock q_new;
             for (size_t i = 0; i < Robot::dimension; i++)
             {
                 q_new[i] = q[i] - gradient[i] * alpha;
@@ -56,6 +57,7 @@ namespace vamp::planning
             Robot::descale_configuration_block(q_new);
             q_new = q_new.clamp(0.F, 1.F);
             Robot::scale_configuration_block(q_new);
+            // return q_new;
         }
 
         // virtual vamp::FloatVector<rake, 1> projectStep(
@@ -220,7 +222,7 @@ namespace vamp::planning
             // tsr_function_inp.print();
         }
 
-        auto print_robot_tsr_error(const ConfigurationBlock &q) const
+        vamp::FloatVector<rake, 1> print_robot_tsr_error(const ConfigurationBlock &q) const
         {
             // for(auto i=0U; i < Robot::dimension + 19; i++)
             //     std::cout << tsr_function_inp[i] << " ";
@@ -294,35 +296,46 @@ namespace vamp::planning
             bool update_q = true,
             float alpha = 1.0F)
         {
+
             auto dist = distanceToConstraint(q);
-            if (update_q)
+            // std::cout << "Bimanual constraint distance: " << dist << std::endl;
+            typename Robot::template ConfigurationBlock<rake> grad;
+
+            if (projection_method == ProjMethod::InnerLM)
             {
-                ConfigurationBlock grad;
+                Robot::template solve_tsr_relative_error_lm_inner<rake>(jac_proj_inp, grad);
+                // std::cout << "Grad for bimanual constraint: "  ;
+                // for (auto i = 0U; i < Robot::dimension; i++)
+                //         std::cout << grad[{i, 0}] << " ";
+                // std::cout << std::endl;
+                // grad = grad.zero_out_nans();
+                // std::cout << "Grad for bimanual constraint: "  ;
+                // for (auto i = 0U; i < Robot::dimension; i++)
+                //         std::cout << grad[{i, 0}] << " ";
+                // std::cout << std::endl;
 
-                if (projection_method == ProjMethod::InnerLM)
-                {
-                    Robot::template solve_tsr_relative_error_lm_inner<rake>(jac_proj_inp, grad);
-                    // std::cout << "Grad for bimanual constraint: "  ;
-                    // for (auto i = 0U; i < Robot::dimension; i++)
-                    //         std::cout << grad[{i, 0}] << " ";
-                    // std::cout << std::endl;
-                    // grad = grad.zero_out_nans();
-                    // std::cout << "Grad for bimanual constraint: "  ;
-                    // for (auto i = 0U; i < Robot::dimension; i++)
-                    //         std::cout << grad[{i, 0}] << " ";
-                    // std::cout << std::endl;
-
-                }
-                if (projection_method == ProjMethod::OuterLM)
-                {
-                    Robot::template solve_tsr_relative_error_lm_outer<rake>(jac_proj_inp, grad);
-                }
-                if (projection_method == ProjMethod::GradDesc)
-                {
-                    Robot::template solve_tsr_relative_error_gradient_descent<rake>(jac_proj_inp, grad);
-                }
-                RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
             }
+            else if (projection_method == ProjMethod::OuterLM)
+            {
+                Robot::template solve_tsr_relative_error_lm_outer<rake>(jac_proj_inp, grad);
+                // std::cout << "Grad for bimanual constraint: "  ;
+                // for (auto i = 0U; i < Robot::dimension; i++)
+                //         std::cout << grad[{i, 0}] << " ";
+                // std::cout << std::endl;
+            }
+            else if (projection_method == ProjMethod::GradDesc)
+            {
+                Robot::template solve_tsr_relative_error_gradient_descent<rake>(jac_proj_inp, grad);
+                // std::cout << "Grad for bimanual constraint: "  ;
+                // for (auto i = 0U; i < Robot::dimension; i++)
+                //         std::cout << grad[{i, 0}] << " ";
+                // std::cout << std::endl;
+            }
+            else {
+                std::cout << "Invalid projection method: " << projection_method << std::endl;
+                throw std::runtime_error("Invalid projection method");
+            }
+            RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
             return dist;
         }
 
@@ -404,7 +417,7 @@ namespace vamp::planning
             ;
         }
 
-        auto print_robot_tsr_error(const ConfigurationBlock &q) const
+        vamp::FloatVector<rake, 1> print_robot_tsr_error(const ConfigurationBlock &q) const
         {
             // for(auto i=0U; i < Robot::dimension + 19; i++)
             //     std::cout << tsr_function_inp[i] << " ";
@@ -627,7 +640,7 @@ namespace vamp::planning
         }
 
 
-        auto print_robot_tsr_error(const ConfigurationBlock &q) const
+        vamp::FloatVector<rake, 1> print_robot_tsr_error(const ConfigurationBlock &q) const
         {
             auto dist = distanceToConstraint(q);
             // std::cout << "Q input: ";
@@ -733,37 +746,36 @@ namespace vamp::planning
             const ConfigurationBlock &q,
             ConfigurationBlock &q_new,
             ProjMethod projection_method = ProjMethod::InnerLM,
-            bool update_q = true,
             float alpha = 1.0F)
         {
             auto dist = distanceToConstraint(q);
-            if (update_q)
+            typename Robot::template ConfigurationBlock<rake> grad;
+
+            if (projection_method == ProjMethod::InnerLM)
             {
-                ConfigurationBlock grad;
+                // Robot::template solve_2_eef_tsr_error_lm_inner<rake>(short_jac_proj_inp, grad);
+                // grad = grad.zero_out_nans();
 
-                if (projection_method == ProjMethod::InnerLM)
-                {
-                    // Robot::template solve_2_eef_tsr_error_lm_inner<rake>(short_jac_proj_inp, grad);
-                    // grad = grad.zero_out_nans();
-
-                    Robot::template solve_tsr_error_lm_inner<rake>(jac_proj_inp, grad);
-                    // std::cout << "Grad for TSR constraint: "  ;
-                    // for (auto i = 0U; i < Robot::dimension; i++)
-                    //         std::cout << grad[i] << " ";
-                    // std::cout << std::endl;
-                }
-                if (projection_method == ProjMethod::OuterLM)
-                {
-                    // Robot::template solve_2_eef_tsr_error_lm_outer<rake>(short_jac_proj_inp, grad);
-                    Robot::template solve_tsr_error_lm_outer<rake>(jac_proj_inp, grad);
-                }
-                if (projection_method == ProjMethod::GradDesc)
-                {
-                    // Robot::template solve_2_eef_tsr_error_gradient_descent<rake>(short_jac_proj_inp, grad);
-                    Robot::template solve_tsr_error_gradient_descent<rake>(jac_proj_inp, grad);
-                }
-                RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
+                Robot::template solve_tsr_error_lm_inner<rake>(jac_proj_inp, grad);
+                // std::cout << "Grad for TSR constraint: "  ;
+                // for (auto i = 0U; i < Robot::dimension; i++)
+                //         std::cout << grad[i] << " ";
+                // std::cout << std::endl;
             }
+            else if (projection_method == ProjMethod::OuterLM)
+            {
+                // Robot::template solve_2_eef_tsr_error_lm_outer<rake>(short_jac_proj_inp, grad);
+                Robot::template solve_tsr_error_lm_outer<rake>(jac_proj_inp, grad);
+            }
+            else if  (projection_method == ProjMethod::GradDesc)
+            {
+                // Robot::template solve_2_eef_tsr_error_gradient_descent<rake>(short_jac_proj_inp, grad);
+                Robot::template solve_tsr_error_gradient_descent<rake>(jac_proj_inp, grad);
+            }
+            else {
+                throw std::runtime_error("Invalid projection method");
+            }
+            RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
             return dist;
         }
 
@@ -1105,37 +1117,36 @@ namespace vamp::planning
             const ConfigurationBlock &q,
             ConfigurationBlock &q_new,
             ProjMethod projection_method = ProjMethod::InnerLM,
-            bool update_q = true,
             float alpha = 1.0F)
         {
             auto dist = distanceToConstraint(q);
-            if (update_q)
+            typename Robot::template ConfigurationBlock<rake> grad;
+
+            if (projection_method == ProjMethod::InnerLM)
             {
-                ConfigurationBlock grad;
+                Robot::template solve_2_eef_tsr_error_lm_inner<rake>(short_jac_proj_inp, grad);
+                // grad = grad.zero_out_nans();
+                // std::cout << "Grad for TSR constraint: "  ;
+                // for (auto i = 0U; i < Robot::dimension; i++)
+                //         std::cout << q[{i, 0}] << " -- " <<grad[{i, 0}] << " ";
+                // std::cout << std::endl;
 
-                if (projection_method == ProjMethod::InnerLM)
-                {
-                    Robot::template solve_2_eef_tsr_error_lm_inner<rake>(short_jac_proj_inp, grad);
-                    // grad = grad.zero_out_nans();
-                    // std::cout << "Grad for TSR constraint: "  ;
-                    // for (auto i = 0U; i < Robot::dimension; i++)
-                    //         std::cout << q[{i, 0}] << " -- " <<grad[{i, 0}] << " ";
-                    // std::cout << std::endl;
-
-                    // Robot::template solve_tsr_error_lm_inner<rake>(jac_proj_inp, grad);
-                }
-                if (projection_method == ProjMethod::OuterLM)
-                {
-                    Robot::template solve_2_eef_tsr_error_lm_outer<rake>(short_jac_proj_inp, grad);
-                    // Robot::template solve_tsr_error_lm_outer<rake>(jac_proj_inp, grad);
-                }
-                if (projection_method == ProjMethod::GradDesc)
-                {
-                    Robot::template solve_2_eef_tsr_error_gradient_descent<rake>(short_jac_proj_inp, grad);
-                    // Robot::template solve_tsr_error_gradient_descent<rake>(jac_proj_inp, grad);
-                }
-                RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
+                // Robot::template solve_tsr_error_lm_inner<rake>(jac_proj_inp, grad);
             }
+            else if  (projection_method == ProjMethod::OuterLM)
+            {
+                Robot::template solve_2_eef_tsr_error_lm_outer<rake>(short_jac_proj_inp, grad);
+                // Robot::template solve_tsr_error_lm_outer<rake>(jac_proj_inp, grad);
+            }
+            else if  (projection_method == ProjMethod::GradDesc)
+            {
+                Robot::template solve_2_eef_tsr_error_gradient_descent<rake>(short_jac_proj_inp, grad);
+                // Robot::template solve_tsr_error_gradient_descent<rake>(jac_proj_inp, grad);
+            }
+            else {
+                throw std::runtime_error("Invalid projection method");
+            }
+            RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
             return dist;
         }
 
@@ -1348,34 +1359,34 @@ namespace vamp::planning
             const ConfigurationBlock &q,
             ConfigurationBlock &q_new,
             ProjMethod projection_method = ProjMethod::InnerLM,
-            bool update_q = true,
             float alpha = 1.0F)
         {
             auto dist = distanceToConstraint(q);
-            if (update_q)
+            // std::cout << "COM constraint distance: " << dist << std::endl;
+            typename Robot::template ConfigurationBlock<rake> grad;
+
+            if (projection_method == ProjMethod::InnerLM)
             {
-                ConfigurationBlock grad;
+                Robot::template solve_com_function_lm_inner<rake>(jac_proj_inp, grad);
+                // grad = grad.zero_out_nans();
+                // std::cout << "Grad for COM constraint: "  ;
+                // for (auto i = 0U; i < Robot::dimension; i++)
+                //         std::cout << q[{i, 0}] << " -- " <<grad[{i, 0}] << " ";
+                // std::cout << std::endl;
 
-                if (projection_method == ProjMethod::InnerLM)
-                {
-                    Robot::template solve_com_function_lm_inner<rake>(jac_proj_inp, grad);
-                    // grad = grad.zero_out_nans();
-                    // std::cout << "Grad for COM constraint: "  ;
-                    // for (auto i = 0U; i < Robot::dimension; i++)
-                    //         std::cout << q[{i, 0}] << " -- " <<grad[{i, 0}] << " ";
-                    // std::cout << std::endl;
-
-                }
-                if (projection_method == ProjMethod::OuterLM)
-                {
-                    Robot::template solve_com_function_lm_outer<rake>(jac_proj_inp, grad);
-                }
-                if (projection_method == ProjMethod::GradDesc)
-                {
-                    Robot::template solve_com_function_gradient_descent<rake>(jac_proj_inp, grad);
-                }
-                RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
             }
+            else if  (projection_method == ProjMethod::OuterLM)
+            {
+                Robot::template solve_com_function_lm_outer<rake>(jac_proj_inp, grad);
+            }
+            else if  (projection_method == ProjMethod::GradDesc)
+            {
+                Robot::template solve_com_function_gradient_descent<rake>(jac_proj_inp, grad);
+            }
+            else {
+                throw std::invalid_argument("Invalid projection method");
+            }
+            RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
             return dist;
         }
 
@@ -1413,17 +1424,44 @@ namespace vamp::planning
             const ConfigurationBlock &q,
             ConfigurationBlock &q_new,
             ProjMethod projection_method = ProjMethod::InnerLM,
-            bool update_q = true,
             float alpha = 1.0f)
         {
             ConfigurationBlock q_in = q;
 
             std::apply([&](auto&... c) {
-                ((c.projectStep(q_in, q_new, projection_method, update_q), q_in = q_new), ...);
+                ((c.projectStep(q_in, q_new, projection_method, alpha), q_in = q_new), ...);
             }, constraints_);
 
             return distanceToConstraint(q_new);
         }
+        // vamp::FloatVector<rake, 1> projectStep(
+        //     const ConfigurationBlock &q,
+        //     ConfigurationBlock &q_new,
+        //     ProjMethod projection_method = ProjMethod::InnerLM,
+        //     float alpha = 1.0f)
+        // {
+        //     ConfigurationBlock q_in = q;
+
+        //     std::apply([&](auto&... c) {
+        //         ((
+        //             // Print BEFORE calling projectStep
+        //             std::cout << "Before projectStep for constraint: "
+        //                       << c.name << std::endl,
+
+        //             // Call projectStep
+        //             c.projectStep(q_in, q_new, projection_method, alpha),
+
+        //             // Update q_in
+        //             q_in = q_new,
+
+        //             // Print AFTER calling projectStep
+        //             std::cout << "After projectStep for constraint: "
+        //                       << c.name << std::endl
+        //         ), ...);  // fold over all constraints
+        //     }, constraints_);
+
+        //     return distanceToConstraint(q_new);
+        // }
 
             bool projectConfiguration(
                 const ConfigurationBlock &q,
@@ -1456,7 +1494,7 @@ namespace vamp::planning
 
                 while ((project_iter < num_projection_iterations) and (not dist.test_all_less_equal(0.0001F)))
                 {
-                    dist = projectStep(q_old, q_new, projection_method, true, descend_rate);
+                    dist = projectStep(q_old, q_new, projection_method, descend_rate);
                     // std::cout << "Iteration " << project_iter << " Distance: " << dist << std::endl;
                     // std::cout << q_old << q_new << std::endl;
                     auto q_dist_from_prev = (q_new[0] - q_old[0]) * (q_new[0] - q_old[0]);
@@ -1492,8 +1530,8 @@ namespace vamp::planning
                 if (verbose)
                 {
                     std::cout << "Num projection steps : " << project_iter << " "<< dist << " and success : " << success << " " << std::endl;
+                    std::cout << "Num steps : " << project_iter << " and success : " << success << " " << " dist " << dist << " q " << q << " q_new " << q_new << std::endl;
                 }
-                // std::cout << "Num steps : " << project_iter << " and success : " << success << " " << " dist " << dist << " q " << q << " q_new " << q_new << std::endl;
 
                 return success;
             }
