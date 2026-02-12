@@ -17,6 +17,7 @@ if(VAMP_BUILD_PYTHON_BINDINGS)
   if(NOT VAMP_ROBOT_MODULES)
     list(APPEND VAMP_ROBOT_MODULES
         g1_unitree
+        digit
       panda
       bimanual_panda
     )

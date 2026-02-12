@@ -9,6 +9,7 @@
 #include <vamp/planning/crrtc.hh>
 #include <vamp/planning/task_space_constraint.hh>
 #include <vamp/planning/validate_constraint.hh>
+#include <vamp/planning/simplify_constraints.hh>
 
 // #include <vamp/planning/simplify.hh>
 #include <vamp/robots/digit.hh>
@@ -24,11 +25,11 @@ using AttachmentInput = vamp::collision::Attachment<float>;
 
 // Start and goal configurations
 static constexpr Robot::ConfigurationArray start = {
-    0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31631,-0.01347,-0.28807,0.11635,-0.00983,-0.36544,0.00508,-0.29158,-0.31758,0.01345,0.28939,-0.11670,0.01291,-0.33541,0.14400,-0.10236,-0.11785,-0.33750,-0.00587,-0.10680,-0.00553
+    0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31631,-0.28807,0.11635,-0.00983,0.00000,0.00000,0.00000,0.00000,-0.36544,0.00508,-0.29158,-0.31758,0.28939,-0.11670,0.01291,0.00000,0.00000,0.00000,0.00000
 };
 
 static constexpr Robot::ConfigurationArray goal = {
-    -0.03391,0.00026,-0.48973,-0.00640,0.22621,0.01055,0.35910,-0.03271,-0.64898,-0.84229,-0.04940,0.87402,-0.55091,-0.06622,-0.36672,0.01895,0.66644,0.86380,0.05172,-0.86609,0.50342,0.05169,-0.15184,-0.56563,0.24405,0.97277,-0.17592,0.44021,0.19196,-0.87314
+    0.00358,0.01604,-0.48348,-0.00927,0.00030,-0.00362,0.37249,0.00746,-0.22666,-0.85028,0.91164,-0.43089,0.01204,-0.18033,-0.49388,0.29491,1.24416,-0.34264,0.01123,0.22809,0.84257,-0.90335,0.43159,0.05288,-0.38174,0.50399,-0.22872,-1.31295
 };
 
 // static constexpr Robot::ConfigurationArray start = {-0.148774,1.59886,1.36434,-2.75007,0.544898,2.51704,-1.4485,2.07773,1.0024,-0.823622,-1.69743,-0.625681,2.59153,0.7243};
@@ -117,14 +118,14 @@ auto main(int, char **) -> int
 
 
     std::array<float, 8> polygon_points = {
-        0.04, -0.1, 0.04, 0.1, -0.04, 0.1, -0.04, -0.1
+        0.03, -0.075, 0.03, 0.075, -0.04, 0.075, -0.04, -0.1
     };
 
     std::array<float, 6> lower_bound = {
-        -0.001, -0.001, -0.001, -0.5, -0.5, -0.5
+        -0.001, -0.001, -0.001, -10.1, -10.1, -10.1
     };
     std::array<float, 6> upper_bound = {
-        0.001, 0.001, 0.001, 0.5, 0.5, 0.5
+        0.001, 0.001, 0.001, 10.1, 10.1, 10.1
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
@@ -176,7 +177,7 @@ auto main(int, char **) -> int
     //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
     // );
 
-    std::array<float, 7> transform = {0.00005,     1.0, 0.0005, 0.0005, -0.04565, -0.03598, -0.38851};
+    std::array<float, 7> transform = {0.1, 0.99, 0.00000, 0.04000, 0.01462, -0.03530, -0.36356};
     vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_task_constraint(transform, lower_bound, upper_bound);
 
     // vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_constraint(
@@ -189,7 +190,7 @@ auto main(int, char **) -> int
 
     // vamp::planning::SelfCollisionConstraint<Robot, rake> self_collision_constraint;
 
-    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint) > task_constraint(
+    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint)> task_constraint(
         feet_tsr_constraint,
         com_constraint,
         bimanual_task_constraint
@@ -203,6 +204,7 @@ auto main(int, char **) -> int
     rrtc_settings.dynamic_domain = dyndom;
     rrtc_settings.projection_method = pm;
     rrtc_settings.descend_rate = descent_rate;
+    rrtc_settings.insert_all_to_tree = true;
 
     vamp::planning::invalid_distance_counter_outside = 0;
     vamp::planning::invalid_distance_counter_inside = 0;
@@ -234,11 +236,17 @@ auto main(int, char **) -> int
 
         if((succ_attempts.size() == 0) || (succ_attempts.size() > 0 && a < succ_attempts[0])){
 
+        vamp::planning::SimplifySettings simplify_settings;
+        auto simplify_result = vamp::planning::constraint::simplify_with_constraints<Robot, rake, Robot::resolution, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint)>(
+            result.path, env_v, task_constraint, simplify_settings, rng);
+        std::cout << "Simplify took " << result.nanoseconds / 1e6 << " ms" << std::endl;
+
         std::cout << "\nPrinting Result!! " << result.path.size() << std::endl;
+        simplify_result.path.interpolate_to_resolution(Robot::resolution);
         // Output configurations of simplified path
         std::cout << std::fixed << std::setprecision(3);
         std::ofstream outfile("/src/trajectory.txt");
-        for (const auto &config : result.path)
+        for (const auto &config : simplify_result.path)
         {
             const auto &array = config.to_array();
             Robot::ConfigurationArray soln;
@@ -255,7 +263,7 @@ auto main(int, char **) -> int
 
             // auto fka = Robot::eefk(soln);
             // std::cout <<std::endl << fka.matrix() <<std::endl;
-            // std::cout << std::endl;
+            std::cout << std::endl;
             outfile << "\n";
         }
         outfile.close();

@@ -200,6 +200,7 @@ namespace vamp::planning
 
     public:
         static constexpr char* name = "BimanualTaskSpaceConstraint";
+        size_t num_project_step_called = 0;
         BimanualTaskSpaceConstraint(
             const std::array<float, 7> right_eef_pose_w_ref_left_eef,  // rTl qw, qx, qy, qz, tx, ty, tz
             const std::array<float, 6> lower_bound,
@@ -289,9 +290,8 @@ namespace vamp::planning
             return d;
         }
 
-        vamp::FloatVector<rake, 1> projectStep(
+        ConfigurationBlock projectStep(
             const ConfigurationBlock &q,
-            ConfigurationBlock &q_new,
             ProjMethod projection_method = ProjMethod::InnerLM,
             bool update_q = true,
             float alpha = 1.0F)
@@ -335,8 +335,9 @@ namespace vamp::planning
                 std::cout << "Invalid projection method: " << projection_method << std::endl;
                 throw std::runtime_error("Invalid projection method");
             }
+            ConfigurationBlock q_new;
             RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
-            return dist;
+            return q_new;
         }
 
 
@@ -617,6 +618,7 @@ namespace vamp::planning
 
     public:
         static constexpr char* name = "TaskSpaceConstraint";
+        size_t num_project_step_called = 0;
         TaskSpaceConstraint(
             std::array<std::array<float, 7>, Robot::n_eef> eef_pose_w_ref_reference, // qw, qx, qy, qz, tx, ty, tz
             std::array<std::array<float, 7>, Robot::n_eef> ref_frame_w_world, // qw, qx, qy, qz, tx, ty, tz
@@ -665,13 +667,13 @@ namespace vamp::planning
             // std::cout << std::endl;
 
 
-            // std::cout << "TSR Error : " << std::endl;
-            // for(auto i=0U; i < 6 * 2 * Robot::dimension; i++){
-            //     if(i % Robot::dimension == 0)
-            //         std::cout << std::endl << "J[" << i / Robot::dimension << "] : ";
-            //     std::cout << short_jac_proj_inp.J[{i, 0}] << " ";
-            // }
-            // std::cout << std::endl;
+            std::cout << "TSR Error : " << std::endl;
+            for(auto i=0U; i < 6 * Robot::n_eef * Robot::dimension; i++){
+                if(i % Robot::dimension == 0)
+                    std::cout << std::endl << "J[" << i / Robot::dimension << "] : ";
+                std::cout << jac_proj_inp.J[{i, 0}] << " ";
+            }
+            std::cout << std::endl;
             std::cout << "TSR Error : ";
             for(auto i=0U; i < 6 * Robot::n_eef; i++)
                 std::cout << jac_proj_inp.err[{i, 0}] << " ";
@@ -742,9 +744,8 @@ namespace vamp::planning
             return d;
         }
 
-        vamp::FloatVector<rake, 1> projectStep(
+        ConfigurationBlock projectStep(
             const ConfigurationBlock &q,
-            ConfigurationBlock &q_new,
             ProjMethod projection_method = ProjMethod::InnerLM,
             float alpha = 1.0F)
         {
@@ -759,7 +760,7 @@ namespace vamp::planning
                 Robot::template solve_tsr_error_lm_inner<rake>(jac_proj_inp, grad);
                 // std::cout << "Grad for TSR constraint: "  ;
                 // for (auto i = 0U; i < Robot::dimension; i++)
-                //         std::cout << grad[i] << " ";
+                //         std::cout << grad[{i, 0}] << " ";
                 // std::cout << std::endl;
             }
             else if (projection_method == ProjMethod::OuterLM)
@@ -775,8 +776,10 @@ namespace vamp::planning
             else {
                 throw std::runtime_error("Invalid projection method");
             }
+            ConfigurationBlock q_new;
+
             RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
-            return dist;
+            return q_new;
         }
 
 
@@ -963,6 +966,8 @@ namespace vamp::planning
 
     public:
         static constexpr char* name = "FeetTaskSpaceConstraint";
+        size_t num_project_step_called = 0;
+
         FeetTaskSpaceConstraint(
             std::array<std::array<float, 7>, Robot::n_eef> eef_pose_w_ref_reference, // qw, qx, qy, qz, tx, ty, tz
             std::array<std::array<float, 7>, Robot::n_eef> ref_frame_w_world, // qw, qx, qy, qz, tx, ty, tz
@@ -1113,9 +1118,8 @@ namespace vamp::planning
             return d;
         }
 
-        vamp::FloatVector<rake, 1> projectStep(
+        ConfigurationBlock projectStep(
             const ConfigurationBlock &q,
-            ConfigurationBlock &q_new,
             ProjMethod projection_method = ProjMethod::InnerLM,
             float alpha = 1.0F)
         {
@@ -1146,8 +1150,9 @@ namespace vamp::planning
             else {
                 throw std::runtime_error("Invalid projection method");
             }
+            ConfigurationBlock q_new;
             RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
-            return dist;
+            return q_new;
         }
 
 
@@ -1283,6 +1288,7 @@ namespace vamp::planning
 
     public:
         static constexpr char* name = "CoMTaskSpaceConstraint";
+        size_t num_project_step_called = 0;
         CoMTaskSpaceConstraint(
             const std::array<float, 2 * num_polygons> polygon_points)
         {
@@ -1355,9 +1361,8 @@ namespace vamp::planning
             return d;
         }
 
-        vamp::FloatVector<rake, 1> projectStep(
+        ConfigurationBlock projectStep(
             const ConfigurationBlock &q,
-            ConfigurationBlock &q_new,
             ProjMethod projection_method = ProjMethod::InnerLM,
             float alpha = 1.0F)
         {
@@ -1371,7 +1376,7 @@ namespace vamp::planning
                 // grad = grad.zero_out_nans();
                 // std::cout << "Grad for COM constraint: "  ;
                 // for (auto i = 0U; i < Robot::dimension; i++)
-                //         std::cout << q[{i, 0}] << " -- " <<grad[{i, 0}] << " ";
+                //         std::cout << grad[{i, 0}] << " ";
                 // std::cout << std::endl;
 
             }
@@ -1386,8 +1391,9 @@ namespace vamp::planning
             else {
                 throw std::invalid_argument("Invalid projection method");
             }
+            ConfigurationBlock q_new;
             RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
-            return dist;
+            return q_new;
         }
 
     };
@@ -1420,20 +1426,6 @@ namespace vamp::planning
             std::apply([&](const auto&... c) { (c.print_robot_tsr_error(q), ...); }, constraints_);
         }
 
-        vamp::FloatVector<rake, 1> projectStep(
-            const ConfigurationBlock &q,
-            ConfigurationBlock &q_new,
-            ProjMethod projection_method = ProjMethod::InnerLM,
-            float alpha = 1.0f)
-        {
-            ConfigurationBlock q_in = q;
-
-            std::apply([&](auto&... c) {
-                ((c.projectStep(q_in, q_new, projection_method, alpha), q_in = q_new), ...);
-            }, constraints_);
-
-            return distanceToConstraint(q_new);
-        }
         // vamp::FloatVector<rake, 1> projectStep(
         //     const ConfigurationBlock &q,
         //     ConfigurationBlock &q_new,
@@ -1443,25 +1435,67 @@ namespace vamp::planning
         //     ConfigurationBlock q_in = q;
 
         //     std::apply([&](auto&... c) {
-        //         ((
-        //             // Print BEFORE calling projectStep
-        //             std::cout << "Before projectStep for constraint: "
-        //                       << c.name << std::endl,
-
-        //             // Call projectStep
-        //             c.projectStep(q_in, q_new, projection_method, alpha),
-
-        //             // Update q_in
-        //             q_in = q_new,
-
-        //             // Print AFTER calling projectStep
-        //             std::cout << "After projectStep for constraint: "
-        //                       << c.name << std::endl
-        //         ), ...);  // fold over all constraints
+        //         ((c.projectStep(q_in, q_new, projection_method, alpha), q_in = q_new), ...);
         //     }, constraints_);
 
         //     return distanceToConstraint(q_new);
         // }
+        ConfigurationBlock projectStep(
+            const ConfigurationBlock &q,
+            ProjMethod projection_method = ProjMethod::InnerLM,
+            float alpha = 1.0f)
+        {
+            // Copy initial configuration
+            ConfigurationBlock q_in;
+            ConfigurationBlock q_new;
+            for(size_t dim = 0U; dim < Robot::dimension; dim++) {
+                q_in[dim] = q[dim];
+                q_new[dim] = q[dim];
+            }
+
+            // Lambda to process a single constraint
+            auto applyConstraint = [&](auto& c) {
+                // Optional debug print
+                std::cout << "Before projectStep for constraint: " << c.name << std::endl;
+
+                // Call the projection step
+                q_new = c.projectStep(q_in, projection_method, alpha);
+                c.num_project_step_called++;
+                // std::cout << q_new << std::endl;
+
+                // Update q_in to the latest projected configuration
+                for(size_t dim = 0U; dim < Robot::dimension; dim++) {
+                    q_in[dim] = q_new[dim];
+                }
+
+                // Optional debug print
+                // std::cout << "After projectStep for constraint: " << c.name << std::endl;
+            };
+
+            // Apply the lambda to all constraints in order
+            std::apply([&](auto&... cs) {
+                // Left-to-right evaluation guaranteed
+                (applyConstraint(cs), ...);
+            }, constraints_);
+
+            // Return distance to constraints as before
+            return q_new;
+        }
+
+        void printNumProjectStepCalled() const {
+            std::apply([&](auto&... cs) {
+                ((std::cout << cs.name << " "
+                            << cs.num_project_step_called << " "), ...);
+            }, constraints_);
+
+            std::cout << '\n';
+        }
+
+        void resetNumProjectStepCalled() {
+            std::apply([&](auto&... cs) {
+                ((cs.num_project_step_called = 0), ...);
+            }, constraints_);
+        }
 
             bool projectConfiguration(
                 const ConfigurationBlock &q,
@@ -1494,7 +1528,8 @@ namespace vamp::planning
 
                 while ((project_iter < num_projection_iterations) and (not dist.test_all_less_equal(0.0001F)))
                 {
-                    dist = projectStep(q_old, q_new, projection_method, descend_rate);
+                    q_new = projectStep(q_old, projection_method, descend_rate);
+                    dist = distanceToConstraint(q_new);
                     // std::cout << "Iteration " << project_iter << " Distance: " << dist << std::endl;
                     // std::cout << q_old << q_new << std::endl;
                     auto q_dist_from_prev = (q_new[0] - q_old[0]) * (q_new[0] - q_old[0]);
@@ -1516,7 +1551,7 @@ namespace vamp::planning
                     if (q_dist_from_prev.test_any_greater(4 * max_q_dist * max_q_dist))  // from triangle
                                                                                                 // inequality
                     {
-                        std::cout << "Too large step " << q_dist_from_prev << std::endl;
+                        // std::cout << "Too large step " << q_dist_from_prev << std::endl;
                         // std::cout << q_old << std::endl;
                         break;
                     }
@@ -1529,8 +1564,10 @@ namespace vamp::planning
                 }
                 if (verbose)
                 {
+                    printNumProjectStepCalled();
+                    resetNumProjectStepCalled();
                     std::cout << "Num projection steps : " << project_iter << " "<< dist << " and success : " << success << " " << std::endl;
-                    std::cout << "Num steps : " << project_iter << " and success : " << success << " " << " dist " << dist << " q " << q << " q_new " << q_new << std::endl;
+                    // std::cout << "Num steps : " << project_iter << " and success : " << success << " " << " dist " << dist << " q " << q << " q_new " << q_new << std::endl;
                 }
 
                 return success;
