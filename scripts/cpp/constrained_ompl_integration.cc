@@ -212,7 +212,7 @@ public:
         // std::cout << "From " << c ;
         fillStateFromReals(newReals, state, pss);
         //std::cout << "At the end, we get: \n";
-        //pss->printState(state, std::cout);
+        // pss->printState(state, std::cout);
         // std::cout << result << "\n";
         //
         if (!result) {
@@ -239,7 +239,7 @@ public:
         ConfigurationBlock block = turn_configuration_into_configuration_block(configuration);
         ConfigurationBlock last_projected_block;
         // std::cout << "After converted to configuration block, it is " << block << "\n";
-        bool result = constraints.projectConfiguration(block, last_projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0, 25, true);
+        bool result = constraints.projectConfiguration(block, last_projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0, 25, false);
         //std::cout << "After pojection, the configuration block is " << block << "\n";
         //std::cout << "Result of projection is " << result << "\n";
         typename Robot::ConfigurationArray last_projected;
@@ -298,7 +298,7 @@ struct VAMPStateValidator : public ob::StateValidityChecker
 
     auto isValid(const ob::State *state) const -> bool override
     {
-        // std::cout << "Called state validator " << "\n";
+        std::cout << "Called state validator " << "\n";
         // Convert OMPL to VAMP vector and validate
        auto *pss = dynamic_cast<ob::ProjectedStateSpace*>(si_->getStateSpace().get());
         if (!pss)
@@ -319,6 +319,7 @@ struct VAMPStateValidator : public ob::StateValidityChecker
         auto result = custom_constraint->isSatisfied(c);
         // std::cout << "At the end of isValid for stateValdiator, is valid returns " << result << "\n";
         if (!result) {
+            std::cout << "Constraint not satisfied\n";
             return result;
         }
         typename Robot::template ConfigurationBlock<rake> temp_block;
@@ -328,7 +329,7 @@ struct VAMPStateValidator : public ob::StateValidityChecker
         }
 
         auto fkcc_out = Robot::template fkcc<rake>(env_v, temp_block);
-        // std::cout << "fkcc_out: " << fkcc_out << "\n";
+        std::cout << "fkcc_out: " << fkcc_out << "\n";
         return fkcc_out;
     }
 
@@ -398,8 +399,6 @@ struct VAMPMotionValidator : public ob::MotionValidator
     {
         throw ompl::Exception("Not implemented!");
     }
-
-
 };
 
 struct OMPLMotionValidator : public ob::MotionValidator
@@ -418,7 +417,7 @@ struct OMPLMotionValidator : public ob::MotionValidator
 
     auto checkMotion(const ob::State *s1, const ob::State *s2) const -> bool override
     {
-        // std::cout << "Calling geodesic checkMotion\n";
+        std::cout << "Calling geodesic checkMotion\n";
         auto *css = dynamic_cast<ob::ProjectedStateSpace*>(si_->getStateSpace().get());
         if (!css)
             throw ompl::Exception("Expected ProjectedStateSpace");
@@ -431,15 +430,15 @@ struct OMPLMotionValidator : public ob::MotionValidator
 
         Configuration configuration2 = double_vector_to_vamp(extractStateReals(s2, css));
         if (!(custom_constraint->isSatisfied(configuration2))) {
-            //std::cout << "configuration2 is not satisfied within checkMotion!\n";
+            std::cout << "configuration2 is not satisfied within checkMotion!\n";
             return false;
         }
 
         auto discrete_geodesic = css->discreteGeodesic(s1, s2, false);
         if (!discrete_geodesic) {
-            // std::cout << "discrete_geodesic is not satisfied within checkMotion!";
-            // css->printState(s1, std::cout);
-            // css->printState(s2, std::cout);
+            std::cout << "discrete_geodesic is not satisfied within checkMotion!\n";
+            css->printState(s1, std::cout);
+            css->printState(s2, std::cout);
 
             project_constrained_motion_failed_counter++;
         }
@@ -471,11 +470,11 @@ auto main(int argc, char **argv) -> int
     }
 
     std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-        -0.01, -10.01, -0.01, -0.01, -0.01, -10.01
+        -0.01, -10.01, -0.01, -10.01, -10.01, -10.01
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
-        0.01, 10.01, 0.01, 0.01, 0.01, 10.01
+        0.01, 10.01, 0.01, 10.01, 10.01, 10.01
     };
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 1,0,0,   0.3486, 0.647752, 0.2399}};
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
@@ -502,14 +501,14 @@ auto main(int argc, char **argv) -> int
         {0.1, 0, 0.7},
         // {0.35, 0.35, 0.25},
         {0, 0.55, 0.25},
-        // {-0.55, 0, 0.25},
-        // {-0.35, -0.35, 0.25},
+        {-0.55, 0, 0.25},
+        {-0.35, -0.35, 0.25},
         {0, -0.55, 0.25},
         // {0.35, -0.35, 0.25},
         {0.35, 0.35, 0.8},
-        // {0, 0.55, 0.8},
-        // {-0.35, 0.35, 0.8},
-        // {-0.55, 0, 0.8},
+        {0, 0.55, 0.8},
+        {-0.35, 0.35, 0.8},
+        {-0.55, 0, 0.8},
         {-0.35, -0.35, 0.8},
         {0, -0.55, 0.8},
         {0.35, -0.35, 0.8},
@@ -616,10 +615,13 @@ auto main(int argc, char **argv) -> int
 
     auto mv = std::shared_ptr<ob::MotionValidator>();
 
-    if(state_only)
+    if(state_only){
         mv = std::make_shared<OMPLMotionValidator>(csi, env_v);
-    else
+        std::cout << "OMPL Motion Validator created" << std::endl;
+    }else{
         mv = std::make_shared<VAMPMotionValidator>(csi, env_v);
+        std::cout << "VAMP Motion Validator created" << std::endl;
+    }
 
     csi->setStateValidityChecker(std::make_shared<VAMPStateValidator>(csi, env_v));
     csi->setMotionValidator(mv);
@@ -653,7 +655,7 @@ auto main(int argc, char **argv) -> int
     auto planner = std::make_shared<og::RRTConnect>(csi);
 
     planner->setProblemDefinition(pdef);
-    planner->setRange(2.0);
+    planner->setRange(1.0);
     planner->setup();
 
     // Solve the problem

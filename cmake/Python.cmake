@@ -18,14 +18,15 @@ if(VAMP_BUILD_PYTHON_BINDINGS)
     list(APPEND VAMP_ROBOT_MODULES
         g1_unitree
         digit
-      panda
-      bimanual_panda
+        panda
+        bimanual_panda
     )
 
     list(APPEND VAMP_ROBOT_STRUCTS
-    G1Unitree
-      Panda
-      BimanualPanda
+        G1Unitree
+        Digit
+        Panda
+        BimanualPanda
     )
   endif()
 
