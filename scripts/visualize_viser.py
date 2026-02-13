@@ -67,7 +67,7 @@ def add_json_cuboids(server, e, filename, color=(12, 89, 178)):
 
 def main(
     obstacle_radius: float = 0.2,
-    attachment_radius: float = 0.015,
+    attachment_radius: float = 0.01,
     planner: str = "crrtc",
     **kwargs,
     ):
@@ -156,7 +156,7 @@ def main(
 
     # Plan and display
     sampler = vamp_module.halton()
-    plan_settings.range = 0.75
+    # plan_settings.range = 0.75
     # result = planner_func(a, b, e, plan_settings, sampler)
     result = planner_func(a, b, e, plan_settings, constraints, sampler)
 
