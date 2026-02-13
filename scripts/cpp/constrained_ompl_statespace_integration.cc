@@ -509,7 +509,7 @@ int main()
     auto planner = std::make_shared<og::RRTConnect>(csi);
 
     planner->setProblemDefinition(pdef);
-    planner->setRange(2.0);
+    planner->setRange(1.0);
     planner->setup();
 
 
@@ -532,17 +532,38 @@ int main()
         auto initial_cost = path_geometric.cost(obj);
 
         og::PathSimplifier simplifier(csi, pdef->getGoal(), obj);
-        if (not simplifier.simplify(path_geometric, simplification_time))
+
+
+        std::ofstream outfile("/src/trajectory.txt");
+        outfile << std::fixed << std::setprecision(10);
+        // std::cout << "Raw path length: " << path->length() << std::endl;
+
+        // path->print(std::cout);
+        for (std::size_t i = 0; i < path_geometric.getStateCount(); ++i)
         {
-            std::cout << "Path not valid!" << std::endl;
+            std::vector<double> result = extractStateReals(path_geometric.getState(i), css.get());
+
+            for (std::size_t j = 0; j < dimension; ++j)
+            {
+                if (j > 0)
+                    outfile << ",";
+                outfile << result[j];
+            }
+            outfile << "\n";
         }
+        outfile.close();
 
-        auto simplified_cost = path_geometric.cost(obj);
+        // if (not simplifier.simplify(path_geometric, simplification_time))
+        // {
+        //     std::cout << "Path not valid!" << std::endl;
+        // }
 
-        // Output statistics
-        std::cout << "Found initial solution with cost " << initial_cost.value() << std::endl;
-        std::cout << "Simplified solution to cost " << simplified_cost.value() << std::endl;
-        std::cout << "Simplified solution:" << std::endl;
+        // auto simplified_cost = path_geometric.cost(obj);
+
+        // // Output statistics
+        // std::cout << "Found initial solution with cost " << initial_cost.value() << std::endl;
+        // std::cout << "Simplified solution to cost " << simplified_cost.value() << std::endl;
+        // std::cout << "Simplified solution:" << std::endl;
 
         path_geometric.print(std::cout);
 
