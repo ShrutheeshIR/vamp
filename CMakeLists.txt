@@ -196,6 +196,8 @@ if(VAMP_BUILD_OMPL_DEMO)
 
   add_executable(vamp_constrained_ompl_integration scripts/cpp/constrained_ompl_integration.cc)
   target_link_libraries(vamp_constrained_ompl_integration PRIVATE ompl::ompl vamp_cpp)
+  add_executable(constrained_ompl_statespace_integration scripts/cpp/constrained_ompl_statespace_integration.cc)
+  target_link_libraries(constrained_ompl_statespace_integration PRIVATE ompl::ompl vamp_cpp)
 
 
   # Disable strict warnings for demos to maintain compatibility
