@@ -159,6 +159,9 @@ find_package(nlohmann_json REQUIRED)
   # add_executable(vamp_bimanual_constraint scripts/cpp/bimanual_constraint.cc)
   # target_link_libraries(vamp_bimanual_constraint PRIVATE vamp_cpp)
 
+  add_executable(check_digit_shin_joint scripts/cpp/check_digit_shin_joint.cc)
+  target_link_libraries(check_digit_shin_joint PRIVATE vamp_cpp)
+
   add_executable(com_constraint scripts/cpp/com_constraint.cc)
   target_link_libraries(com_constraint PRIVATE vamp_cpp)
 

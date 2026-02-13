@@ -151,7 +151,7 @@ namespace vamp::planning
                 }
                 else if (
                     index >= 6 *  Robot::dimension &&
-                    index < 6 * Robot::dimension + 6 * Robot::n_eef)
+                    index < 6 * Robot::dimension + 6)
                 {
                     return err[index - 6 * Robot::dimension];
                 }
@@ -169,7 +169,7 @@ namespace vamp::planning
                 }
                 else if (
                     index >= 6 * Robot::dimension &&
-                    index < 6 * Robot::dimension + 6 * Robot::n_eef)
+                    index < 6 * Robot::dimension + 6)
                 {
                     return err[index - 6 * Robot::dimension];
                 }
@@ -180,7 +180,7 @@ namespace vamp::planning
             }
 
             JacobianProjectInp &
-            operator=(vamp::FloatVector<rake, 6 * Robot::n_eef + 6 * Robot::n_eef * Robot::dimension> y)
+            operator=(vamp::FloatVector<rake, 6 + 6 * Robot::dimension> y)
             {
                 for (size_t i = 0; i < 6; i++)
                 {
@@ -1399,6 +1399,191 @@ namespace vamp::planning
     };
 
 
+    template <typename Robot, std::size_t rake>
+    class ClosedLinkConstraint : public RobotConstraint<Robot, rake>
+    {
+        /**
+         * A TSR constraint is expressed as 2 transformation matrices
+         * with a lower and upper bound, as per
+         * https://personalrobotics.cs.washington.edu/publications/berenson2011task.pdf
+         *
+         *
+         */
+        protected:
+            using ConfigurationBlock = typename Robot::ConfigurationBlock<rake>;
+
+            struct JacobianProjectInp
+            {
+                vamp::FloatVector<rake, 2 * Robot::dimension> J;  // jacobian
+                vamp::FloatVector<rake, 2> err;                   // error vector
+
+                auto &operator[](size_t index)
+                {
+                    if (index < 2 * Robot::dimension)
+                    {
+                        return J[index];
+                    }
+                    else if (
+                        index >= 2 *  Robot::dimension &&
+                        index < 2 * Robot::dimension + 2)
+                    {
+                        return err[index - 2 * Robot::dimension];
+                    }
+                    else
+                    {
+                        return err[0];
+                    }
+                }
+
+                const auto operator[](size_t index) const
+                {
+                    if (index < 2 * Robot::dimension)
+                    {
+                        return J[index];
+                    }
+                    else if (
+                        index >= 2 * Robot::dimension &&
+                        index < 2 * Robot::dimension + 2)
+                    {
+                        return err[index - 2 * Robot::dimension];
+                    }
+                    else
+                    {
+                        return err[0];
+                    }
+                }
+
+                JacobianProjectInp &
+                operator=(vamp::FloatVector<rake, 2 + 2 * Robot::dimension> y)
+                {
+                    for (size_t i = 0; i < 2; i++)
+                    {
+                        err[i] = y[2 * Robot::dimension + i];
+                    }
+                    for (size_t i = 0; i < 2 * Robot::dimension; i++)
+                    {
+                        J[i] = y[i];
+                    }
+                    return *this;
+                }
+            };
+
+            mutable JacobianProjectInp jac_proj_inp;
+            // some housekeeping variables predefined for speed
+            ConfigurationBlock q_old;
+
+        public:
+            static constexpr char* name = "CL";
+            size_t num_project_step_called = 0;
+            ClosedLinkConstraint() {;}
+
+            vamp::FloatVector<rake, 1> print_robot_tsr_error(const ConfigurationBlock &q) const
+            {
+                // for(auto i=0U; i < Robot::dimension + 19; i++)
+                //     std::cout << tsr_function_inp[i] << " ";
+
+
+                auto dist = distanceToConstraint(q);
+                std::cout << "Closed linkage error : " << std::endl;
+                for(auto i=0U; i < 2 * Robot::dimension; i++){
+                    if (i%Robot::dimension == 0)
+                        std::cout << std::endl << " J[" << i << "]: ";
+                    std::cout << std::setprecision(5) << jac_proj_inp.J[{i, 0}] << " ";
+                }
+                std::cout << std::endl << "Error : ";
+                for(auto i=0U; i < 2; i++)
+                    std::cout << jac_proj_inp.err[{i, 0}] << " ";
+                std::cout << std::endl;
+                return dist;
+            }
+
+            vamp::FloatVector<rake, 1> distanceToConstraint(const ConfigurationBlock &q) const
+            {
+
+                // std::cout << "Q input: ";
+                // for(auto i=0U; i < Robot::dimension; i++)
+                //     std::cout << std::setprecision(5) << tsr_function_inp.q[{i, 0}] << " ";
+                // std::cout << std::endl;
+                // std::cout << "Transform input: ";
+                // for(auto i=0U; i < 7; i++)
+                //     std::cout << std::setprecision(5) << tsr_function_inp.rTlB[{i, 0}] << " ";
+                // std::cout << std::endl;
+
+
+                Robot::template closed_link_joints_error<rake>(q, jac_proj_inp);
+                auto d = jac_proj_inp.err[0] * jac_proj_inp.err[0];
+                for (size_t i = 1; i < 2; i++)
+                {
+                    d = d + jac_proj_inp.err[i] * jac_proj_inp.err[i];
+                }
+                // std::cout << "Closed link Error : ";
+                // for(auto i=0U; i < 2; i++){
+                //     std::cout << std::setprecision(5) << jac_proj_inp.err[{i, 0}] << " ";
+                // }
+                // for(auto i=0U; i < 2 * Robot::dimension; i++){
+                //     if (i%Robot::dimension == 0)
+                //         std::cout << std::endl << " J[" << i << "]: ";
+                //     std::cout << std::setprecision(5) << jac_proj_inp.J[{i, 0}] << " ";
+                // }
+
+                // std::cout << std::endl;
+
+                return d;
+            }
+
+            ConfigurationBlock projectStep(
+                const ConfigurationBlock &q,
+                ProjMethod projection_method = ProjMethod::InnerLM,
+                bool update_q = true,
+                float alpha = 1.0F)
+            {
+
+                auto dist = distanceToConstraint(q);
+                // std::cout << "Bimanual constraint distance: " << dist << std::endl;
+                typename Robot::template ConfigurationBlock<rake> grad;
+
+                if (projection_method == ProjMethod::InnerLM)
+                {
+                    Robot::template solve_closed_link_error_lm_inner<rake>(jac_proj_inp, grad);
+                    // std::cout << "Grad for bimanual constraint: "  ;
+                    // for (auto i = 0U; i < Robot::dimension; i++)
+                    //         std::cout << grad[{i, 0}] << " ";
+                    // std::cout << std::endl;
+                    // grad = grad.zero_out_nans();
+                    // std::cout << "Grad for bimanual constraint: "  ;
+                    // for (auto i = 0U; i < Robot::dimension; i++)
+                    //         std::cout << grad[{i, 0}] << " ";
+                    // std::cout << std::endl;
+
+                }
+                else if (projection_method == ProjMethod::OuterLM)
+                {
+                    Robot::template solve_closed_link_error_lm_outer<rake>(jac_proj_inp, grad);
+                    // std::cout << "Grad for bimanual constraint: "  ;
+                    // for (auto i = 0U; i < Robot::dimension; i++)
+                    //         std::cout << grad[{i, 0}] << " ";
+                    // std::cout << std::endl;
+                }
+                else if (projection_method == ProjMethod::GradDesc)
+                {
+                    Robot::template solve_closed_link_error_gradient_descent<rake>(jac_proj_inp, grad);
+                    // std::cout << "Grad for bimanual constraint: "  ;
+                    // for (auto i = 0U; i < Robot::dimension; i++)
+                    //         std::cout << grad[{i, 0}] << " ";
+                    // std::cout << std::endl;
+                }
+                else {
+                    std::cout << "Invalid projection method: " << projection_method << std::endl;
+                    throw std::runtime_error("Invalid projection method");
+                }
+                ConfigurationBlock q_new;
+                RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
+                return q_new;
+            }
+
+
+    };
+
 
     template <typename Robot, std::size_t rake, typename... Constraints>
     class ComposableConstraints : public RobotConstraint<Robot, rake>
@@ -1457,7 +1642,7 @@ namespace vamp::planning
             auto applyConstraint = [&](auto& c) {
                 // Optional debug print
                 // std::cout << c.name << std::endl;
-                asm volatile("" ::: "memory");
+                // asm volatile("" ::: "memory");
                 // Call the projection step
                 q_new = c.projectStep(q_in, projection_method, alpha);
                 c.num_project_step_called++;

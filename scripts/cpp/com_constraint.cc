@@ -42,13 +42,37 @@ using AttachmentInput = vamp::collision::Attachment<float>;
 
 
 static constexpr Robot::ConfigurationArray start = {
-    0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31631,-0.28807,0.11635,-0.00983,0.00000,0.00000,0.00000,0.00000,-0.36544,0.00508,-0.29158,-0.31758,0.28939,-0.11670,0.01291,0.00000,0.00000,0.00000,0.00000
+    0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,
+    0.36547,-0.00525,0.29127,0.31631,-0.0134694,-0.28807,0.11635,-0.00983,
+    -0.105038, 0.888521, -0.00624406, 0.377775,
+    -0.36544,0.00508,-0.29158,-0.31758,0.0134478,0.28939,-0.11670,0.01291,
+    0.104559, -0.893957, 0.00550343, -0.366626,
 };
 
 static constexpr Robot::ConfigurationArray goal = {
-    0.00358,0.01604,-0.48348,-0.00927,0.00030,-0.00362,0.37249,0.00746,-0.22666,-0.85028,0.91164,-0.43089,0.01204,-0.18033,-0.49388,0.29491,1.24416,-0.34264,0.01123,0.22809,0.84257,-0.90335,0.43159,0.05288,-0.38174,0.50399,-0.22872,-1.31295
+    0.00358,0.01604,-0.48348,-0.00927,0.00030,-0.00362,
+    0.37249,0.00746,-0.22666,-0.85028, -0.02148, 0.91164,-0.43089,0.01204,
+    -0.18033,-0.49388,0.29491,1.24416,
+    -0.34264,0.01123,0.22809,0.84257, 0.021335, -0.90335,0.43159,0.05288,
+    -0.38174,0.50399,-0.22872,-1.31295
 };
 
+
+// static constexpr Robot::ConfigurationArray start = {
+//     0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,
+//     0.36547,-0.00525,0.29127,0.31631, -0.0134694,-0.28807,0.11635,-0.00983,
+//     0.02358,-0.00579,0.01520,0.09714,
+//     -0.36544,0.00508,-0.29158,-0.31758, 0.0134478, 0.28939,-0.11670,0.01291,
+//     0.00435,0.00820,-0.01199,-0.09980
+// };
+
+// static constexpr Robot::ConfigurationArray goal = {
+//     0.00358,0.01604,-0.48348,-0.00927,0.00030,-0.00362,
+//     0.37249,0.00746,-0.22666,-0.85028, -0.02148, 0.91164,-0.43089,0.01204,
+//     -0.17608,-0.40123,0.03686,1.07578,
+//     -0.34264,0.01123,0.22809,0.84257, 0.021335, -0.90335,0.43159,0.05288,
+//     -0.28604,0.42121,-0.16502,-1.13728
+// };
 // static constexpr Robot::ConfigurationArray goal = {-0.045,0.0,-0.03,0.0,-0.264,0.0,0.0,0.0,0.0,0.456,0.0,0.0,0.0,0.0,0.0,0.486,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
 
@@ -197,13 +221,16 @@ auto main(int, char **) -> int
         polygon_points
     );
 
+    vamp::planning::ClosedLinkConstraint<Robot, rake> closed_link_constraint;
+
     // vamp::planning::SelfCollisionConstraint<Robot, rake> self_collision_constraint;
 
 
-    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint)> task_constraint(
+    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint), decltype(closed_link_constraint)> task_constraint(
         feet_tsr_constraint,
         com_constraint,
-        bimanual_task_constraint
+        bimanual_task_constraint,
+        closed_link_constraint
     );
     // vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(
     //     eef_transforms_ref_frame_w_world,
