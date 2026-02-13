@@ -1457,7 +1457,7 @@ namespace vamp::planning
             auto applyConstraint = [&](auto& c) {
                 // Optional debug print
                 // std::cout << c.name << std::endl;
-                // asm volatile("" ::: "memory");
+                asm volatile("" ::: "memory");
                 // Call the projection step
                 q_new = c.projectStep(q_in, projection_method, alpha);
                 c.num_project_step_called++;

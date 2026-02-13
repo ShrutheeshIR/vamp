@@ -35,7 +35,7 @@ def main(
     )
 
 
-    constraints = vamp_module.Composable_TaskSpaceConstraint_CoMTaskSpaceConstraint_BimanualTaskSpaceConstraint(feet_tsr_constraint, com_constraint, bimanual_constraint)
+    constraints = vamp_module.Composable_T_C_B(feet_tsr_constraint, com_constraint, bimanual_constraint)
 
 
 
