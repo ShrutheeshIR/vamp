@@ -199,7 +199,7 @@ namespace vamp::planning
         ConfigurationBlock q_old;
 
     public:
-        static constexpr char* name = "BimanualTaskSpaceConstraint";
+        static constexpr char* name = "B";
         size_t num_project_step_called = 0;
         BimanualTaskSpaceConstraint(
             const std::array<float, 7> right_eef_pose_w_ref_left_eef,  // rTl qw, qx, qy, qz, tx, ty, tz
@@ -617,7 +617,7 @@ namespace vamp::planning
         ConfigurationBlock q_old;
 
     public:
-        static constexpr char* name = "TaskSpaceConstraint";
+        static constexpr char* name = "T";
         size_t num_project_step_called = 0;
         TaskSpaceConstraint(
             std::array<std::array<float, 7>, Robot::n_eef> eef_pose_w_ref_reference, // qw, qx, qy, qz, tx, ty, tz
@@ -965,7 +965,7 @@ namespace vamp::planning
         ConfigurationBlock q_old;
 
     public:
-        static constexpr char* name = "FeetTaskSpaceConstraint";
+        static constexpr char* name = "F";
         size_t num_project_step_called = 0;
 
         FeetTaskSpaceConstraint(
@@ -1287,7 +1287,7 @@ namespace vamp::planning
         ConfigurationBlock q_old;
 
     public:
-        static constexpr char* name = "CoMTaskSpaceConstraint";
+        static constexpr char* name = "C";
         size_t num_project_step_called = 0;
         CoMTaskSpaceConstraint(
             const std::array<float, 2 * num_polygons> polygon_points)
@@ -1456,8 +1456,8 @@ namespace vamp::planning
             // Lambda to process a single constraint
             auto applyConstraint = [&](auto& c) {
                 // Optional debug print
-                std::cout << "Before projectStep for constraint: " << c.name << std::endl;
-
+                // std::cout << c.name << std::endl;
+                // asm volatile("" ::: "memory");
                 // Call the projection step
                 q_new = c.projectStep(q_in, projection_method, alpha);
                 c.num_project_step_called++;
