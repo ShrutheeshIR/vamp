@@ -10,6 +10,10 @@
 #include <vamp/collision/factory.hh>
 #include <vamp/planning/validate.hh>
 
+#include <sstream>
+#include <string>
+#include <nlohmann/json.hpp>
+
 #include <vamp/robots/panda.hh>
 
 #include <ompl/base/MotionValidator.h>
@@ -42,6 +46,7 @@ static constexpr const std::size_t rake = vamp::FloatVectorWidth;
 using EnvironmentInput = vamp::collision::Environment<float>;
 using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 using ConfigurationBlock = typename Robot::template ConfigurationBlock<rake>;
+using AttachmentInput = vamp::collision::Attachment<float>;
 
 
 // Maximum planning time
@@ -50,6 +55,67 @@ static constexpr int maxIterations = 100000;
 
 // Maximum simplification time
 static constexpr float simplification_time = 1.0;
+
+
+static bool load_cuboids_from_json(EnvironmentInput &environment, const std::string &path) {
+    std::ifstream ifs(path);
+    if (!ifs.is_open()) {
+        std::cerr << "Failed to open JSON file: " << path << std::endl;
+        return false;
+    }
+
+    nlohmann::json j;
+    try {
+        ifs >> j;
+    } catch (const std::exception &e) {
+        std::cerr << "Failed to parse JSON file: " << path << " error: " << e.what() << std::endl;
+        return false;
+    }
+
+    if (!j.is_array()) {
+        std::cerr << "Expected top-level JSON array in: " << path << std::endl;
+        return false;
+    }
+
+    for (const auto &obj : j) {
+        if (!obj.is_object()) {
+            std::cerr << "Skipping non-object element in array" << std::endl;
+            continue;
+        }
+
+        // required fields
+        if (!obj.contains("x") || !obj.contains("y") || !obj.contains("z") ||
+            !obj.contains("dx") || !obj.contains("dy") || !obj.contains("dz")) {
+            std::cerr << "Skipping object missing required fields (x,y,z,dx,dy,dz)" << std::endl;
+            continue;
+        }
+
+        try {
+            float x = obj.at("x").get<float>();
+            float y = obj.at("y").get<float>();
+            float z = obj.at("z").get<float>();
+            float dx = obj.at("dx").get<float>();
+            float dy = obj.at("dy").get<float>();
+            float dz = obj.at("dz").get<float>();
+
+            float roll = 0.0f, pitch = 0.0f, yaw = 0.0f;
+            if (obj.contains("roll")) roll = obj.at("roll").get<float>();
+            if (obj.contains("pitch")) pitch = obj.at("pitch").get<float>();
+            if (obj.contains("yaw")) yaw = obj.at("yaw").get<float>();
+
+            std::array<float,3> posf = {x, y, z};
+            std::array<float,3> rotf = {roll, pitch, yaw};
+            std::array<float,3> sizef = {dx / 2, dy / 2, dz / 2};
+            // std::cout << "Creating cuboid at position: " << posf[0] << ", " << posf[1] << ", " << posf[2] << " with size: " << sizef[0] << ", " << sizef[1] << ", " << sizef[2] << std::endl;
+            environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array(posf, rotf, sizef));
+        } catch (const std::exception &e) {
+            std::cerr << "Error reading object fields: " << e.what() << " -- skipping object" << std::endl;
+            continue;
+        }
+    }
+
+    return true;
+}
 
 
 // Helper function to convert projected state into a double veector
@@ -292,7 +358,8 @@ struct VAMPStateValidator : public ob::StateValidityChecker
         Configuration robot_config(float_config_from_x);
 
         std::vector <typename Robot::Configuration> projected_vector;
-        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(robot_config, robot_config, projected_vector, task_constraint, env_v, vamp::planning::ProjMethod::InnerLM, 1.0, 10, true);
+        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(robot_config, robot_config, projected_vector, task_constraint, env_v, vamp::planning::ProjMethod::InnerLM, 0.5, 25, true);
+        // std::cout << "Projection result: " << projection_result << std::endl;
         return projection_result;
 
         // std::vector<double> newReals = vamp_to_double_vector(projected_vector.back());
@@ -337,7 +404,7 @@ struct VAMPMotionValidator : public ob::MotionValidator
         Configuration robot_config_2(float_config_from_x2);
 
         std::vector <typename Robot::Configuration> projected_vector;
-        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(robot_config_1, robot_config_2, projected_vector, task_constraint, env_v, vamp::planning::ProjMethod::InnerLM, 1.0, 10, true);
+        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(robot_config_1, robot_config_2, projected_vector, task_constraint, env_v, vamp::planning::ProjMethod::InnerLM, 0.5, 25, true);
         return projection_result;
     }
 
@@ -391,21 +458,38 @@ int main()
 {
     auto rvss = std::make_shared<ob::RealVectorStateSpace>(dimension);
 
+    // ob::RealVectorBounds bounds(dimension);
+    // bounds.setLow(-2);
+    // bounds.setHigh(2);
+    // Get bounds from VAMP Robot information, scale 0/1 config to min/max
+    static constexpr std::array<float, dimension> zeros = {0., 0., 0., 0., 0., 0., 0.};
+    static constexpr std::array<float, dimension> ones = {1., 1., 1., 1., 1., 1., 1.};
+
+    auto zero_v = Configuration(zeros);
+    auto one_v = Configuration(ones);
+    Robot::scale_configuration(zero_v);
+    Robot::scale_configuration(one_v);
+
+
     ob::RealVectorBounds bounds(dimension);
-    bounds.setLow(-2);
-    bounds.setHigh(2);
+    for (auto i = 0U; i < dimension; ++i)
+    {
+        bounds.setLow(i, zero_v[{0, i}]);
+        bounds.setHigh(i, one_v[{0, i}]);
+    }
 
     rvss->setBounds(bounds);
 
 
     std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-        -0.01, -10.01, -0.01, -0.01, -0.01, -0.01
+        -10.01, -10.01, -0.01, -0.01, -0.01, -10.01
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
-        0.01, 10.01, 0.01, 0.01, 0.01, 0.01
+        10.01, 10.01, 0.01, 0.01, 0.01, 10.01
     };
-    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 1,0,0,   0.3486, 0.647752, 0.2399}};
+
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 1.0, 0, 0.0, 0.29276255, -0.55347496, 0.20607783}};
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
 
     vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
@@ -459,13 +543,42 @@ int main()
         {0.35, -0.35, 0.8},
     };
     // Radius for obstacle spheres
-    static constexpr float radius = 0.15;
-    for (const auto &sphere : problem)
-    {
-        environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
-    }
+    // static constexpr float radius = 0.15;
+    // for (const auto &sphere : problem)
+    // {
+    //     environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
+    // }
 
+    // Try a few likely paths for the JSON file
+    const std::vector<std::string> candidate_paths = {
+        "/src/myfork/vamp/resources/environments/cuboids/real_maze.json",
+    };
+
+    bool loaded = false;
+    for (const auto &p : candidate_paths) {
+        if (load_cuboids_from_json(environment, p)) {
+            std::cout << "Loaded cuboids from: " << p << std::endl;
+            loaded = true;
+            break;
+        }
+    }
+    if (!loaded) {
+        std::cerr << "Failed to load cuboids JSON from any candidate path. Exiting." << std::endl;
+        return 1;
+    }
     environment.sort();
+
+    std::vector<vamp::collision::Sphere<float>> spheres;
+    for(auto i=0U; i < 8; i++){
+        spheres.push_back(vamp::collision::Sphere<float>(0.0, 0.0, i * 0.02, 0.01));
+    }
+    auto attach_transform = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
+    attach_transform.translation().z() = 0.0;
+    AttachmentInput attachment(attach_transform);
+
+    attachment.spheres.insert(attachment.spheres.end(), spheres.cbegin(), spheres.cend());
+    environment.attach(attachment, 0);
+
     auto env_v = EnvironmentVector(environment);
 
     csi->setStateValidityChecker(std::make_shared<VAMPStateValidator>(csi, env_v, task_constraint));
@@ -479,8 +592,8 @@ int main()
 
     // Start and goal vectors.
     Eigen::VectorXd sv(dimension), gv(dimension);
-    sv << 1.01600, 0.68800, 0.08700, -1.28100, -0.06000, 1.95500, 1.89100;
-    gv << -1.18400, 0.68900, 0.15400, -1.27400, -0.10600, 1.95500, -0.24000;
+    sv << -0.88021, 0.53120, -0.20601, -1.61905, 0.11733, 2.14908, 1.19294;
+    gv << 1.40490, 0.35201, -0.22762, -1.90963, 0.10796, 2.26183, 0.22238;
 
     // Scoped states that we will add to simple setup.
     ob::ScopedState<> start(css);
@@ -509,7 +622,7 @@ int main()
     auto planner = std::make_shared<og::RRTConnect>(csi);
 
     planner->setProblemDefinition(pdef);
-    planner->setRange(1.0);
+    planner->setRange(0.5);
     planner->setup();
 
 
