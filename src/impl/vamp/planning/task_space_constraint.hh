@@ -151,7 +151,7 @@ namespace vamp::planning
                 }
                 else if (
                     index >= 6 *  Robot::dimension &&
-                    index < 6 * Robot::dimension + 6 * Robot::n_eef)
+                    index < 6 * Robot::dimension + 6)
                 {
                     return err[index - 6 * Robot::dimension];
                 }
@@ -169,7 +169,7 @@ namespace vamp::planning
                 }
                 else if (
                     index >= 6 * Robot::dimension &&
-                    index < 6 * Robot::dimension + 6 * Robot::n_eef)
+                    index < 6 * Robot::dimension + 6)
                 {
                     return err[index - 6 * Robot::dimension];
                 }
@@ -180,7 +180,7 @@ namespace vamp::planning
             }
 
             JacobianProjectInp &
-            operator=(vamp::FloatVector<rake, 6 * Robot::n_eef + 6 * Robot::n_eef * Robot::dimension> y)
+            operator=(vamp::FloatVector<rake, 6 + 6 * Robot::dimension> y)
             {
                 for (size_t i = 0; i < 6; i++)
                 {
