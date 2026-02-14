@@ -269,7 +269,7 @@ public:
         // std::cout << "Projecting configuration block...";
         // return true;
 
-        bool result = constraints.projectConfiguration(config_block, last_projected_block, vamp::planning::ProjMethod::InnerLM, 5.0, 1.0, 25, false);
+        bool result = constraints.projectConfiguration(config_block, last_projected_block, vamp::planning::ProjMethod::OuterLM, 5.0, 1.0, 25, false);
         if (result){
             for (auto i = 0U; i < Robot::dimension; ++i) {
                 x[i] = static_cast<double>(last_projected_block[{i, rake - 1}]);
@@ -358,7 +358,7 @@ struct VAMPStateValidator : public ob::StateValidityChecker
         Configuration robot_config(float_config_from_x);
 
         std::vector <typename Robot::Configuration> projected_vector;
-        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(robot_config, robot_config, projected_vector, task_constraint, env_v, vamp::planning::ProjMethod::InnerLM, 0.5, 25, true);
+        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(robot_config, robot_config, projected_vector, task_constraint, env_v, vamp::planning::ProjMethod::OuterLM, 1.0, 20, false);
         // std::cout << "Projection result: " << projection_result << std::endl;
         return projection_result;
 
@@ -404,7 +404,7 @@ struct VAMPMotionValidator : public ob::MotionValidator
         Configuration robot_config_2(float_config_from_x2);
 
         std::vector <typename Robot::Configuration> projected_vector;
-        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(robot_config_1, robot_config_2, projected_vector, task_constraint, env_v, vamp::planning::ProjMethod::InnerLM, 0.5, 25, true);
+        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(robot_config_1, robot_config_2, projected_vector, task_constraint, env_v, vamp::planning::ProjMethod::OuterLM, 1.0, 20, false);
         return projection_result;
     }
 
@@ -569,7 +569,7 @@ int main()
     environment.sort();
 
     std::vector<vamp::collision::Sphere<float>> spheres;
-    for(auto i=0U; i < 8; i++){
+    for(auto i=0U; i < 9; i++){
         spheres.push_back(vamp::collision::Sphere<float>(0.0, 0.0, i * 0.02, 0.01));
     }
     auto attach_transform = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
@@ -622,7 +622,7 @@ int main()
     auto planner = std::make_shared<og::RRTConnect>(csi);
 
     planner->setProblemDefinition(pdef);
-    planner->setRange(0.5);
+    planner->setRange(1.0);
     planner->setup();
 
 
