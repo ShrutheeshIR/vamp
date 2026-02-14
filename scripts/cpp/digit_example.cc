@@ -24,12 +24,20 @@ using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 using AttachmentInput = vamp::collision::Attachment<float>;
 
 // Start and goal configurations
-static constexpr Robot::ConfigurationArray start = {
+// static constexpr Robot::ConfigurationArray start = {
+//     0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31631,-0.01347,-0.28807,0.11635,-0.00983,0.02358,-0.00579,0.01520,0.09714,-0.36544,0.00508,-0.29158,-0.31758,0.01345,0.28939,-0.11670,0.01291,0.00435,0.00820,-0.01199,-0.09980
+// };
+
+// static constexpr Robot::ConfigurationArray goal = {
+//     0.00358,0.01604,-0.48348,-0.00927,0.00030,-0.00362,0.37249,0.00746,-0.22666,-0.85028,-0.02148,0.91164,-0.43089,0.01204,-0.17608,-0.40123,0.03686,1.07578,-0.34264,0.01123,0.22809,0.84257,0.02134,-0.90335,0.43159,0.05288,-0.28604,0.42121,-0.16502,-1.13728
+// };
+
+static constexpr Robot::ConfigurationArray goal = {
     0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31631,-0.01347,-0.28807,0.11635,-0.00983,0.02358,-0.00579,0.01520,0.09714,-0.36544,0.00508,-0.29158,-0.31758,0.01345,0.28939,-0.11670,0.01291,0.00435,0.00820,-0.01199,-0.09980
 };
 
-static constexpr Robot::ConfigurationArray goal = {
-    0.00358,0.01604,-0.48348,-0.00927,0.00030,-0.00362,0.37249,0.00746,-0.22666,-0.85028,-0.02148,0.91164,-0.43089,0.01204,-0.17608,-0.40123,0.03686,1.07578,-0.34264,0.01123,0.22809,0.84257,0.02134,-0.90335,0.43159,0.05288,-0.28604,0.42121,-0.16502,-1.13728
+static constexpr Robot::ConfigurationArray start = {
+    0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31631,-0.01347,-0.28807,0.11635,-0.00983,-0.10504,0.88852,-0.00624,0.37778,-0.36544,0.00508,-0.29158,-0.31758,0.01345,0.28939,-0.11670,0.01291,0.10456,-0.89396,0.00550,-0.36663
 };
 
 // static constexpr Robot::ConfigurationArray start = {-0.148774,1.59886,1.36434,-2.75007,0.544898,2.51704,-1.4485,2.07773,1.0024,-0.823622,-1.69743,-0.625681,2.59153,0.7243};
@@ -196,11 +204,14 @@ auto main(int, char **) -> int
     );
 
     // vamp::planning::SelfCollisionConstraint<Robot, rake> self_collision_constraint;
+    vamp::planning::ClosedLinkConstraint<Robot, rake> closed_link_constraint;
 
-    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint)> task_constraint(
+    // vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint), decltype(closed_link_constraint)> task_constraint(
+    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(closed_link_constraint)> task_constraint(
         feet_tsr_constraint,
         com_constraint,
-        bimanual_task_constraint
+        // bimanual_task_constraint,
+        closed_link_constraint
     );    // vamp::planning::ComposableConstraints<Robot, rake, decltype(bimanual_constraint), decltype(com_constraint)> task_constraint(
     //     bimanual_constraint,
     //     com_constraint
@@ -228,7 +239,8 @@ auto main(int, char **) -> int
     // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
     auto result =
-        vamp::planning::CRRTC<Robot, rake, Robot::resolution, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint)>::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
+        // vamp::planning::CRRTC<Robot, rake, Robot::resolution, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint), decltype(closed_link_constraint)>::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
+        vamp::planning::CRRTC<Robot, rake, Robot::resolution, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(closed_link_constraint)>::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
     // auto result =
     //     vamp::planning::CRRTC<Robot, rake, Robot::resolution, decltype(bimanual_constraint), decltype(com_constraint)>::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
 
@@ -252,7 +264,8 @@ auto main(int, char **) -> int
         if((succ_attempts.size() == 0) || (succ_attempts.size() > 0 && a < succ_attempts[0])){
 
         vamp::planning::SimplifySettings simplify_settings;
-        auto simplify_result = vamp::planning::constraint::simplify_with_constraints<Robot, rake, Robot::resolution, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint)>(
+        // auto simplify_result = vamp::planning::constraint::simplify_with_constraints<Robot, rake, Robot::resolution, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint), decltype(closed_link_constraint)>(
+        auto simplify_result = vamp::planning::constraint::simplify_with_constraints<Robot, rake, Robot::resolution, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(closed_link_constraint)>(
             result.path, env_v, task_constraint, simplify_settings, rng);
         std::cout << "Simplify took " << result.nanoseconds / 1e6 << " ms" << std::endl;
 
