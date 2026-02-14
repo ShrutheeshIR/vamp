@@ -201,6 +201,11 @@ if(VAMP_BUILD_OMPL_DEMO)
   add_executable(ompl_regular_integration scripts/cpp/ompl_regular_integration.cc)
   target_link_libraries(ompl_regular_integration PRIVATE ompl::ompl vamp_cpp)
 
+  find_package(pinocchio REQUIRED)
+  find_package(Eigen3 REQUIRED)
+  add_executable(ompl_integration_pinocchio scripts/cpp/ompl_integration_pinocchio.cc)
+  target_link_libraries(ompl_integration_pinocchio PRIVATE ompl::ompl vamp_cpp pinocchio::pinocchio Eigen3::Eigen)
+
 
   # Disable strict warnings for demos to maintain compatibility
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")

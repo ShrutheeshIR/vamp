@@ -133,7 +133,7 @@ std::vector<double> extractStateReals(
     return values;
 }
 
-//outputs into state. takes a double vector and turns it into state for projectedstatespace
+//outputs into state. takes a double vector and turns it into state for ProjectedStateSpace
 void fillStateFromReals(
     const std::vector<double> &values,
     ob::State *state,
@@ -281,6 +281,38 @@ public:
 
     }
 
+    void jacobian(const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::MatrixXd> out) const override
+    {
+        Eigen::Matrix<double, 1, 7> mat = Eigen::Matrix<double, 1, 7>::Zero();
+
+        // Set the top-left 6x6 block to identity
+        mat.block<1,1>(0,0) = Eigen::Matrix<double, 1, 1>::Identity();
+        out = mat.normalized();
+
+        // std::array<float, Robot::dimension> float_config_from_x;
+        // for (auto i = 0U; i < Robot::dimension; ++i) {
+        //     // cast x[i] to float
+        //     float_config_from_x[i] = static_cast<float>(x[i]);
+        // }
+        // auto config_block = turn_configuration_into_configuration_block(Configuration(float_config_from_x));
+        // ConfigurationBlock last_projected_block;
+        // // bool result = true;
+        // // std::cout << "Projecting configuration block...";
+        // // return true;
+
+        // bool result = constraints.projectConfiguration(config_block, last_projected_block, vamp::planning::ProjMethod::InnerLM, 5.0, 1.0, 25, false);
+        // if (result){
+        //     for (auto i = 0U; i < Robot::dimension; ++i) {
+        //         x[i] = static_cast<double>(last_projected_block[{i, rake - 1}]);
+        //         // std::cout << x[i] << " ";
+        //     }
+        // }
+        // // std::cout << "Projection result " << result << std::endl;
+        // return result;
+
+    }
+
+
     double distance(const Eigen::Ref<const Eigen::VectorXd> &x) const override {
         // need to convert x to a configuration block
         std::array<float, Robot::dimension> float_config_from_x;
@@ -358,7 +390,7 @@ struct VAMPStateValidator : public ob::StateValidityChecker
         Configuration robot_config(float_config_from_x);
 
         std::vector <typename Robot::Configuration> projected_vector;
-        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(robot_config, robot_config, projected_vector, task_constraint, env_v, vamp::planning::ProjMethod::InnerLM, 0.5, 25, true);
+        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(robot_config, robot_config, projected_vector, task_constraint, env_v, vamp::planning::ProjMethod::InnerLM, 1.0, 20, false);
         // std::cout << "Projection result: " << projection_result << std::endl;
         return projection_result;
 
@@ -404,7 +436,7 @@ struct VAMPMotionValidator : public ob::MotionValidator
         Configuration robot_config_2(float_config_from_x2);
 
         std::vector <typename Robot::Configuration> projected_vector;
-        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(robot_config_1, robot_config_2, projected_vector, task_constraint, env_v, vamp::planning::ProjMethod::InnerLM, 0.5, 25, true);
+        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(robot_config_1, robot_config_2, projected_vector, task_constraint, env_v, vamp::planning::ProjMethod::InnerLM, 1.0, 20, false);
         return projection_result;
     }
 
@@ -579,8 +611,8 @@ int main()
     //   css->anchorChart(start.get());
     //   css->anchorChart(goal.get());
     // Which gives a starting point for the atlas to grow.
-    // csi->setAtlasStepSize(0.05);
-    // csi->setAtlasBoundary(0.1);
+    // css->setBackoff(0.05);
+    // css->setAtlasBoundary(0.1);
 
 
     auto pdef = std::make_shared<ob::ProblemDefinition>(csi);
