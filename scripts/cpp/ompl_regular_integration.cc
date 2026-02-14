@@ -551,18 +551,6 @@ int main()
 
     // Try a few likely paths for the JSON file
     environment.sort();
-
-    std::vector<vamp::collision::Sphere<float>> spheres;
-    for(auto i=0U; i < 8; i++){
-        spheres.push_back(vamp::collision::Sphere<float>(0.0, 0.0, i * 0.02, 0.01));
-    }
-    auto attach_transform = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
-    attach_transform.translation().z() = 0.0;
-    AttachmentInput attachment(attach_transform);
-
-    attachment.spheres.insert(attachment.spheres.end(), spheres.cbegin(), spheres.cend());
-    environment.attach(attachment, 0);
-
     auto env_v = EnvironmentVector(environment);
 
     csi->setStateValidityChecker(std::make_shared<VAMPStateValidator>(csi, env_v, task_constraint));
@@ -606,7 +594,7 @@ int main()
     auto planner = std::make_shared<og::RRTConnect>(csi);
 
     planner->setProblemDefinition(pdef);
-    planner->setRange(0.5);
+    planner->setRange(2.0);
     planner->setup();
 
 
