@@ -579,6 +579,8 @@ int main()
     //   css->anchorChart(start.get());
     //   css->anchorChart(goal.get());
     // Which gives a starting point for the atlas to grow.
+    // csi->setAtlasStepSize(0.05);
+    // csi->setAtlasBoundary(0.1);
 
 
     auto pdef = std::make_shared<ob::ProblemDefinition>(csi);
@@ -594,7 +596,7 @@ int main()
     auto planner = std::make_shared<og::RRTConnect>(csi);
 
     planner->setProblemDefinition(pdef);
-    planner->setRange(2.0);
+    planner->setRange(1.0);
     planner->setup();
 
 
