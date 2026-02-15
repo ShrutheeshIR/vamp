@@ -1,0 +1,223 @@
+# Third Party
+import torch
+
+# cuRobo
+from curobo.types.math import Pose
+from curobo.types.robot import JointState
+from curobo.wrap.reacher.motion_gen import MotionGen, MotionGenConfig, MotionGenPlanConfig, PoseCostMetric
+from curobo.types.base import TensorDeviceType
+
+from curobo.geom.types import WorldConfig, Sphere
+import numpy as np
+
+import os
+import yaml
+import json
+
+
+class MotionPlanningTask:
+    def __init__(self):
+        self.problem_start = []
+        self.problem_end = []
+        self.obstacles = []
+        self.tsr_lower_bound = []
+        self.tsr_upper_bound = []
+
+def load_problems_from_json(json_file_path):
+    with open(json_file_path, 'r') as f:
+        data = json.load(f)
+
+    problems = []
+    for problem_data in data:
+        task = MotionPlanningTask()
+        task.problem_start = problem_data['problem_start']
+        task.problem_end = problem_data['problem_end']
+        task.obstacles = problem_data['obstacles']
+        task.tsr_lower_bound = [1 if abs(float(x)) > 0.1 else 0 for x in problem_data['tsr_lower_bound']]
+        task.tsr_upper_bound = [1 if abs(float(x)) > 0.1 else 0 for x in problem_data['tsr_upper_bound']]
+        problems.append(task)
+
+    return problems
+
+def plan_task(mp_task: MotionPlanningTask, motion_gen: MotionGen, tensor_args: TensorDeviceType):
+
+    motion_gen.clear_world_cache()
+
+    # Create obstacle
+    obstacle_spheres = []
+    for i, obs in enumerate(mp_task.obstacles):
+        x, y, z, r = obs
+        obstacle_spheres.append(
+            Sphere(
+                name=f"obstacle_{i}",
+                radius=r,
+                pose=[x, y, z, 1, 0, 0, 0],
+                color=[0, 1.0, 0, 1.0],
+            )
+        )
+    
+    world_model = WorldConfig(
+        sphere=obstacle_spheres,
+    )
+
+    # convert obstacle to cuboid. This is necessary for collision checking. I think this is stupid.
+    cuboid_world = WorldConfig.create_obb_world(world_model)
+    motion_gen.update_world(cuboid_world)
+
+    start_state = JointState.from_position(
+        tensor_args.to_device([mp_task.problem_start]),
+        joint_names=["panda_joint1", "panda_joint2", "panda_joint3", "panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"],
+    )
+
+    goal_state = JointState.from_position(
+        tensor_args.to_device([mp_task.problem_end]),
+        joint_names=["panda_joint1", "panda_joint2", "panda_joint3", "panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"],
+    )
+    start_kin_state = motion_gen.rollout_fn.compute_kinematics(start_state)
+    print(start_kin_state.ee_pos_seq, start_kin_state.ee_quat_seq)
+
+    goal_kin_state = motion_gen.rollout_fn.compute_kinematics(goal_state)
+    print(goal_kin_state.ee_pos_seq, goal_kin_state.ee_quat_seq)
+
+    # print(goal_kin_state)
+
+
+    valid_query, status = motion_gen.check_start_state(start_state)
+    if not valid_query:
+        print("\033[91m" + "Invalid start state" + "\033[0m")
+        return -1
+
+    valid_query, status = motion_gen.check_start_state(goal_state)
+    if not valid_query:
+        print("\033[91m" + "Invalid goal state" + "\033[0m")
+        return -1
+
+    # pose_cost_metric = PoseCostMetric(
+    #     hold_partial_pose=True,
+    #     hold_vec_weight=motion_gen.tensor_args.to_device([int(lb) for lb in mp_task.tsr_lower_bound]),
+    # )
+    # print(pose_cost_metric)
+    pose_cost_metric = PoseCostMetric(
+        hold_partial_pose=True,
+        hold_vec_weight=motion_gen.tensor_args.to_device([1, 1, 1, 0, 0, 1]),
+
+    )
+
+    motion_gen_config = MotionGenPlanConfig(
+            max_attempts=20,  # 20,
+            enable_graph_attempt=1,
+            disable_graph_attempt=10,
+            enable_finetune_trajopt=True,
+            enable_graph=False,
+            timeout=60,
+            enable_opt=True,
+            need_graph_success=False,
+            parallel_finetune=True,
+            finetune_dt_scale=0.8,
+            check_start_validity=True,
+        )
+    # motion_gen_config = MotionGenPlanConfig(
+    #     enable_graph=True, 
+    #     enable_opt=False,
+    #     use_nn_ik_seed=False,
+    #     need_graph_success=False,
+    #     max_attempts=20,
+    #     timeout=10.0,
+    #     enable_finetune_trajopt=False,
+    #     parallel_finetune=False,
+    #     finetune_attempts=0,
+    #     check_start_validity=True,
+    # )
+    motion_gen_config.pose_cost_metric = pose_cost_metric
+    # result = motion_gen.plan_single_js(start_state, goal_state, motion_gen_config)
+    ik_goal = Pose(
+        position=tensor_args.to_device(goal_kin_state.ee_pos_seq.clone()),
+        quaternion=tensor_args.to_device(goal_kin_state.ee_quat_seq.clone()),
+    )
+    # ik_goal = Pose(
+    #     position=tensor_args.to_device(
+    #         torch.tensor([0.3493, -0.6499,  0.3449])
+    #     ),
+    #     quaternion=tensor_args.to_device(
+    #         torch.tensor([4.8889e-05,  1.0000e+00,  2.6360e-04, -2.9853e-04])
+    #     ),
+    # )
+
+
+    # print(ik_goal)
+    result = motion_gen.plan_single(start_state, ik_goal, motion_gen_config)
+    return result
+
+
+
+def main():
+    tensor_args = TensorDeviceType(device=torch.device("cuda:0"))
+
+    # We need to create dummpy obstacle to initialize the motion generator, so it can first create the collision cache.
+    # Create obstacle
+    obstacle_sphere = Sphere(
+        name="dummy_obstacle",
+        radius=0.2,
+        pose=[0.506, 0.0, 10, 1, 0, 0, 0],
+        color=[0, 1.0, 0, 1.0],
+    )
+    world_model = WorldConfig(
+    sphere=[obstacle_sphere],
+    )
+
+    # convert obstacle to cuboid. This is necessary for collision checking. I think this is stupid.
+    cuboid_world = WorldConfig.create_obb_world(world_model)
+
+    motion_gen_config = MotionGenConfig.load_from_robot_config(
+        "/home/ros/curobo/src/curobo/content/configs/robot/franka.yml",
+        cuboid_world,
+        interpolation_dt=0.02,
+        project_pose_to_goal_frame=False,
+        collision_cache={"obb": 50, "mesh": 50},
+        ee_link_name="panda_hand",
+        position_threshold=0.01,  # 1 cm
+        rotation_threshold=0.01,
+    )
+
+    motion_gen = MotionGen(motion_gen_config)
+    motion_gen.warmup()
+
+    num_of_success = 0
+    num_of_tasks = 0
+    total_time_of_success_case = 0
+
+    #  do a dummy task first
+    dummy_task = MotionPlanningTask()
+    dummy_task.problem_start = [1.01600, 0.68800, 0.08700, -1.28100, -0.06000, 1.95500, 1.89100]
+    dummy_task.problem_end = [-0.91508937, 0.6985612, -0.23231459, -1.2822142, 0.16026999, 1.962646, -0.37113136]
+    dummy_task.obstacles = [
+        [0.56, 0, 0.450, 0.1],
+        [0.1, 0, 0.7, 0.1],
+        [0, 0.55, 0.25, 0.1],
+        [-0.55, 0, 0.25, 0.1],
+        [-0.35, -0.35, 0.25, 0.1],
+        [0, -0.55, 0.25, 0.1],
+        [0.35, 0.35, 0.8, 0.1],
+        [0, 0.55, 0.8, 0.1],
+        [-0.35, 0.35, 0.8, 0.1],
+        [-0.55, 0, 0.8, 0.1],
+        [-0.35, -0.35, 0.8, 0.1],
+        [0, -0.55, 0.8, 0.1],
+        [0.35, -0.35, 0.8, 0.1]
+    ]
+    np.savetxt("/src/spheres.txt", dummy_task.obstacles, fmt="%.5f", delimiter=",")
+    dummy_task.tsr_lower_bound = [0, 0, 0, 0, 1, 0]
+    dummy_task.tsr_upper_bound = [0, 0, 0, 0, 1, 0]
+
+    for _ in range(2):
+        result = plan_task(dummy_task, motion_gen, tensor_args)
+        print(result.success, result.graph_time, result.solve_time, result.trajopt_time, result.finetune_time)
+        if result.success:
+            cmd_plan = result.get_interpolated_plan()
+            cmd_plan = motion_gen.get_full_js(cmd_plan)
+            waypoints = cmd_plan.position[:, :7].cpu().numpy()
+            print(waypoints[-1])
+            np.savetxt("/src/dummy_plan.txt", waypoints, fmt="%.5f", delimiter=",")
+
+if __name__ == "__main__":
+    main()

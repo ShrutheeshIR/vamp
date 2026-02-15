@@ -215,10 +215,11 @@ namespace vamp::planning
         ProjMethod projection_method = ProjMethod::InnerLM,
         float projection_descent_rate = 1.0F,
         int num_projection_iterations = 25,
-        bool insert_all_to_tree = false) -> bool
+        bool insert_all_to_tree = false,
+        bool infinite_distance = false) -> bool
     {
         auto vector = goal - start;
         return project_constraint_vector<Robot, rake, resolution>(
-            start, vector, vector.l2_norm(), projected_vector, constraint, environment, projection_method, projection_descent_rate);
+            start, vector, infinite_distance ? 10000.F : vector.l2_norm(), projected_vector, constraint, environment, projection_method, projection_descent_rate);
     }
 }  // namespace vamp::planning
