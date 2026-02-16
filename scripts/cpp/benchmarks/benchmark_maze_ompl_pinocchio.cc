@@ -82,29 +82,34 @@ struct TSR
 class SE3Constraint : public ob::Constraint
 {
     public:
-        SE3Constraint(const pinocchio::Model &model,
-                        pinocchio::FrameIndex eeFrame,
-                        const TSR &tsr)
-                : ob::Constraint(model.nq, 6, dist_tol), // nq is config dim, 6 is constraint dim
-                model_(model),
-                data_(model_),
-                eeFrame_(eeFrame),
-                tsr_(tsr)
-            {
-                // Convert Eigen::Isometry3d to pinocchio::SE3
-                T_ref_pin_ = pinocchio::SE3(tsr.T_ref.rotation(), tsr.T_ref.translation());
-                std::cout << "Created model " << std::endl;
-            }
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+    SE3Constraint(const std::string& urdf_path, 
+                const TSR &tsr)
+        : ob::Constraint(get_model(urdf_path)->nq, 6, 1e-3),
+        tsr_(tsr)
+        {
+            // 1. Get the shared model (loads only once)
+            model_ptr_ = get_model(urdf_path);
+            
+            // 2. Get the Frame ID
+            eeFrame_ = model_ptr_->getFrameId("panda_grasptarget");
+            // pinocchio::FrameIndex eeFrame = model.getFrameId("panda_grasptarget");
+            // 3. Setup Reference
+            T_ref_pin_ = pinocchio::SE3(tsr.T_ref.rotation(), tsr.T_ref.translation());
+        }
+
         void function(const Eigen::Ref<const Eigen::VectorXd> &q,
                         Eigen::Ref<Eigen::VectorXd> out) const override
             {
+                static thread_local pinocchio::Data data(*model_ptr_);
                 // Use a local data object if multi-threading, or lock this section
-                pinocchio::forwardKinematics(model_, data_, q);
-                pinocchio::updateFramePlacements(model_, data_);
+                pinocchio::forwardKinematics(*model_ptr_, data, q);
+                pinocchio::updateFramePlacements(*model_ptr_, data);
 
                 // Compute error in local-world aligned or local frame
                 // T_err = T_ref^-1 * T_ee
-                const pinocchio::SE3 &T_ee = data_.oMf[eeFrame_];
+                const pinocchio::SE3 &T_ee = data.oMf[eeFrame_];
                 const pinocchio::SE3 T_err = T_ref_pin_.actInv(T_ee);
                 
                 // Log map gives the 6D error vector
@@ -124,15 +129,16 @@ class SE3Constraint : public ob::Constraint
                     Eigen::Ref<Eigen::MatrixXd> out) const override
         {
 
+            static thread_local pinocchio::Data data(*model_ptr_);
 
-            pinocchio::forwardKinematics(model_, data_, q);
-            pinocchio::computeJointJacobians(model_, data_, q);
-            pinocchio::updateFramePlacements(model_, data_);
+            pinocchio::forwardKinematics(*model_ptr_, data, q);
+            pinocchio::computeJointJacobians(*model_ptr_, data, q);
+            pinocchio::updateFramePlacements(*model_ptr_, data);
 
-            pinocchio::Data::Matrix6x J(6, model_.nv);
+            pinocchio::Data::Matrix6x J(6, model_ptr_->nv);
             // Get Jacobian in the LOCAL frame of the end effector
-            pinocchio::getFrameJacobian(model_, data_, eeFrame_, pinocchio::LOCAL, J);
-            const pinocchio::SE3 &T_ee = data_.oMf[eeFrame_];
+            pinocchio::getFrameJacobian(*model_ptr_, data, eeFrame_, pinocchio::LOCAL, J);
+            const pinocchio::SE3 &T_ee = data.oMf[eeFrame_];
             const pinocchio::SE3 T_err = T_ref_pin_.actInv(T_ee);
 
             pinocchio::Data::Matrix6 Jlog;
@@ -145,7 +151,7 @@ class SE3Constraint : public ob::Constraint
         bool project (Eigen::Ref< Eigen::VectorXd > x) const override
         {
             Eigen::VectorXd f(6);
-            Eigen::MatrixXd J(6, model_.nv);
+            Eigen::MatrixXd J(6, model_ptr_->nv);
 
             for(int i=0;i<max_iters_;++i)
             {
@@ -159,7 +165,7 @@ class SE3Constraint : public ob::Constraint
                 jacobian(x, J);
 
 
-                Eigen::VectorXd delta(model_.nv);
+                Eigen::VectorXd delta(model_ptr_->nv);
                 pinocchio::Data::Matrix6 JJt;
                 JJt.noalias() = J * J.transpose();
                 JJt.diagonal().array() += lambda_;
@@ -167,8 +173,8 @@ class SE3Constraint : public ob::Constraint
 
                 // Eigen::MatrixXd H = J.transpose()*J + lambda*Eigen::MatrixXd::Identity(model_.nv, model_.nv);
                 // Eigen::VectorXd delta = H.ldlt().solve(-J.transpose()*f);
-                x = pinocchio::integrate(model_, x, -delta * 0.25);
-                // x += delta;
+                x = pinocchio::integrate(*model_ptr_, x, -delta * 0.25);
+                // x += delta;  
 
                 if(delta.norm() < dist_tol) {
                     return true;
@@ -195,12 +201,19 @@ class SE3Constraint : public ob::Constraint
 
 
     private:
-        std::shared_ptr<const pinocchio::Model> model_;
-        mutable pinocchio::Data data_;
+        // std::shared_ptr<const pinocchio::Model> model_ptr_; 
+        static std::shared_ptr<pinocchio::Model> get_model(const std::string& path) {
+            static std::shared_ptr<pinocchio::Model> shared_model;
+            if (!shared_model) {
+                shared_model = std::make_shared<pinocchio::Model>();
+                pinocchio::urdf::buildModel(path, *shared_model);
+            }
+            return shared_model;
+        }
+        std::shared_ptr<const pinocchio::Model> model_ptr_;
         pinocchio::FrameIndex eeFrame_;
         pinocchio::SE3 T_ref_pin_;
         TSR tsr_;
-
         size_t max_iters_ = 50;
         double dist_tol = 1e-3;
         double lambda_ = 1e-3;
@@ -520,12 +533,12 @@ auto run_rrtc(const Problem &problem) {
         tsr.upper = Eigen::Map<const Eigen::Matrix<float, 6, 1>>(tsr_upper_bound.data()).cast<double>();
 
         std::string urdf_file = "/src/myfork/vamp/resources/panda/panda_spherized.urdf";
-        pinocchio::Model model;
-        pinocchio::GeometryModel collision_model;
+        // pinocchio::Model model;
+        // pinocchio::GeometryModel collision_model;
 
-        pinocchio::urdf::buildModel(urdf_file, model);
-        pinocchio::urdf::buildGeom(model, urdf_file, pinocchio::COLLISION, collision_model);
-        pinocchio::FrameIndex eeFrame = model.getFrameId("panda_grasptarget");
+        // pinocchio::urdf::buildModel(urdf_file, model);
+        // pinocchio::urdf::buildGeom(model, urdf_file, pinocchio::COLLISION, collision_model);
+        // pinocchio::FrameIndex eeFrame = model.getFrameId("panda_grasptarget");
 
         auto rvss = std::make_shared<ob::RealVectorStateSpace>(dimension);
 
@@ -557,7 +570,9 @@ auto run_rrtc(const Problem &problem) {
         // auto constraint = std::make_shared<CustomConstraint>(task_constraint);
 
         // Combine the ambient space and the constraint into a constrained state space.
-        auto constraint = std::make_shared<SE3Constraint>(model, eeFrame , tsr);
+        // auto constraint = std::make_shared<SE3Constraint>(model, eeFrame , tsr);
+        // 2. Pass the model_ptr to your new constructor
+        auto constraint = std::make_shared<SE3Constraint>(urdf_file, tsr);
 
         auto css = std::make_shared<ob::ProjectedStateSpace>(rvss, constraint);
 
@@ -657,12 +672,21 @@ auto run_rrtc(const Problem &problem) {
         auto start_time = std::chrono::steady_clock::now();
         ob::PlannerStatus stat = planner->ob::Planner::solve(planning_time);
         auto nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
-        std::cout << "Planning time: " << nanoseconds / 1e6 << "ms" << std::endl;
+
+        planner->clear();
+
+        // 2. Clear the problem definition
+        pdef->clearSolutionPaths();
+        pdef->clearStartStates();
+        pdef->clearGoal();
+
         planner.reset();
         pdef.reset();
         csi.reset();
         css.reset();
         constraint.reset();
+        
+        std::cout << "Planning time: " << nanoseconds / 1e6 << "ms" << std::endl;
         return std::make_pair(stat == ob::PlannerStatus::EXACT_SOLUTION, nanoseconds);
 
 }

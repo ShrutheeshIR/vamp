@@ -222,7 +222,7 @@ def main():
     #         print(waypoints[-1])
     #         np.savetxt("/src/dummy_plan.txt", waypoints, fmt="%.5f", delimiter=",")
 
-    tasks = load_problems_from_json("/src/tsr_panda_problems_parallel_line_ori_50.json")
+    tasks = load_problems_from_json("/src/tsr_panda_problems_single_line_ori_random_obs.json")
     print(f"Loaded {len(tasks)} tasks from json file.")
 
     for i, task in enumerate(tasks):

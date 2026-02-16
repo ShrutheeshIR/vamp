@@ -211,18 +211,46 @@ std::vector<std::array<float, 4>> generate_sphere_obstacles(const Configuration 
 
 int main() {
 	size_t num_constraints_added = 0;
-	size_t TOT_NUM_CONSTRAINTS = 50;
-	size_t TOT_NUM_START_GOAL_PAIRS_PER_CONSTRAINT = 10;
+	size_t TOT_NUM_CONSTRAINTS = 1;
+	size_t TOT_NUM_START_GOAL_PAIRS_PER_CONSTRAINT = 100;
 
 
 	std::vector<Problem> problems;
-	const char *output_path = "/src/tsr_panda_problems_parallel_plane_ori_50.json";
+	const char *output_path = "/src/tsr_panda_problems_single_line_ori_random_obs.json";
 	std::ofstream file(output_path);
+
+    // std::array<std::array<bool, 6>, 12> tsr_bound_combinations = {{
+    //     // true indicates no-constraint for that dimension, false indicates constraint
+    //     // x plane without orientation
+    //     {false, true, true, true, true, true},
+    //     // x plane with orientation
+    //     {false, true, true, false, false, false},
+    //     // y plane without orientation
+    //     {true, false, true, true, true, true},
+    //     // y plane with orientation
+    //     {true, false, true, false, false, false},
+    //     // z plane without orientation
+    //     {true, true, false, true, true, true},
+    //     // z plane with orientation
+    //     {true, true, false, false, false, false},
+    //     // xz-line without orientation
+    //     {false, true, false, true, true, true},
+    //     // xz-line with orientation
+    //     {false, true, false, false, false, false},
+    //     // xy line without orientation
+    //     {false, false, true, true, true, true},
+    //     // xy line with orientation
+    //     {false, false, true, false, false, false},
+    //     // yz line without orientation
+    //     {true, false, false, true, true, true},
+    //     // yz line with orientation
+    //     {true, false, false, false, false, false},
+    // }};
 
 
 
 	while(num_constraints_added < TOT_NUM_CONSTRAINTS) {
-		if (file.is_open()) {
+		if (num_constraints_added > 0 && file.is_open()) {
 			file.seekp(0);
 			file << json(problems).dump(4);
 			file.flush();
@@ -238,15 +266,19 @@ int main() {
 
 		typedef Eigen::Quaterniond Quatd;
 		// Generate a random unit quaternion
-		Quatd random_quat = Quatd::UnitRandom();
+		// Quatd random_quat = Quatd::UnitRandom();
 		Eigen::VectorXf rand_translation = Eigen::VectorXf::Random(3);
-		std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{random_quat.w(), random_quat.x(), random_quat.y() ,random_quat.z(), rand_translation[0], rand_translation[1], rand_translation[2] }};
-		std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{1, 0, 0, 0, 0, 0, 0}};
+		// std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{random_quat.w(), random_quat.x(), random_quat.y() ,random_quat.z(), rand_translation[0], rand_translation[1], rand_translation[2] }};
+		// std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{0.0, 1.0, 0.0 ,0.0, rand_translation[0], rand_translation[1], rand_translation[2] }};
+		// std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{1, 0, 0, 0, 0, 0, 0}};
+        std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 1,0,0,   0.3486, 0.647752, 0.2399}};
+        std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
+
         std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-            -10.0025, -10.01, -0.0025, -0.0025, -0.0025, -0.0025
+            -0.0025, -10.01, -0.0025, -0.0025, -0.0025, -0.0025
         };
         std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
-            10.0025, 10.01, 0.0025, 0.0025, 0.0025, 0.0025
+            0.0025, 10.01, 0.0025, 0.0025, 0.0025, 0.0025
         };
 		vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
 			eef_transforms_ref_frame_w_world,
@@ -266,7 +298,7 @@ int main() {
 
         std::cout << "Attempting to generate problems for constraint " << num_constraints_added + 1 << std::endl;
 		size_t num_start_goal_pairs_added = 0;
-		for(size_t config_attempt = 0U; config_attempt < 500; config_attempt++){
+		for(size_t config_attempt = 0U; config_attempt < 1000; config_attempt++){
             // std::cout << "Num start goal pairs added " << num_start_goal_pairs_added << std::endl;
 			if(num_start_goal_pairs_added >= TOT_NUM_START_GOAL_PAIRS_PER_CONSTRAINT){
 				break;
@@ -291,7 +323,7 @@ int main() {
 				))
 				{
 					// std::cout << "Able to get start " << start << start_projected_vector.back() << std::endl;
-					for(size_t goal_config_attempt = 0U; goal_config_attempt < 500; goal_config_attempt++){
+					for(size_t goal_config_attempt = 0U; goal_config_attempt < 1000; goal_config_attempt++){
 						auto goal = rng->next();
 						typename Robot::template ConfigurationBlock<rake> block, projected_block;
 						std::vector<typename Robot::Configuration> goal_projected_vector;
@@ -350,8 +382,8 @@ int main() {
                                 bool obstacle_adding_failed = false;
 
 								for (const auto num_obstacles : obstacle_counts) {
-                                    if (obstacle_adding_failed)
-                                        break;
+                                    // if (obstacle_adding_failed)
+                                    //     break;
 
                                     // obstacle_futures.push_back(std::async(std::launch::async, [&, num_obstacles]() {
                                         // std::cout << "Attempting with " << num_obstacles << " obstacles." << std::endl;
@@ -425,6 +457,10 @@ int main() {
 
 	}
 
+    if(problems.empty()){
+        std::cerr << "No problems generated!" << std::endl;
+        return 0;
+    }
 	json j_all_problems = problems;
 	if (file.is_open()) {
 		file << j_all_problems.dump(4); // '4' is the indentation level for readability

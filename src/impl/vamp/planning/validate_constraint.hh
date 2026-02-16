@@ -148,9 +148,12 @@ namespace vamp::planning
             }
             projected_vector.push_back(typename Robot::Configuration(last_projected));
         }
+        if (distance > 100.F)
+            return valid;
         // std::cout << initial_projected_block << std::endl;
         // auto max_inter_dist = std::sqrt(inter_rake_distance.hmax());
 
+        // std::cout << "Max inter distance: " << max_inter_dist <<  " " << distance << std::endl;
         if (not valid or max_inter_dist <= (distance / rake) / n)
         {
             if (not valid)
