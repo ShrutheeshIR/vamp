@@ -13,7 +13,7 @@ import numpy as np
 import os
 import yaml
 import json
-
+import time
 
 class MotionPlanningTask:
     def __init__(self):
@@ -73,6 +73,7 @@ def plan_task(mp_task: MotionPlanningTask, motion_gen: MotionGen, tensor_args: T
         tensor_args.to_device([mp_task.problem_end]),
         joint_names=["panda_joint1", "panda_joint2", "panda_joint3", "panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"],
     )
+    print(mp_task.problem_start, mp_task.problem_end)
     start_kin_state = motion_gen.rollout_fn.compute_kinematics(start_state)
     print(start_kin_state.ee_pos_seq, start_kin_state.ee_quat_seq)
 
@@ -85,23 +86,25 @@ def plan_task(mp_task: MotionPlanningTask, motion_gen: MotionGen, tensor_args: T
     valid_query, status = motion_gen.check_start_state(start_state)
     if not valid_query:
         print("\033[91m" + "Invalid start state" + "\033[0m")
+        print(status)
         return -1
 
     valid_query, status = motion_gen.check_start_state(goal_state)
     if not valid_query:
         print("\033[91m" + "Invalid goal state" + "\033[0m")
+        print(status)
         return -1
 
-    # pose_cost_metric = PoseCostMetric(
-    #     hold_partial_pose=True,
-    #     hold_vec_weight=motion_gen.tensor_args.to_device([int(lb) for lb in mp_task.tsr_lower_bound]),
-    # )
-    # print(pose_cost_metric)
     pose_cost_metric = PoseCostMetric(
         hold_partial_pose=True,
-        hold_vec_weight=motion_gen.tensor_args.to_device([1, 1, 1, 0, 0, 1]),
-
+        hold_vec_weight=motion_gen.tensor_args.to_device([int(lb) for lb in mp_task.tsr_lower_bound]),
     )
+    # print(pose_cost_metric)
+    # pose_cost_metric = PoseCostMetric(
+    #     hold_partial_pose=True,
+    #     hold_vec_weight=motion_gen.tensor_args.to_device([1, 1, 1, 0, 0, 1]),
+
+    # )
 
     motion_gen_config = MotionGenPlanConfig(
             max_attempts=20,  # 20,
@@ -173,7 +176,7 @@ def main():
         cuboid_world,
         interpolation_dt=0.02,
         project_pose_to_goal_frame=False,
-        collision_cache={"obb": 50, "mesh": 50},
+        collision_cache={"obb": 100},
         ee_link_name="panda_hand",
         position_threshold=0.01,  # 1 cm
         rotation_threshold=0.01,
@@ -205,19 +208,41 @@ def main():
         [0, -0.55, 0.8, 0.1],
         [0.35, -0.35, 0.8, 0.1]
     ]
-    np.savetxt("/src/spheres.txt", dummy_task.obstacles, fmt="%.5f", delimiter=",")
+    # np.savetxt("/src/spheres.txt", dummy_task.obstacles, fmt="%.5f", delimiter=",")
     dummy_task.tsr_lower_bound = [0, 0, 0, 0, 1, 0]
     dummy_task.tsr_upper_bound = [0, 0, 0, 0, 1, 0]
 
-    for _ in range(2):
-        result = plan_task(dummy_task, motion_gen, tensor_args)
+    # for _ in range(2):
+    #     result = plan_task(dummy_task, motion_gen, tensor_args)
+    #     print(result.success, result.graph_time, result.solve_time, result.trajopt_time, result.finetune_time)
+    #     if result.success:
+    #         cmd_plan = result.get_interpolated_plan()
+    #         cmd_plan = motion_gen.get_full_js(cmd_plan)
+    #         waypoints = cmd_plan.position[:, :7].cpu().numpy()
+    #         print(waypoints[-1])
+    #         np.savetxt("/src/dummy_plan.txt", waypoints, fmt="%.5f", delimiter=",")
+
+    tasks = load_problems_from_json("/src/tsr_panda_problems_parallel_line_ori_50.json")
+    print(f"Loaded {len(tasks)} tasks from json file.")
+
+    for i, task in enumerate(tasks):
+        print(f"Planning task {i+1}/{len(tasks)}")
+        result = plan_task(task, motion_gen, tensor_args)
+        if result == -1:
+            continue
         print(result.success, result.graph_time, result.solve_time, result.trajopt_time, result.finetune_time)
         if result.success:
+            num_of_success += 1
+            total_time_of_success_case += result.graph_time + result.solve_time + result.trajopt_time + result.finetune_time
             cmd_plan = result.get_interpolated_plan()
             cmd_plan = motion_gen.get_full_js(cmd_plan)
             waypoints = cmd_plan.position[:, :7].cpu().numpy()
-            print(waypoints[-1])
             np.savetxt("/src/dummy_plan.txt", waypoints, fmt="%.5f", delimiter=",")
+            np.savetxt("/src/spheres.txt", task.obstacles, fmt="%.5f", delimiter=",")
+
+            time.sleep(10.0)
+
+        num_of_tasks += 1
 
 if __name__ == "__main__":
     main()

@@ -26,15 +26,18 @@ using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution>;
 using AttachmentInput = vamp::collision::Attachment<float>;
 
 // Start and goal configurations
-// static constexpr Robot::ConfigurationArray start = {0., -0.785, 0., -2.356, 0., 1.571, 0.785};
-// static constexpr Robot::ConfigurationArray goal = {2.35, 1., 0., -0.8, 0, 2.5, 0.785};
+// static constexpr Robot::ConfigurationArray start = {0.0723661, 0.759532, 0.739697, -1.46145, -0.542908, 2.01123, 1.44284};
+// static constexpr Robot::ConfigurationArray goal = {-0.861715, -1.77698, 1.27599, -2.77671, 1.37271, 1.27341, -0.113237};
 // static constexpr Robot::ConfigurationArray goal = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
 // static constexpr Robot::ConfigurationArray start = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
 
 
 // static constexpr Robot::ConfigurationArray start = {0.99,1.43,-0.05,-0.28,0.33,1.98,1.42};
-static constexpr Robot::ConfigurationArray start = {-0.88021, 0.53120, -0.20601, -1.61905, 0.11733, 2.14908, 1.19294};
-static constexpr Robot::ConfigurationArray goal = {1.40490, 0.35201, -0.22762, -1.90963, 0.10796, 2.26183, 0.22238};
+// static constexpr Robot::ConfigurationArray start = {-0.88021, 0.53120, -0.20601, -1.61905, 0.11733, 2.14908, 1.19294};
+// static constexpr Robot::ConfigurationArray goal = {1.40490, 0.35201, -0.22762, -1.90963, 0.10796, 2.26183, 0.22238};
+
+static constexpr Robot::ConfigurationArray start = {1.40884, -1.27491, -1.15143, -2.90345, -1.0985, 1.76689, 0.116565};
+static constexpr Robot::ConfigurationArray goal = {2.9671, 0.0269232, 2.80111, -2.45045, -0.00934296, 2.42461, 2.55441};
 
 // static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
 // static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
@@ -189,7 +192,7 @@ auto main(int, char **) -> int
     bool loaded = false;
     for (const auto &p : candidate_paths) {
         if (load_cuboids_from_json(environment, p)) {
-            std::cout << "Loaded cuboids from: " << p << std::endl;
+            // std::cout << "Loaded cuboids from: " << p << std::endl;
             loaded = true;
             break;
         }
@@ -202,7 +205,7 @@ auto main(int, char **) -> int
     environment.sort();
 
     std::vector<vamp::collision::Sphere<float>> spheres;
-    for(auto i=0U; i < 9; i++){
+    for(auto i=0U; i < 10; i++){
         spheres.push_back(vamp::collision::Sphere<float>(0.0, 0.0, i * 0.02, 0.01));
     }
     auto attach_transform = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
@@ -251,7 +254,7 @@ auto main(int, char **) -> int
     rrtc_settings.num_projection_iterations = num_projection_iterations;
     rrtc_settings.insert_all_to_tree = insert_all_to_tree;
     // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
-    std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
+    // std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
     vamp::planning::invalid_distance_counter_outside = 0;
     vamp::planning::invalid_distance_counter_inside = 0;
     vamp::planning::collision_counter = 0;

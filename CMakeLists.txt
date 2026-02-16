@@ -156,6 +156,11 @@ find_package(nlohmann_json REQUIRED)
   add_executable(problem_generator scripts/cpp/problem_generator.cc)
   target_link_libraries(problem_generator PRIVATE vamp_cpp)
 
+  add_executable(problem_generator_parallel scripts/cpp/problem_generator_parallel.cc)
+  target_link_libraries(problem_generator_parallel PRIVATE vamp_cpp)
+
+  add_executable(problem_generator_maze scripts/cpp/problem_generator_maze.cc)
+  target_link_libraries(problem_generator_maze PRIVATE vamp_cpp)
 
   # add_executable(vamp_crrtc_transport_mug scripts/cpp/vamp_crrtc_transport_mug.cc)
 # target_link_libraries(vamp_crrtc_transport_mug PRIVATE vamp_cpp)

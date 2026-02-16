@@ -135,7 +135,7 @@ std::vector<std::array<float, 4>> generate_sphere_obstacles(const Configuration 
     size_t num_attempts = 0;
     while (num_obstacles_added < num_obstacles && num_attempts++ < MAX_OBSTACLE_ATTEMPTS)
     {
-        Eigen::Vector3f center = lower_bound + Eigen::Vector3f::Random().cwiseProduct(upper_bound - lower_bound);
+		Eigen::Vector3f center = lower_bound + ((Eigen::Vector3f::Random() + Eigen::Vector3f::Ones()) / 2.0f).cwiseProduct(upper_bound - lower_bound);
         // check if it collides with the start or goal configuration, if so, resample
         EnvironmentInput environment;
         std::array<float, 3> sphere = {center[0], center[1], center[2]};
@@ -195,17 +195,18 @@ int main() {
 
 
     while(num_constraints_added < TOT_NUM_CONSTRAINTS) {
+        std::cout << "Generating problem for constraint " << num_constraints_added + 1 << std::endl;
         typedef Eigen::Quaterniond Quatd;
         // Generate a random unit quaternion
         Quatd random_quat = Quatd::UnitRandom();
         Eigen::VectorXf rand_translation = Eigen::VectorXf::Random(3);
-        std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{random_quat.w(), random_quat.x(), random_quat.y() ,random_quat.z(), rand_translation[0], rand_translation[1], rand_translation[2] }};
-        std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{1, 0, 0, 0, 0, 0, 0}};
+        std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{random_quat.w(), random_quat.x(), random_quat.y() ,random_quat.z(), rand_translation[0], rand_translation[1], rand_translation[2] }};
+        std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
         std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-            -10.01, -10.01, -0.01, -0.01, -0.01, -0.01
+            -10.01, -10.01, -0.0025, -0.0025, -0.0025, -0.0025
         };
         std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
-            10.01, 10.01, 0.01, 0.01, 0.01, 0.01
+            10.01, 10.01, 0.0025, 0.0025, 0.0025, 0.0025
         };
         vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
             eef_transforms_ref_frame_w_world,
@@ -225,17 +226,16 @@ int main() {
 
 
         size_t num_start_goal_pairs_added = 0;
-        for(size_t config_attempt = 0U; config_attempt < 100; config_attempt++){
+		for(size_t config_attempt = 0U; config_attempt < 500; config_attempt++){
             
-            if(num_start_goal_pairs_added >= TOT_NUM_START_GOAL_PAIRS_PER_CONSTRAINT){
-                num_constraints_added++;
-                break;
-            }
-            auto start = rng->next();
-            typename Robot::template ConfigurationBlock<rake> block, projected_block;
+			if(num_start_goal_pairs_added >= TOT_NUM_START_GOAL_PAIRS_PER_CONSTRAINT){
+				break;
+			}
+			auto start = rng->next();
+			typename Robot::template ConfigurationBlock<rake> block, projected_block;
 
 
-            std::vector<typename Robot::Configuration> start_projected_vector;
+			std::vector<typename Robot::Configuration> start_projected_vector;
 
             if (vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(
                     start,
@@ -251,7 +251,7 @@ int main() {
                 ))
                 {
                     // std::cout << "Able to get start " << start << start_projected_vector.back() << std::endl;
-                    for(size_t goal_config_attempt = 0U; goal_config_attempt < 100; goal_config_attempt++){
+                    for(size_t goal_config_attempt = 0U; goal_config_attempt < 500; goal_config_attempt++){
                         auto goal = rng->next();
                         typename Robot::template ConfigurationBlock<rake> block, projected_block;
                         std::vector<typename Robot::Configuration> goal_projected_vector;
@@ -269,11 +269,11 @@ int main() {
                                 true
                             ))
                             {
-                                if((goal - start).l2_norm() < 2.0)
-                                    continue;
 
                                 auto start_config = start_projected_vector.back();
                                 auto goal_config = goal_projected_vector.back();
+                                if((goal_config - start_config).l2_norm() < 2.0)
+                                    continue;
 
                                 // now check if plan is feasible
                                 bool any_successful_plan = run_crrtc_attempts(start_config, goal_config, env_v, task_constraint, rng);
@@ -381,6 +381,9 @@ int main() {
             
 
 
+        }
+        if(num_start_goal_pairs_added > 0){
+            num_constraints_added++;
         }
 
 
