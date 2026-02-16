@@ -205,7 +205,7 @@ auto main(int, char **) -> int
     environment.sort();
 
     std::vector<vamp::collision::Sphere<float>> spheres;
-    for(auto i=0U; i < 10; i++){
+    for(auto i=0U; i < 9; i++){
         spheres.push_back(vamp::collision::Sphere<float>(0.0, 0.0, i * 0.02, 0.01));
     }
     auto attach_transform = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();

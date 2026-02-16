@@ -162,6 +162,10 @@ find_package(nlohmann_json REQUIRED)
   add_executable(problem_generator_maze scripts/cpp/problem_generator_maze.cc)
   target_link_libraries(problem_generator_maze PRIVATE vamp_cpp)
 
+  add_executable(benchmark_maze_vamp scripts/cpp/benchmarks/benchmark_maze_vamp.cc)
+  target_link_libraries(benchmark_maze_vamp PRIVATE vamp_cpp)
+
+
   # add_executable(vamp_crrtc_transport_mug scripts/cpp/vamp_crrtc_transport_mug.cc)
 # target_link_libraries(vamp_crrtc_transport_mug PRIVATE vamp_cpp)
 
@@ -210,11 +214,16 @@ if(VAMP_BUILD_OMPL_DEMO)
   add_executable(ompl_regular_integration scripts/cpp/ompl_regular_integration.cc)
   target_link_libraries(ompl_regular_integration PRIVATE ompl::ompl vamp_cpp)
 
+  add_executable(benchmark_maze_ompl scripts/cpp/benchmarks/benchmark_maze_ompl.cc)
+  target_link_libraries(benchmark_maze_ompl PRIVATE ompl::ompl vamp_cpp)
+
   find_package(pinocchio REQUIRED)
   find_package(Eigen3 REQUIRED)
   add_executable(ompl_integration_pinocchio scripts/cpp/ompl_integration_pinocchio.cc)
   target_link_libraries(ompl_integration_pinocchio PRIVATE ompl::ompl vamp_cpp pinocchio::pinocchio Eigen3::Eigen)
 
+  add_executable(benchmark_maze_ompl_pinocchio scripts/cpp/benchmarks/benchmark_maze_ompl_pinocchio.cc)
+  target_link_libraries(benchmark_maze_ompl_pinocchio PRIVATE ompl::ompl vamp_cpp pinocchio::pinocchio Eigen3::Eigen)
 
   # Disable strict warnings for demos to maintain compatibility
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
