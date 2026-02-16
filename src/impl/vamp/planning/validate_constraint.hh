@@ -151,7 +151,7 @@ namespace vamp::planning
         // std::cout << initial_projected_block << std::endl;
         // auto max_inter_dist = std::sqrt(inter_rake_distance.hmax());
 
-        if (not valid or max_inter_dist <= (distance / rake))
+        if (not valid or max_inter_dist <= (distance / rake) / n)
         {
             if (not valid)
                 collision_counter++;

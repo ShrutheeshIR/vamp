@@ -33,11 +33,11 @@ using AttachmentInput = vamp::collision::Attachment<float>;
 
 
 // static constexpr Robot::ConfigurationArray start = {0.99,1.43,-0.05,-0.28,0.33,1.98,1.42};
-// static constexpr Robot::ConfigurationArray start = {-0.88021, 0.53120, -0.20601, -1.61905, 0.11733, 2.14908, 1.19294};
-// static constexpr Robot::ConfigurationArray goal = {1.40490, 0.35201, -0.22762, -1.90963, 0.10796, 2.26183, 0.22238};
+static constexpr Robot::ConfigurationArray start = {-0.88021, 0.53120, -0.20601, -1.61905, 0.11733, 2.14908, 1.19294};
+static constexpr Robot::ConfigurationArray goal = {1.40490, 0.35201, -0.22762, -1.90963, 0.10796, 2.26183, 0.22238};
 
-static constexpr Robot::ConfigurationArray start = {1.40884, -1.27491, -1.15143, -2.90345, -1.0985, 1.76689, 0.116565};
-static constexpr Robot::ConfigurationArray goal = {2.9671, 0.0269232, 2.80111, -2.45045, -0.00934296, 2.42461, 2.55441};
+// static constexpr Robot::ConfigurationArray goal = {1.40884, -1.27491, -1.15143, -2.90345, -1.0985, 1.76689, 0.116565};
+// static constexpr Robot::ConfigurationArray start = {2.9671, 0.0269232, 2.80111, -2.45045, -0.00934296, 2.42461, 2.55441};
 
 // static constexpr Robot::ConfigurationArray start = {0.88,1.05,0.0,-0.66,0.0,1.73,0.0};
 // static constexpr Robot::ConfigurationArray goal = {-0.92,1.05,0.0,-0.66,0.0,1.73,0.0};
@@ -157,13 +157,13 @@ auto main(int, char **) -> int
     // Setup RRTC and plan
     vamp::planning::RRTCSettings rrtc_settings;
 
-    float ranges[] = {0.5, 0.75, 1.0, 0.1, 0.2};
+    float ranges[] = {0.5, 0.75, 1.0, 0.1, 0.2, 1.5};
     // float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
     // float ranges[] = {0.5, 0.75};
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     // bool dd[] = {false};
     bool dd[] = {false, true};
-    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};
+    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM}; //, vamp::planning::ProjMethod::GradDesc};
 
     // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
     float descend_rates[] = {0.75, 1.0};
@@ -254,7 +254,7 @@ auto main(int, char **) -> int
     rrtc_settings.num_projection_iterations = num_projection_iterations;
     rrtc_settings.insert_all_to_tree = insert_all_to_tree;
     // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
-    // std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
+    std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " " << std::endl;
     vamp::planning::invalid_distance_counter_outside = 0;
     vamp::planning::invalid_distance_counter_inside = 0;
     vamp::planning::collision_counter = 0;

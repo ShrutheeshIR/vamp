@@ -230,7 +230,9 @@ namespace vamp::planning
                             constraint,
                             environment,
                             static_cast<ProjMethod>(settings.projection_method),
-                            settings.descend_rate
+                            settings.descend_rate,
+                            settings.num_projection_iterations
+                            // settings.insert_all_to_tree
                             )
                         )
                         {
@@ -313,21 +315,21 @@ namespace vamp::planning
             result.iterations = iter;
             result.size.emplace_back(start_tree.size());
             result.size.emplace_back(goal_tree.size());
-            // std::cout << "Terminated with  : " << std::endl;
-            // std::cout << "Iterations : " << iter << std::endl;
-            // std::cout << "Free Index : " << free_index << std::endl;
-            // std::cout << "Connected : " << connected << std::endl;
-            // std::cout << "Tree sizes : " << tree_a->size() << ", " << tree_b->size() <<  std::endl;
-            // std::cout << "Time (ms) : " << result.nanoseconds/1e6 << std::endl;
-            // std::cout << "Invalid Distance Outside : " << (float)invalid_distance_counter_outside / iter << std::endl;
-            // std::cout << "Invalid Distance Inside : " << (float)invalid_distance_counter_inside / iter << std::endl;
-            // std::cout << "Unable to Project : " << (float) unable_to_project_counter / iter << std::endl;
-            // std::cout << "Unable to Project Inside : " << (float) unable_to_project_inside_counter / iter << std::endl;
-            // std::cout << "Collision : " << (float) collision_counter / iter << std::endl;
-            // std::cout << "Collision Inside : " << (float) collision_inside_counter / iter << std::endl;
-            // std::cout << "Validate Failed : " << (float) validate_failed / iter << std::endl;
-            // std::cout << "DynDom Failed : " << (float) dyndomfailed / iter << std::endl;
-            // settings.display();
+            std::cout << "Terminated with  : " << std::endl;
+            std::cout << "Iterations : " << iter << std::endl;
+            std::cout << "Free Index : " << free_index << std::endl;
+            std::cout << "Connected : " << connected << std::endl;
+            std::cout << "Tree sizes : " << tree_a->size() << ", " << tree_b->size() <<  std::endl;
+            std::cout << "Time (ms) : " << result.nanoseconds/1e6 << std::endl;
+            std::cout << "Invalid Distance Outside : " << (float)invalid_distance_counter_outside / iter << std::endl;
+            std::cout << "Invalid Distance Inside : " << (float)invalid_distance_counter_inside / iter << std::endl;
+            std::cout << "Unable to Project : " << (float) unable_to_project_counter / iter << std::endl;
+            std::cout << "Unable to Project Inside : " << (float) unable_to_project_inside_counter / iter << std::endl;
+            std::cout << "Collision : " << (float) collision_counter / iter << std::endl;
+            std::cout << "Collision Inside : " << (float) collision_inside_counter / iter << std::endl;
+            std::cout << "Validate Failed : " << (float) validate_failed / iter << std::endl;
+            std::cout << "DynDom Failed : " << (float) dyndomfailed / iter << std::endl;
+            settings.display();
             return result;
         }
     };
