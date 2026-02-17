@@ -29,11 +29,15 @@ static constexpr Robot::ConfigurationArray standing_pose = {0.00000,0.00184,-0.0
 // static constexpr Robot::ConfigurationArray rack_2 = {0.00305,0.01553,-0.48345,-0.01069,0.00173,-0.00299,0.36991,0.00741,-0.22885,-0.85230,-0.02549,0.90910,-0.43356,0.01072,-0.02876,-0.17999,0.16228,0.99774,-0.33776,0.01561,0.22590,0.84363,0.02173,-0.90309,0.42748,0.06021,-0.16520,0.35173,-0.06290,-1.30637};
 
 static constexpr Robot::ConfigurationArray box_top_shelf_pickup = {
-    0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31794,-0.01125,-0.28643,0.11635,-0.00983,0.08084,-0.26989,-0.01151,0.12815,-0.36544,0.00508,-0.29158,-0.32097,0.00882,0.28598,-0.11670,0.01291,0.15245,0.28130,0.06021,-0.10471
+    0.01535,0.00223,-0.00520,-0.00184,0.00960,0.00021,0.36475,-0.00394,0.29881,0.31744,-0.00933,-0.28854,0.11234,-0.00974,0.08865,-0.26356,-0.00642,0.11516,-0.36586,0.00529,-0.29317,-0.32211,0.00711,0.28940,-0.09870,0.01280,0.16197,0.27678,0.06764,-0.09442
 };
 
 static constexpr Robot::ConfigurationArray rack_2 = {
-    0.00306,0.01556,-0.48345,-0.01063,0.00173,-0.00292,0.37003,0.00751,-0.22884,-0.85230,-0.02549,0.90911,-0.43355,0.01078,-0.17309,-0.36296,0.06140,1.08973,-0.33766,0.01570,0.22586,0.84365,0.02174,-0.90312,0.42744,0.06025,-0.29859,0.37721,-0.15511,-1.16677
+    0.00649,0.01494,-0.48312,-0.01123,0.00484,-0.00190,0.37187,0.00985,-0.22625,-0.85267,-0.02488,0.90858,-0.43197,0.01244,-0.17075,-0.36408,0.06200,1.08998,-0.33958,0.01487,0.22498,0.84377,0.02152,-0.90293,0.43374,0.05814,-0.29661,0.37934,-0.15480,-1.16806
+};
+
+static constexpr Robot::ConfigurationArray rack_3 = {
+    0.01172,0.00883,-0.28551,-0.00360,-0.00775,-0.00259,0.36978,0.00088,-0.01740,-0.40609,-0.03825,0.47305,-0.23680,-0.00017,-0.09672,-0.29005,-0.02483,0.49941,-0.35131,0.00681,0.01679,0.40305,0.03835,-0.47680,0.23502,0.03439,-0.07496,0.30373,-0.05558,-0.51322
 };
 
 
@@ -68,29 +72,36 @@ inline auto compute_plan(
 
 int main(){
     std::array<float, 8> polygon_points = {
-        0.03, -0.075, 0.03, 0.075, -0.04, 0.075, -0.04, -0.075
+        0.01, -0.06, 0.01, 0.06, -0.04, 0.06, -0.04, -0.06
     };
 
     std::array<float, 6> lower_bound = {
-        -0.001, -0.001, -0.001, -10.1, -10.1, -10.1
+        -0.001, -0.001, -0.001, -0.1, -10.1, -10.1
     };
     std::array<float, 6> upper_bound = {
-        0.001, 0.001, 0.001, 10.1, 10.1, 10.1
+        0.001, 0.001, 0.001, 0.1, 10.1, 10.1
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-        -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -0.01, -0.01, -0.01, -0.01, -0.01, -0.01, -0.01, -0.01, -0.01, -0.01, -0.01, -0.01
+        -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, 
+        -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, 
+        -0.001, -0.001, -0.001, -0.01, -0.01, -0.01, 
+        -0.001, -0.001, -0.001, -0.01, -0.01, -0.01
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
-        10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.01, 0.01, 0.01, 0.05, 0.05, 0.05, 0.01, 0.01, 0.01, 0.05, 0.05, 0.05
+        10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 
+        10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 
+        0.001, 0.001, 0.001, 0.01, 0.01, 0.01, 
+        0.001, 0.001, 0.001, 0.01, 0.01, 0.01
     };
+
 
 
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{{1, 0,0,0,   0, 0, 0}, {1, 0,0,0,   0.0, 0.0, 0.0}, {0.603, 0.36, 0.36, 0.603, -0.04302,  0.10080, -0.96013}, {0.603, -0.36, 0.36, -0.603 , -0.04288, -0.09895, -0.96033}}};
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{{1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}}};
 
-    vamp::planning::TaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
+    vamp::planning::FeetTaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
         eef_transforms_ref_frame_w_world,
         eef_transforms,
         tsr_lower_bound,
@@ -106,7 +117,7 @@ int main(){
     vamp::planning::ClosedLinkConstraint<Robot, rake> closed_link_constraint;
 
     vamp::planning::ComposableConstraints<Robot, rake, 
-        vamp::planning::TaskSpaceConstraint<Robot, rake>,
+        vamp::planning::FeetTaskSpaceConstraint<Robot, rake>,
         vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4>, 
         vamp::planning::ClosedLinkConstraint<Robot, rake>, 
         vamp::planning::BimanualTaskSpaceConstraint<Robot, rake>>transport_task_constraint(
@@ -117,7 +128,7 @@ int main(){
     );
 
     vamp::planning::ComposableConstraints<Robot, rake, 
-        vamp::planning::TaskSpaceConstraint<Robot, rake>,
+        vamp::planning::FeetTaskSpaceConstraint<Robot, rake>,
         vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4>, 
         vamp::planning::ClosedLinkConstraint<Robot, rake>>non_transport_task_constraint(
         feet_tsr_constraint,
@@ -198,7 +209,7 @@ int main(){
                             // Create RNG for planning
                             auto rng = std::make_shared<vamp::rng::Halton<Robot>>();
                             std::vector<Robot::Configuration> path_non_transport;
-                            auto [success_non_transport, non_transport_ns] = compute_plan<vamp::planning::TaskSpaceConstraint<Robot, rake>, vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4>,vamp::planning::ClosedLinkConstraint<Robot, rake>>(
+                            auto [success_non_transport, non_transport_ns] = compute_plan<vamp::planning::FeetTaskSpaceConstraint<Robot, rake>, vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4>,vamp::planning::ClosedLinkConstraint<Robot, rake>>(
                                 standing_pose,
                                 box_top_shelf_pickup,
                                 env_v,
@@ -251,7 +262,7 @@ int main(){
 
                             // plan from box pickup to rack 2 with transport constraints
                             std::vector<Robot::Configuration> path_transport;
-                            auto [success_transport, transport_ns] = compute_plan<vamp::planning::TaskSpaceConstraint<Robot, rake>, vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4>,vamp::planning::ClosedLinkConstraint<Robot, rake>, vamp::planning::BimanualTaskSpaceConstraint<Robot, rake>>(
+                            auto [success_transport, transport_ns] = compute_plan<vamp::planning::FeetTaskSpaceConstraint<Robot, rake>, vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4>,vamp::planning::ClosedLinkConstraint<Robot, rake>, vamp::planning::BimanualTaskSpaceConstraint<Robot, rake>>(
                                 box_top_shelf_pickup,
                                 rack_2,
                                 env_v,
@@ -267,6 +278,55 @@ int main(){
                                 std::cout << "Failed to find transport path" << std::endl;
                                 break;
                             }
+                            environment.detach(0);
+
+                            std::vector<Robot::Configuration> path_non_transport_2;
+                            auto [success_non_transport_2, non_transport_ns_2] = compute_plan<vamp::planning::FeetTaskSpaceConstraint<Robot, rake>, vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4>,vamp::planning::ClosedLinkConstraint<Robot, rake>>(
+                                rack_2,
+                                rack_3,
+                                env_v,
+                                rrtc_settings,
+                                non_transport_task_constraint,
+                                path_non_transport_2,
+                                rng
+                            );
+                            if (success_non_transport_2){
+                                // std::cout << "Found non-transport path of length " << path_non_transport.size() << std::endl;
+                                ;
+                            } else {
+                                std::cout << "Failed to find non-transport path" << std::endl;
+                                break;
+                            }
+
+                            attach_transform = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
+                            attachment = AttachmentInput(attach_transform);
+
+                            attachment.spheres.insert(attachment.spheres.end(), spheres.cbegin(), spheres.cend());
+                            environment.attach(attachment, 0);
+                            environment.sort();
+                            env_v = EnvironmentVector(environment);
+
+
+                            //  plan to pickup from rack 2 to rack 3 with transport constraints to validate that we can plan with the attachment in the environment
+
+                            std::vector<Robot::Configuration> path_transport_2;
+                            auto [success_transport_2, transport_ns_2] = compute_plan<vamp::planning::FeetTaskSpaceConstraint<Robot, rake>, vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4>,vamp::planning::ClosedLinkConstraint<Robot, rake>, vamp::planning::BimanualTaskSpaceConstraint<Robot, rake>>(
+                                rack_3,
+                                box_top_shelf_pickup,
+                                env_v,
+                                rrtc_settings,
+                                transport_task_constraint,
+                                path_transport_2,
+                                rng
+                            );
+                            if (success_transport_2){
+                                // std::cout << "Found transport path of length " << path_transport.size() << std::endl;
+                                ;
+                            } else {
+                                std::cout << "Failed to find transport path" << std::endl;
+                                break;
+                            }
+
 
                             environment.detach(0);
 
@@ -280,17 +340,17 @@ int main(){
 
 
                             // // plan from rack 2 to standing with non-transport constraints
-                            std::vector<Robot::Configuration> path_non_transport_2;
-                            auto [success_non_transport_2, non_transport_ns_2] = compute_plan<vamp::planning::TaskSpaceConstraint<Robot, rake>, vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4>,vamp::planning::ClosedLinkConstraint<Robot, rake>>(
-                                rack_2,
+                            std::vector<Robot::Configuration> path_non_transport_3;
+                            auto [success_non_transport_3, non_transport_ns_3] = compute_plan<vamp::planning::FeetTaskSpaceConstraint<Robot, rake>, vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4>,vamp::planning::ClosedLinkConstraint<Robot, rake>>(
+                                box_top_shelf_pickup,
                                 standing_pose,
                                 env_v,
                                 rrtc_settings,
                                 non_transport_task_constraint,
-                                path_non_transport_2,
+                                path_non_transport_3,
                                 rng
                             );
-                            if (success_non_transport_2){
+                            if (success_non_transport_3){
 
 
                                 // std::cout << "Found non-transport path back to standing of length " << path_non_transport_2.size() << std::endl;
@@ -299,6 +359,8 @@ int main(){
                                 full_trajectory.insert(full_trajectory.end(), path_non_transport.begin(), path_non_transport.end());
                                 full_trajectory.insert(full_trajectory.end(), path_transport.begin(), path_transport.end());
                                 full_trajectory.insert(full_trajectory.end(), path_non_transport_2.begin(), path_non_transport_2.end());
+                                full_trajectory.insert(full_trajectory.end(), path_transport_2.begin(), path_transport_2.end());
+                                full_trajectory.insert(full_trajectory.end(), path_non_transport_3.begin(), path_non_transport_3.end());
 
                                 Attempt a{
                                     range,
@@ -308,7 +370,7 @@ int main(){
                                     num_projection_iterations,
                                     insert_all_to_tree,
                                     true,
-                                    non_transport_ns + transport_ns + non_transport_ns_2,
+                                    non_transport_ns + transport_ns + transport_ns_2 + non_transport_ns_2 + non_transport_ns_3,
                                     0,
                                     full_trajectory.size()
                                 };

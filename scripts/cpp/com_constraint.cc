@@ -16,6 +16,9 @@
 #include <fstream>
 #include <random>
 #include "vamp/parsers/mjcf_parser.hh"
+#include <fstream>
+#include <sstream>
+#include <string>
 
 
 
@@ -85,8 +88,25 @@ using AttachmentInput = vamp::collision::Attachment<float>;
 //     0.00305,0.01553,-0.48345,-0.01069,0.00173,-0.00299,0.36992,0.00741,-0.22885,-0.85230,-0.02549,0.90910,-0.43356,0.01072,-0.10347,-0.22115,0.08292,1.04140,-0.33777,0.01560,0.22590,0.84363,0.02173,-0.90310,0.42748,0.06019,-0.22174,0.23454,-0.12485,-1.19928
 // };
 
-static constexpr Robot::ConfigurationArray start = {
+static constexpr Robot::ConfigurationArray standing_pose = {0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31631,-0.01347,-0.28807,0.11635,-0.00983,-0.10504,0.88852,-0.00624,0.37778,-0.36544,0.00508,-0.29158,-0.31758,0.01345,0.28939,-0.11670,0.01291,0.10456,-0.89396,0.00550,-0.36663};
+// static constexpr Robot::ConfigurationArray box_top_shelf_pickup = {0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31794,-0.01125,-0.28643,0.11635,-0.00983,-0.15597,-0.29369,-0.00103,0.35552,-0.36544,0.00508,-0.29158,-0.32097,0.00882,0.28598,-0.11670,0.01291,-0.12971,0.29191,0.02145,-0.35453};
+// static constexpr Robot::ConfigurationArray rack_2 = {0.00305,0.01553,-0.48345,-0.01069,0.00173,-0.00299,0.36991,0.00741,-0.22885,-0.85230,-0.02549,0.90910,-0.43356,0.01072,-0.02876,-0.17999,0.16228,0.99774,-0.33776,0.01561,0.22590,0.84363,0.02173,-0.90309,0.42748,0.06021,-0.16520,0.35173,-0.06290,-1.30637};
+
+static constexpr Robot::ConfigurationArray box_top_shelf_pickup = {
     0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31794,-0.01125,-0.28643,0.11635,-0.00983,0.08084,-0.26989,-0.01151,0.12815,-0.36544,0.00508,-0.29158,-0.32097,0.00882,0.28598,-0.11670,0.01291,0.15245,0.28130,0.06021,-0.10471
+};
+
+static constexpr Robot::ConfigurationArray rack_2 = {
+    0.00306,0.01556,-0.48345,-0.01063,0.00173,-0.00292,0.37003,0.00751,-0.22884,-0.85230,-0.02549,0.90911,-0.43355,0.01078,-0.17309,-0.36296,0.06140,1.08973,-0.33766,0.01570,0.22586,0.84365,0.02174,-0.90312,0.42744,0.06025,-0.29859,0.37721,-0.15511,-1.16677
+};
+
+static constexpr Robot::ConfigurationArray rack_3 = {
+    0.00654,0.00966,-0.29138,-0.00794,-0.00970,-0.00133,0.36653,0.00279,-0.01526,-0.40044,-0.03277,0.45986,-0.22197,0.00189,-0.10022,-0.29082,-0.02517,0.50293,-0.35429,0.00912,0.02117,0.40809,0.04398,-0.48963,0.24456,0.03610,-0.07963,0.30238,-0.05724,-0.51453
+};
+
+
+static constexpr Robot::ConfigurationArray start = {
+    0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31631,-0.01347,-0.28807,0.11635,-0.00983,-0.10504,0.88852,-0.00624,0.37778,-0.36544,0.00508,-0.29158,-0.31758,0.01345,0.28939,-0.11670,0.01291,0.10456,-0.89396,0.00550,-0.36663
 };
 
 static constexpr Robot::ConfigurationArray goal = {
@@ -142,18 +162,24 @@ auto main(int, char **) -> int
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-        -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -0.01, -0.01, -0.01, -0.05, -0.05, -0.05, -0.001, -0.001, -0.001, -0.05, -0.05, -0.05
+        -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, 
+        -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, 
+        -0.001, -0.001, -0.001, -0.01, -0.01, -0.01, 
+        -0.001, -0.001, -0.001, -0.01, -0.01, -0.01
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
-        10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.01, 0.01, 0.01, 0.05, 0.05, 0.05, 0.001, 0.001, 0.001, 0.05, 0.05, 0.05
+        10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 
+        10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 
+        0.001, 0.001, 0.001, 0.01, 0.01, 0.01, 
+        0.001, 0.001, 0.001, 0.01, 0.01, 0.01
     };
 
 
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{{1, 0,0,0,   0, 0, 0}, {1, 0,0,0,   0.0, 0.0, 0.0}, {0.603, 0.36, 0.36, 0.603, -0.04302,  0.10080, -0.96013}, {0.603, -0.36, 0.36, -0.603 , -0.04288, -0.09895, -0.96033}}};
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{{1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}}};
 
-    vamp::planning::TaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
+    vamp::planning::FeetTaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
         eef_transforms_ref_frame_w_world,
         eef_transforms,
         tsr_lower_bound,
@@ -217,7 +243,27 @@ auto main(int, char **) -> int
     std::cout << "Bimanual constraint goal transform: " << T_bim_goal.matrix() << std::endl;
 
 
-
+    std::vector<std::array<float, 3>> attach_spheres = {
+        {-0.02, 0.0, -0.09},
+        {-0.02, -0.02, -0.18},
+        {-0.02, -0.04, -0.26},
+        {-0.02, 0.05, -0.09},
+        {-0.02, 0.03, -0.18},
+        {-0.02, 0.01, -0.26},
+        {0.04, 0.0, -0.09},
+        {0.04, -0.02, -0.18},
+        {0.04, -0.04, -0.26},
+        {0.04, 0.05, -0.09},
+        {0.04, 0.03, -0.18},
+        {0.04, 0.01, -0.26},
+    };
+    std::vector<vamp::collision::Sphere<float>> spheres;
+    for(const auto& s : attach_spheres){
+        std::cout << "Adding sphere with center " << s[0] << ", " << s[1] << ", " << s[2] << " and radius " << 0.05 << std::endl;
+        spheres.emplace_back(vamp::collision::Sphere<float>(s[0], s[1], s[2], 0.05));
+        }
+    auto attach_transform = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
+    AttachmentInput attachment(attach_transform);
 
     environment.sort();
     auto env_v = EnvironmentVector(environment);
@@ -298,6 +344,49 @@ auto main(int, char **) -> int
     std::cout << "----Projecting ----" << std::endl;
     typename Robot::template ConfigurationBlock<rake> projected_block;
 
+
+    // Insert after line 320
+    std::ifstream traj_file("/src/trajectory.txt");
+    std::string line;
+    while (std::getline(traj_file, line)) {
+        Robot::ConfigurationArray config;
+
+        std::stringstream ss(line);
+        std::string value;
+        size_t dim = 0;
+        // Split by comma
+        while (std::getline(ss, value, ',')) {
+            config[dim++] = std::stof(value);
+        }
+
+
+        isometries = Robot::eefk(config);
+        // std::cout << "Goal pose eef poses " << std::endl;
+
+        // q_hand = Eigen::Quaternionf(isometries[0].linear());
+        // std::cout << q_hand.w() << ", " << q_hand.x() << ", " << q_hand.y() << ", " << q_hand.z() << " , " << isometries[0].translation().transpose() << std::endl;
+        // q_hand = Eigen::Quaternionf(isometries[1].linear());
+        // std::cout << q_hand.w() << ", " << q_hand.x() << ", " << q_hand.y() << ", " << q_hand.z() << " , " << isometries[1].translation().transpose() << std::endl;
+
+        // std::cout << "Relative pose between left and right hand " << (isometries[0].inverse() * isometries[1]).matrix() << std::endl;
+        // q_foot = Eigen::Quaternionf(isometries[2].linear());
+        std::cout << isometries[2].translation().transpose()  << " " << isometries[3].translation().transpose() << std::endl;
+        // q_foot = Eigen::Quaternionf(isometries[3].linear());
+        // std::cout << q_foot.w() << ", " << q_foot.x() << ", " << q_foot.y() << ", " << q_foot.z() << " , " << isometries[3].translation().transpose() << std::endl;
+
+        // left_right = isometries[0].inverse() * isometries[1];
+        // q_left_right = Eigen::Quaternionf(left_right.linear());
+        // std::cout << q_left_right.w() << ", " << q_left_right.x() << ", " << q_left_right.y() << ", " << q_left_right.z() << " , " << left_right.translation().transpose() << std::endl;
+
+        // left_right_goal = left_right * T_bim_goal.inverse();
+        // q_left_right_goal = Eigen::Quaternionf(left_right_goal.linear());
+        // std::cout << q_left_right_goal.w() << ", " << q_left_right_goal.x() << ", " << q_left_right_goal.y() << ", " << q_left_right_goal.z() << ", " <<  left_right_goal.translation().transpose() << std::endl;
+
+
+
+    }
+
+
     // for (auto i = 0U; i < Robot::dimension; ++i)
     //     block[i] = Robot::Configuration(start).broadcast(i);
     // goal_valid = Robot::template fkcc<rake>(env_v, block);
@@ -321,7 +410,7 @@ auto main(int, char **) -> int
     for(auto i=0U; i < Robot::dimension; i++)
         std::cout << projected_block[{i, 0}] << ",";
     std::cout << success <<std::endl;
-    std::ofstream outfile("/src/trajectory.txt");
+    std::ofstream outfile("/src/trajectory_com.txt");
     for (auto i = 0U; i < Robot::dimension; ++i)
     {
         if (!first) outfile << ",";
@@ -340,6 +429,8 @@ auto main(int, char **) -> int
     }
 
     outfile << "\n";
+    task_constraint.distanceToConstraint(block);
+    task_constraint.print_robot_tsr_error(block);
 
     std::cout << " \n\n ------------Goal-----------------\n\n";
 
