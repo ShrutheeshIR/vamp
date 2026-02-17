@@ -148,10 +148,13 @@ namespace vamp::planning
             }
             projected_vector.push_back(typename Robot::Configuration(last_projected));
         }
+        if (distance > 100.F)
+            return valid;
         // std::cout << initial_projected_block << std::endl;
         // auto max_inter_dist = std::sqrt(inter_rake_distance.hmax());
 
-        if (not valid or max_inter_dist <= (distance / rake))
+        // std::cout << "Max inter distance: " << max_inter_dist <<  " " << distance << std::endl;
+        if (not valid or max_inter_dist <= (distance / rake) / n)
         {
             if (not valid)
                 collision_counter++;
@@ -215,10 +218,11 @@ namespace vamp::planning
         ProjMethod projection_method = ProjMethod::InnerLM,
         float projection_descent_rate = 1.0F,
         int num_projection_iterations = 25,
-        bool insert_all_to_tree = false) -> bool
+        bool insert_all_to_tree = false,
+        bool infinite_distance = false) -> bool
     {
         auto vector = goal - start;
         return project_constraint_vector<Robot, rake, resolution>(
-            start, vector, vector.l2_norm(), projected_vector, constraint, environment, projection_method, projection_descent_rate);
+            start, vector, infinite_distance ? 10000.F : vector.l2_norm(), projected_vector, constraint, environment, projection_method, projection_descent_rate);
     }
 }  // namespace vamp::planning

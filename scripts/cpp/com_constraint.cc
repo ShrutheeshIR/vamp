@@ -75,13 +75,17 @@ using AttachmentInput = vamp::collision::Attachment<float>;
 // };
 // static constexpr Robot::ConfigurationArray goal = {-0.045,0.0,-0.03,0.0,-0.264,0.0,0.0,0.0,0.0,0.456,0.0,0.0,0.0,0.0,0.0,0.486,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
-static constexpr Robot::ConfigurationArray start = {
-    0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31631,-0.01347,-0.28807,0.11635,-0.00983,0.02358,-0.00579,0.01520,0.09714,-0.36544,0.00508,-0.29158,-0.31758,0.01345,0.28939,-0.11670,0.01291,0.00435,0.00820,-0.01199,-0.09980
-};
+// static constexpr Robot::ConfigurationArray start = {
+//     0.0,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31631,-0.0134694,-0.28807,0.11635,-0.00983,0.02358,-0.304,0.0152,0.472,-0.36544,0.00508,-0.29158,-0.31758,0.0134478,0.28939,-0.1167,0.01291,0.00435,0.304,-0.01199,-0.472
+// };
 
-static constexpr Robot::ConfigurationArray goal = {
-    0.00358,0.01604,-0.48348,-0.00927,0.00030,-0.00362,0.37249,0.00746,-0.22666,-0.85028,-0.02148,0.91164,-0.43089,0.01204,-0.17608,-0.40123,0.03686,1.07578,-0.34264,0.01123,0.22809,0.84257,0.02134,-0.90335,0.43159,0.05288,-0.28604,0.42121,-0.16502,-1.13728
-};
+// static constexpr Robot::ConfigurationArray goal = {
+//     0.00305,0.01553,-0.48345,-0.01069,0.00173,-0.00299,0.36992,0.00741,-0.22885,-0.85230,-0.02549,0.90910,-0.43356,0.01072,-0.10347,-0.22115,0.08292,1.04140,-0.33777,0.01560,0.22590,0.84363,0.02173,-0.90310,0.42748,0.06019,-0.22174,0.23454,-0.12485,-1.19928
+// };
+
+
+static constexpr Robot::ConfigurationArray start = {0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31631,-0.01347,-0.28807,0.11635,-0.00983,-0.10504,0.88852,-0.00624,0.37778,-0.36544,0.00508,-0.29158,-0.31758,0.01345,0.28939,-0.11670,0.01291,0.10456,-0.89396,0.00550,-0.36663};
+static constexpr Robot::ConfigurationArray goal = {0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31794,-0.01125,-0.28643,0.11635,-0.00983,-0.15597,-0.29369,-0.00103,0.35552,-0.36544,0.00508,-0.29158,-0.32097,0.00882,0.28598,-0.11670,0.01291,-0.12971,0.29191,0.02145,-0.35453};
 
 
 struct Attempt {
@@ -218,7 +222,7 @@ auto main(int, char **) -> int
     //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
     // );
 
-    std::array<float, 7> transform = {0.1, 0.99, 0.00000, 0.04000, 0.01462, -0.03530, -0.36356};
+    std::array<float, 7> transform = {0.0, 1.0, 0.00000, 0.0, 0.0, 0.0, -0.36356};
     vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_task_constraint(transform, lower_bound, upper_bound);
 
     // vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_constraint(
@@ -234,12 +238,19 @@ auto main(int, char **) -> int
     // vamp::planning::SelfCollisionConstraint<Robot, rake> self_collision_constraint;
 
 
-    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint), decltype(closed_link_constraint)> task_constraint(
+    // vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint), decltype(closed_link_constraint)> task_constraint(
+    //     feet_tsr_constraint,
+    //     com_constraint,
+    //     bimanual_task_constraint,
+    //     closed_link_constraint
+    // );
+
+    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(closed_link_constraint)> task_constraint(
         feet_tsr_constraint,
         com_constraint,
-        bimanual_task_constraint,
         closed_link_constraint
     );
+
     // vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(
     //     eef_transforms_ref_frame_w_world,
     //     eef_transforms,

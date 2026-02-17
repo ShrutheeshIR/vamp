@@ -168,6 +168,9 @@ find_package(nlohmann_json REQUIRED)
   add_executable(digit_example scripts/cpp/digit_example.cc)
   target_link_libraries(digit_example PRIVATE vamp_cpp tinyxml2)
 
+  add_executable(digit_full_trajectory scripts/cpp/digit_full_trajectory.cc)
+  target_link_libraries(digit_full_trajectory PRIVATE vamp_cpp tinyxml2)
+
 add_executable(vamp_bimanual_example_iiwa scripts/cpp/vamp_bimanual_example_iiwa.cc)
 target_link_libraries(vamp_bimanual_example_iiwa PRIVATE vamp_cpp)
 
