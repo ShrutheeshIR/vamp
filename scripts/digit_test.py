@@ -17,8 +17,9 @@ def run_planner(
     **kwargs,
 ):
 
-    start = [0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31631,-0.28807,0.11635,-0.00983,0.02358,-0.00579,0.01520,0.09714,-0.36544,0.00508,-0.29158,-0.31758,0.28939,-0.11670,0.01291,0.00435,0.00820,-0.01199,-0.09980]
-    goal = [0.00358,0.01604,-0.48348,-0.00927,0.00030,-0.00362,0.37249,0.00746,-0.22666,-0.85028,0.91164,-0.43089,0.01204,-0.17608,-0.40123,0.03686,1.07578,-0.34264,0.01123,0.22809,0.84257,-0.90335,0.43159,0.05288,-0.28604,0.42121,-0.16502,-1.13728]
+    start = [0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31794,-0.01125,-0.28643,0.11635,-0.00983,0.08084,-0.26989,-0.01151,0.12815,-0.36544,0.00508,-0.29158,-0.32097,0.00882,0.28598,-0.11670,0.01291,0.15245,0.28130,0.06021,-0.10471]
+    goal = [0.00306,0.01556,-0.48345,-0.01063,0.00173,-0.00292,0.37003,0.00751,-0.22884,-0.85230,-0.02549,0.90911,-0.43355,0.01078,-0.17309,-0.36296,0.06140,1.08973,-0.33766,0.01570,0.22586,0.84365,0.02174,-0.90312,0.42744,0.06025,-0.29859,0.37721,-0.15511,-1.16677]
+
 
 
     (vamp_module, planner_func, plan_settings, simp_settings) = (
@@ -27,8 +28,8 @@ def run_planner(
     print("Created vamp module")
     bimanual_constraint = vamp_module.BimanualTaskSpaceConstraint(
         [0.1, 0.99, 0.00000, 0.04000, 0.01462, -0.03530, -0.36356],
-        [-0.001, -0.001, -0.001, -10.1, -10.1, -10.1],
-        [0.001, 0.001, 0.001, 10.1, 10.1, 10.1]
+        [-0.001, -0.001, -0.001, -0.1, -10.1, -10.1],
+        [0.001, 0.001, 0.001, 0.1, 10.1, 10.1]
     )
     com_constraint = vamp_module.CoMTaskSpaceConstraint(
         [0.03, -0.075, 0.03, 0.075, -0.04, 0.075, -0.04, -0.075],
@@ -46,11 +47,20 @@ def run_planner(
     constraints = vamp_module.Composable_T_C_B(feet_tsr_constraint, com_constraint, bimanual_constraint)
 
 
+    problem_cuboids = np.array([[0.65,0.03,-0.925,   0.15,0.35,0.025],
+            [0.65,0.03,-0.525 ,  0.15,0.35,0.025],
+            [0.65,0.03,-0.125 ,  0.15,0.35,0.025],
+            [0.65,0.03,0.25  , 0.15,0.35,0.025],
+            [0.815,0.405,-0.35 ,  0.025,0.025,0.6],
+            [0.815,-0.345,-0.35 ,  0.025,0.025,0.6],
+            [0.485,0.405,-0.35  , 0.025,0.025,0.6],
+            [0.485,-0.345,-0.35  , 0.025,0.025,0.6]])
+
 
     e = vamp.Environment()
-    problem_cuboids = np.loadtxt('resources/environments/cuboids/humanoid_digit_shelf.txt', delimiter = ",")
+    # problem_cuboids = np.loadtxt('resources/environments/cuboids/humanoid_digit_shelf.txt', delimiter = ",")
     for cuboid in problem_cuboids:
-        e.add_cuboid(vamp.Cuboid(cuboid[:3], [0, 0, 0], cuboid[3:6] / 2))
+        e.add_cuboid(vamp.Cuboid(cuboid[:3], [0, 0, 0], cuboid[3:6]))
 
     # e.attach(attachment, 0)
     sampler = vamp_module.halton()
@@ -63,7 +73,7 @@ def run_planner(
 
     plan_settings.range = combination[0]
     plan_settings.dynamic_domain = combination[1]
-    plan_settings.max_iterations = 10000
+    plan_settings.max_iterations = 100000
     print("Started planner")
     result = planner_func(start, goal, e, plan_settings, constraints, sampler)
 

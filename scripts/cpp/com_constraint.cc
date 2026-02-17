@@ -15,6 +15,8 @@
 #include <vamp/random/halton.hh>
 #include <fstream>
 #include <random>
+#include "vamp/parsers/mjcf_parser.hh"
+
 
 
 using Robot = vamp::robots::Digit;
@@ -83,9 +85,15 @@ using AttachmentInput = vamp::collision::Attachment<float>;
 //     0.00305,0.01553,-0.48345,-0.01069,0.00173,-0.00299,0.36992,0.00741,-0.22885,-0.85230,-0.02549,0.90910,-0.43356,0.01072,-0.10347,-0.22115,0.08292,1.04140,-0.33777,0.01560,0.22590,0.84363,0.02173,-0.90310,0.42748,0.06019,-0.22174,0.23454,-0.12485,-1.19928
 // };
 
+static constexpr Robot::ConfigurationArray start = {
+    0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31794,-0.01125,-0.28643,0.11635,-0.00983,0.08084,-0.26989,-0.01151,0.12815,-0.36544,0.00508,-0.29158,-0.32097,0.00882,0.28598,-0.11670,0.01291,0.15245,0.28130,0.06021,-0.10471
+};
 
-static constexpr Robot::ConfigurationArray start = {0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31631,-0.01347,-0.28807,0.11635,-0.00983,-0.10504,0.88852,-0.00624,0.37778,-0.36544,0.00508,-0.29158,-0.31758,0.01345,0.28939,-0.11670,0.01291,0.10456,-0.89396,0.00550,-0.36663};
-static constexpr Robot::ConfigurationArray goal = {0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31794,-0.01125,-0.28643,0.11635,-0.00983,-0.15597,-0.29369,-0.00103,0.35552,-0.36544,0.00508,-0.29158,-0.32097,0.00882,0.28598,-0.11670,0.01291,-0.12971,0.29191,0.02145,-0.35453};
+static constexpr Robot::ConfigurationArray goal = {
+    0.00306,0.01556,-0.48345,-0.01063,0.00173,-0.00292,0.37003,0.00751,-0.22884,-0.85230,-0.02549,0.90911,-0.43355,0.01078,-0.17309,-0.36296,0.06140,1.08973,-0.33766,0.01570,0.22586,0.84365,0.02174,-0.90312,0.42744,0.06025,-0.29859,0.37721,-0.15511,-1.16677
+};
+
+// static constexpr Robot::ConfigurationArray goal = {0.0,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31631,-0.01347,-0.28807,0.11635,-0.00983,-0.10504,-0.4,0.174,0.37778,-0.36544,0.00508,-0.29158,-0.31758,0.01345,0.28939,-0.1167,0.01291,0.10456,0.4,-0.324,-0.36663};
 
 
 struct Attempt {
@@ -112,27 +120,102 @@ auto main(int, char **) -> int
 
     EnvironmentInput environment;
 
-
-    std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/shelf_drake.txt");
-    if (!infile.is_open()) {
-        std::cerr << "Failed to open file!" << std::endl;
-        return 1;
-    }
-
-    std::string line;
-    while (std::getline(infile, line)) {
-        std::istringstream iss(line);
-        char delim;
-        float x, y, z, dx, dy, dz;
-
-        if (!(iss >> x >> delim >> y >> delim >> z >> delim >> dx >> delim >> dy >> delim >> dz)) {
-            std::cerr << "Error reading line: " << line << std::endl;
-            continue;
+    auto geoms = vamp::utils::parser::parseMJCF("/src/myfork/vamp/resources/environments/cuboids/wooden_shelf.xml");
+    for (const auto& g : geoms) {
+        if (g.type == vamp::utils::parser::GeomType::BOX){
+            std::cout << "Adding cuboid with pos " << g.world_pose.pos.x << ", " << g.world_pose.pos.y << ", " << g.world_pose.pos.z << " and size " << g.size.x << ", " << g.size.y << ", " << g.size.z << std::endl;
+            environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({g.world_pose.pos.x, g.world_pose.pos.y, g.world_pose.pos.z}, {0.0, 0.0, 0.0}, {g.size.x, g.size.y, g.size.z}));
         }
-        // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
-        // environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x, y, z}, {0.0, 0.0, 0.0}, {dx/2, dy/2, dz/2}));
+
     }
-    infile.close();
+
+
+    std::array<float, 8> polygon_points = {
+        0.03, -0.075, 0.03, 0.075, -0.04, 0.075, -0.04, -0.1
+    };
+
+    std::array<float, 6> lower_bound = {
+        -0.001, -0.001, -0.001, -0.1, -10.1, -0.1
+    };
+    std::array<float, 6> upper_bound = {
+        0.001, 0.001, 0.001, 0.1, 10.1, 0.1
+    };
+
+    std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
+        -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -0.01, -0.01, -0.01, -0.05, -0.05, -0.05, -0.001, -0.001, -0.001, -0.05, -0.05, -0.05
+    };
+
+    std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
+        10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.01, 0.01, 0.01, 0.05, 0.05, 0.05, 0.001, 0.001, 0.001, 0.05, 0.05, 0.05
+    };
+
+
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{{1, 0,0,0,   0, 0, 0}, {1, 0,0,0,   0.0, 0.0, 0.0}, {0.603, 0.36, 0.36, 0.603, -0.04302,  0.10080, -0.96013}, {0.603, -0.36, 0.36, -0.603 , -0.04288, -0.09895, -0.96033}}};
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{{1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}}};
+
+    vamp::planning::TaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
+        eef_transforms_ref_frame_w_world,
+        eef_transforms,
+        tsr_lower_bound,
+        tsr_upper_bound
+    );
+
+    // vamp::planning::TaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
+    //     eef_transforms_ref_frame_w_world,
+    //     eef_transforms,
+    //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
+    // );
+
+    std::array<float, 7> transform = {0.1, 0.99, 0.00000, 0.04000, 0.01462, -0.03530, -0.36356};
+    vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_task_constraint(transform, lower_bound, upper_bound);
+
+    // vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_constraint(
+    //     target_pose,
+    //     std::make_pair(lower_bound, upper_bound)
+    // );
+    vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4> com_constraint(
+        polygon_points
+    );
+
+    vamp::planning::ClosedLinkConstraint<Robot, rake> closed_link_constraint;
+
+    // vamp::planning::SelfCollisionConstraint<Robot, rake> self_collision_constraint;
+
+
+    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint), decltype(closed_link_constraint)> task_constraint(
+        feet_tsr_constraint,
+        com_constraint,
+        bimanual_task_constraint,
+        closed_link_constraint
+    );
+
+    // 1. Extract the pointer to the data
+    const float* data = transform.data();
+
+    // 2. Create the Quaternion (w, x, y, z)
+    // Note: We cast to double because Isometry3d expects doubles
+    Eigen::Quaternionf bimanual_quat(
+        static_cast<double>(data[0]), // w
+        static_cast<double>(data[1]), // x
+        static_cast<double>(data[2]), // y
+        static_cast<double>(data[3])  // z
+    );
+
+    std::cout << "Adding transforms : " << data[4] << ", " << data[5] << ", " << data[6] << std::endl;
+    // 3. Create the Translation vector (x, y, z)
+    Eigen::Vector3f bimanual_trans(
+        static_cast<double>(data[4]), 
+        static_cast<double>(data[5]), 
+        static_cast<double>(data[6])
+    );
+
+    // 4. Combine into an Isometry3d
+    Eigen::Isometry3f T_bim_goal = Eigen::Isometry3f::Identity();
+    T_bim_goal.rotate(bimanual_quat);
+    T_bim_goal.pretranslate(bimanual_trans);
+
+    std::cout << "Bimanual constraint goal transform: " << T_bim_goal.matrix() << std::endl;
+
 
 
 
@@ -163,6 +246,10 @@ auto main(int, char **) -> int
     Eigen::Quaternionf q_left_right(left_right.linear());
     std::cout << q_left_right.w() << ", " << q_left_right.x() << ", " << q_left_right.y() << ", " << q_left_right.z() << left_right.translation().transpose() << std::endl;
 
+    auto left_right_goal = left_right * T_bim_goal.inverse();
+    Eigen::Quaternionf q_left_right_goal(left_right_goal.linear());
+    std::cout << q_left_right_goal.w() << ", " << q_left_right_goal.x() << ", " << q_left_right_goal.y() << ", " << q_left_right_goal.z() << ", " << left_right_goal.translation().transpose() << std::endl;
+
 
     isometries = Robot::eefk(goal);
     std::cout << "Goal pose eef poses " << std::endl;
@@ -186,114 +273,24 @@ auto main(int, char **) -> int
     q_left_right = Eigen::Quaternionf(left_right.linear());
     std::cout << q_left_right.w() << ", " << q_left_right.x() << ", " << q_left_right.y() << ", " << q_left_right.z() << " , " << left_right.translation().transpose() << std::endl;
 
-    std::array<float, 8> polygon_points = {
-        0.03, -0.075, 0.03, 0.075, -0.04, 0.075, -0.04, -0.1
-    };
-
-    std::array<float, 6> lower_bound = {
-        -0.001, -0.001, -0.001, -1.0, -1.0, -1.0
-    };
-    std::array<float, 6> upper_bound = {
-        0.001, 0.001, 0.001, 1.0, 1.0, 1.0
-    };
-
-    std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-        -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -0.01, -0.01, -0.01, -0.05, -0.05, -0.05, -0.001, -0.001, -0.001, -0.05, -0.05, -0.05
-    };
-
-    std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
-        10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.01, 0.01, 0.01, 0.05, 0.05, 0.05, 0.001, 0.001, 0.001, 0.05, 0.05, 0.05
-    };
-
-
-    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{{1, 0,0,0,   0, 0, 0}, {1, 0,0,0,   0.0, 0.0, 0.0}, {0.603, 0.36, 0.36, 0.603, -0.04302,  0.10080, -0.96013}, {0.603, -0.36, 0.36, -0.603 , -0.04288, -0.09895, -0.96033}}};
-    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{{1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}}};
-
-    vamp::planning::TaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
-        eef_transforms_ref_frame_w_world,
-        eef_transforms,
-        tsr_lower_bound,
-        tsr_upper_bound
-    );
-
-    // vamp::planning::TaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
-    //     eef_transforms_ref_frame_w_world,
-    //     eef_transforms,
-    //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
-    // );
-
-    std::array<float, 7> transform = {0.0, 1.0, 0.00000, 0.0, 0.0, 0.0, -0.36356};
-    vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_task_constraint(transform, lower_bound, upper_bound);
-
-    // vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_constraint(
-    //     target_pose,
-    //     std::make_pair(lower_bound, upper_bound)
-    // );
-    vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4> com_constraint(
-        polygon_points
-    );
-
-    vamp::planning::ClosedLinkConstraint<Robot, rake> closed_link_constraint;
-
-    // vamp::planning::SelfCollisionConstraint<Robot, rake> self_collision_constraint;
-
-
-    // vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint), decltype(closed_link_constraint)> task_constraint(
-    //     feet_tsr_constraint,
-    //     com_constraint,
-    //     bimanual_task_constraint,
-    //     closed_link_constraint
-    // );
-
-    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(closed_link_constraint)> task_constraint(
-        feet_tsr_constraint,
-        com_constraint,
-        closed_link_constraint
-    );
-
-    // vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(
-    //     eef_transforms_ref_frame_w_world,
-    //     eef_transforms,
-    //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
-    // );
-
-    // vamp::planning::SETaskSpaceConstraint<Robot, rake> task_constraint2(
-    //     eef_transforms_ref_frame_w_world[2],
-    //     eef_transforms[2],
-    //     std::make_pair(slower_bound, supper_bound)
-    // );
-
-    // vamp::planning::BimanualCoMTaskSpaceConstraint<Robot, rake, 4> task_constraint(
-    //     polygon_points,
-    //     target_pose,
-    //     std::make_pair(lower_bound, upper_bound)
-    // );
-
-    // vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> task_constraint(
-    //     target_pose,
-    //     std::make_pair(lower_bound, upper_bound)
-    // );
-
-
-    // // Eigen::Transform<float, 3, Eigen::Isometry> target_pose;
-    // Eigen::Matrix<float, 4, 4> T;
-    // T << -0.719427, 0.694568, 6.59173e-05, -2.2769e-05, 0.694568, 0.719427, -2.26738e-05, -0.000370264, -6.31774e-05, 2.94462e-05, -1, 0.171814, 0, 0, 0, 1;
-    // const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
-    // vamp::planning::BimanualCoMTaskSpaceConstraint<Robot, rake, 4> task_constraint(polygon_points, target_pose, std::make_pair(lower_bound, upper_bound));
+    left_right_goal = left_right * T_bim_goal.inverse();
+    q_left_right_goal = Eigen::Quaternionf(left_right_goal.linear());
+    std::cout << q_left_right_goal.w() << ", " << q_left_right_goal.x() << ", " << q_left_right_goal.y() << ", " << q_left_right_goal.z() << ", " <<  left_right_goal.translation().transpose() << std::endl;
 
 
 
-    // // vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4> task_constraint(polygon_points);
-    // auto startcc = rng->next();
     bool success;
     // Robot::ConfigurationArray test = {-0.05756, -0.10361, -0.30607, -0.22192, -0.22951, -0.23933, -1.01621, -0.03210, -0.22167, 1.59964, -0.86941, -0.02150, -1.02993, -0.24976, -0.22910, 1.59571, -0.87069, -0.02193, 1.23762, -0.29675, 0.43134, -0.26073, -0.13340, -0.22137, -0.08773, -0.16697, -0.13678, -0.13683, -0.26232, -0.19178, -0.22258, -0.08843, -0.16783, -0.13752, -0.13754};
     typename Robot::template ConfigurationBlock<rake> block;
     for (auto i = 0U; i < Robot::dimension; ++i)
-        block[i] = Robot::Configuration(start).broadcast(i);
-
-
+        block[i] = Robot::Configuration(goal).broadcast(i);
     bool goal_valid = Robot::template fkcc<rake>(env_v, block);
     std::cout << "Goal valid: " << goal_valid << std::endl;
+
+    for (auto i = 0U; i < Robot::dimension; ++i)
+        block[i] = Robot::Configuration(start).broadcast(i);
+    bool start_valid = Robot::template fkcc<rake>(env_v, block);
+    std::cout << "Start valid: " << start_valid << std::endl;
 
     task_constraint.distanceToConstraint(block);
     task_constraint.print_robot_tsr_error(block);
