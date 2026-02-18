@@ -7,7 +7,8 @@ from curobo.types.robot import JointState
 from curobo.wrap.reacher.motion_gen import MotionGen, MotionGenConfig, MotionGenPlanConfig, PoseCostMetric
 from curobo.types.base import TensorDeviceType
 
-from curobo.geom.types import WorldConfig, Sphere
+import tqdm
+from curobo.geom.types import WorldConfig, Sphere, Cuboid
 import numpy as np
 
 import os
@@ -32,7 +33,7 @@ def load_problems_from_json(json_file_path):
         task = MotionPlanningTask()
         task.problem_start = problem_data['problem_start']
         task.problem_end = problem_data['problem_end']
-        task.obstacles = problem_data['obstacles']
+        task.obstacles = problem_data['cuboid_obstacles']
         task.tsr_lower_bound = [1 if abs(float(x)) > 0.1 else 0 for x in problem_data['tsr_lower_bound']]
         task.tsr_upper_bound = [1 if abs(float(x)) > 0.1 else 0 for x in problem_data['tsr_upper_bound']]
         problems.append(task)
@@ -46,18 +47,18 @@ def plan_task(mp_task: MotionPlanningTask, motion_gen: MotionGen, tensor_args: T
     # Create obstacle
     obstacle_spheres = []
     for i, obs in enumerate(mp_task.obstacles):
-        x, y, z, r = obs
+        x, y, z, l, w, h = obs
         obstacle_spheres.append(
-            Sphere(
+            Cuboid(
                 name=f"obstacle_{i}",
-                radius=r,
-                pose=[x, y, z, 1, 0, 0, 0],
+                pose = [x, y, z, 1, 0, 0, 0],
+                dims=[l*2, w*2, h*2],
                 color=[0, 1.0, 0, 1.0],
             )
         )
     
     world_model = WorldConfig(
-        sphere=obstacle_spheres,
+        cuboid=obstacle_spheres,
     )
 
     # convert obstacle to cuboid. This is necessary for collision checking. I think this is stupid.
@@ -73,26 +74,23 @@ def plan_task(mp_task: MotionPlanningTask, motion_gen: MotionGen, tensor_args: T
         tensor_args.to_device([mp_task.problem_end]),
         joint_names=["panda_joint1", "panda_joint2", "panda_joint3", "panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"],
     )
-    print(mp_task.problem_start, mp_task.problem_end)
     start_kin_state = motion_gen.rollout_fn.compute_kinematics(start_state)
-    print(start_kin_state.ee_pos_seq, start_kin_state.ee_quat_seq)
 
     goal_kin_state = motion_gen.rollout_fn.compute_kinematics(goal_state)
-    print(goal_kin_state.ee_pos_seq, goal_kin_state.ee_quat_seq)
 
     # print(goal_kin_state)
 
 
     valid_query, status = motion_gen.check_start_state(start_state)
     if not valid_query:
-        print("\033[91m" + "Invalid start state" + "\033[0m")
-        print(status)
+        # print("\033[91m" + "Invalid start state" + "\033[0m")
+        # print(status)
         return -1
 
     valid_query, status = motion_gen.check_start_state(goal_state)
     if not valid_query:
-        print("\033[91m" + "Invalid goal state" + "\033[0m")
-        print(status)
+        # print("\033[91m" + "Invalid goal state" + "\033[0m")
+        # print(status)
         return -1
 
     pose_cost_metric = PoseCostMetric(
@@ -151,6 +149,77 @@ def plan_task(mp_task: MotionPlanningTask, motion_gen: MotionGen, tensor_args: T
     result = motion_gen.plan_single(start_state, ik_goal, motion_gen_config)
     return result
 
+def load_large_json_with_extra(filepath):
+    with open(filepath, 'r') as f:
+        data = f.read()
+    
+    decoder = json.JSONDecoder()
+    pos = 0
+    results = []
+    problems = []
+    
+    while pos < len(data):
+        # Skip whitespace
+        if data[pos].isspace():
+            pos += 1
+            continue
+        try:
+            obj, pos = decoder.raw_decode(data, pos)
+            results.append(obj)
+        except json.JSONDecodeError:
+            break # Or handle specific corruption
+
+
+    for result in results:
+        for obj in result:
+            # task = MotionPlanningTask()
+            # task.problem_start = obj['problem_start']
+            # task.problem_end = obj['problem_end']
+            # task.obstacles = obj['cuboid_obstacles']
+            # task.tsr_lower_bound = [1 if abs(float(x)) > 0.1 else 0 for x in obj['tsr_lower_bound']]
+            # task.tsr_upper_bound = [1 if abs(float(x)) > 0.1 else 0 for x in obj['tsr_upper_bound']]
+            problems.append(obj)
+    
+    # save this fixed json to the file
+    with open(filepath, 'w') as f:
+        json.dump(problems, f, indent=4)
+
+
+
+    problems = []
+    for result in results:
+        for obj in result:
+            task = MotionPlanningTask()
+            task.problem_start = obj['problem_start']
+            task.problem_end = obj['problem_end']
+            task.obstacles = obj['cuboid_obstacles']
+            task.tsr_lower_bound = [1 if abs(float(x)) > 0.1 else 0 for x in obj['tsr_lower_bound']]
+            task.tsr_upper_bound = [1 if abs(float(x)) > 0.1 else 0 for x in obj['tsr_upper_bound']]
+            problems.append(task)
+
+
+    return problems
+
+
+class SolvedResult:
+    def __init__(self, success, plan=None, graph_time=0, solve_time=0, trajopt_time=0, finetune_time=0, num_cuboid_obstacles=0):
+        self.success = success
+        self.plan = plan
+        self.total_solve_time = graph_time + solve_time + trajopt_time + finetune_time
+        self.num_cuboid_obstacles = num_cuboid_obstacles
+
+
+def save_solved_results_to_plot_data(solved_results, save_path):
+    plot_data = []
+    for result in solved_results:
+        plot_data.append({
+            "success": result.success,
+            "total_solve_time": result.total_solve_time * 1000.0,  # convert to milliseconds
+            "num_cuboid_obstacles": result.num_cuboid_obstacles,
+            "plan": result.plan.tolist() if result.plan is not None else None,
+        })
+    with open(save_path, 'w') as f:
+        json.dump(plot_data, f, indent=4)
 
 
 def main():
@@ -222,27 +291,48 @@ def main():
     #         print(waypoints[-1])
     #         np.savetxt("/src/dummy_plan.txt", waypoints, fmt="%.5f", delimiter=",")
 
-    tasks = load_problems_from_json("/src/tsr_panda_problems_single_line_ori_random_obs.json")
+    tasks = load_large_json_with_extra("/src/tsr_panda_problems_curobo_cuboid.json")
+    # print(tasks[0])
     print(f"Loaded {len(tasks)} tasks from json file.")
 
-    for i, task in enumerate(tasks):
-        print(f"Planning task {i+1}/{len(tasks)}")
+    solved_plans: list[SolvedResult] = []
+
+    for i, task in tqdm.tqdm(enumerate(tasks), total=len(tasks)):
+        # print(f"Planning task {i+1}/{len(tasks)}")
         result = plan_task(task, motion_gen, tensor_args)
+        # np.savetxt("/src/cuboids.txt", task.obstacles, fmt="%.5f", delimiter=",")
         if result == -1:
+            # just interpolate between start and goal configs and write
+            start_config = task.problem_start
+            goal_config = task.problem_end
+            waypoints = np.linspace(start_config, goal_config, num=50)
+            # np.savetxt("/src/dummy_plan.txt", waypoints, fmt="%.5f", delimiter=",")
+            # time.sleep(10.0)
             continue
-        print(result.success, result.graph_time, result.solve_time, result.trajopt_time, result.finetune_time)
         if result.success:
+            # print(f"Task {i+1} success: {result.success}")
             num_of_success += 1
-            total_time_of_success_case += result.graph_time + result.solve_time + result.trajopt_time + result.finetune_time
             cmd_plan = result.get_interpolated_plan()
             cmd_plan = motion_gen.get_full_js(cmd_plan)
-            waypoints = cmd_plan.position[:, :7].cpu().numpy()
-            np.savetxt("/src/dummy_plan.txt", waypoints, fmt="%.5f", delimiter=",")
-            np.savetxt("/src/spheres.txt", task.obstacles, fmt="%.5f", delimiter=",")
+            # waypoints = cmd_plan.position[:, :7].cpu().numpy()
+            # np.savetxt("/src/dummy_plan.txt", waypoints, fmt="%.5f", delimiter=",")
 
-            time.sleep(10.0)
+            # time.sleep(1.0)
+
+
+        solved_plans.append(SolvedResult(
+            success=result.success.squeeze().cpu().numpy().item(),
+            plan=cmd_plan.position[:, :7].cpu().numpy() if result.success else None,
+            graph_time=result.graph_time,
+            solve_time=result.solve_time,
+            trajopt_time=result.trajopt_time,
+            finetune_time=result.finetune_time,
+            num_cuboid_obstacles=len(task.obstacles),
+        ))
 
         num_of_tasks += 1
+    print(f"Success rate: {num_of_success}/{num_of_tasks}, Average time of success case: {total_time_of_success_case/num_of_success if num_of_success > 0 else 0:.2f} seconds")
+    save_solved_results_to_plot_data(solved_plans, "/src/tsr_panda_problems_curobo_cuboid_plane_curobo_results.json")
 
 if __name__ == "__main__":
     main()

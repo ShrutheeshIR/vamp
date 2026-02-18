@@ -17,7 +17,7 @@
 #include <Eigen/Dense>
 
 // #include <vamp/planning/simplify.hh>
-#include <vamp/robots/panda.hh>
+#include <vamp/robots/panda_curobo.hh>
 #include <vamp/random/halton.hh>
 #include <fstream>
 
@@ -44,7 +44,7 @@ struct Problem {
 	std::array<float, 7> eef_transforms;
 	std::array<float, 7> problem_start;
 	std::array<float, 7> problem_end;
-	std::vector<std::array<float, 4>> obstacles;
+	std::vector<std::array<float, 6>> cuboid_obstacles;
 };
 
 // This helper function allows nlohmann::json to "just work" with your struct
@@ -56,7 +56,7 @@ void to_json(json& j, const Problem& p) {
 		{"eef_transforms", p.eef_transforms},
 		{"problem_start", p.problem_start},
 		{"problem_end", p.problem_end},
-		{"obstacles", p.obstacles}
+		{"cuboid_obstacles", p.cuboid_obstacles}
 	};
 }
 
@@ -206,17 +206,42 @@ std::vector<std::array<float, 4>> generate_sphere_obstacles(const Configuration 
 	return obstacles;
 }
 
+std::vector<std::array<float, 6>> generate_cube_obstacles(const Configuration &start_config, const Configuration &goal_config, size_t num_obstacles, float obstacle_half_length, Eigen::Vector3f lower_bound, Eigen::Vector3f upper_bound)
+{
+	size_t MAX_OBSTACLE_ATTEMPTS = 1000;
+	std::vector<std::array<float, 6>> obstacles;
+	size_t num_obstacles_added = 0;
+	size_t num_attempts = 0;
+	while (num_obstacles_added < num_obstacles && num_attempts++ < MAX_OBSTACLE_ATTEMPTS)
+	{
+		Eigen::Vector3f center = lower_bound + ((Eigen::Vector3f::Random() + Eigen::Vector3f::Ones()) / 2.0f).cwiseProduct(upper_bound - lower_bound);
+        // std::cout << "Attempting to add obstacle at " << center.transpose() << std::endl;
+		// check if it collides with the start or goal configuration, if so, resample
+		EnvironmentInput environment;
+		std::array<float, 3> sphere = {center[0], center[1], center[2]};
+		environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array(sphere, {0.0, 0.0, 0.0}, {obstacle_half_length  + 0.01, obstacle_half_length  + 0.01, obstacle_half_length  + 0.01}));
+		environment.sort();
+		auto env_v = EnvironmentVector(environment);
+		if (
+			(vamp::planning::validate_motion<Robot, rake, 1>(start_config, start_config, env_v)) &&
+			(vamp::planning::validate_motion<Robot, rake, 1>(goal_config, goal_config, env_v))
+		)
+			obstacles.push_back({center[0], center[1], center[2], obstacle_half_length, obstacle_half_length, obstacle_half_length});
+			num_obstacles_added++;
+	}
+	return obstacles;
+}
 
 
 
 int main() {
 	size_t num_constraints_added = 0;
-	size_t TOT_NUM_CONSTRAINTS = 1;
-	size_t TOT_NUM_START_GOAL_PAIRS_PER_CONSTRAINT = 100;
+	size_t TOT_NUM_CONSTRAINTS = 100;
+	size_t TOT_NUM_START_GOAL_PAIRS_PER_CONSTRAINT = 10;
 
 
 	std::vector<Problem> problems;
-	const char *output_path = "/src/tsr_panda_problems_single_line_ori_random_obs.json";
+	const char *output_path = "/src/tsr_panda_problems_curobo_cuboid_line.json";
 	std::ofstream file(output_path);
 
     // std::array<std::array<bool, 6>, 12> tsr_bound_combinations = {{
@@ -266,13 +291,13 @@ int main() {
 
 		typedef Eigen::Quaterniond Quatd;
 		// Generate a random unit quaternion
-		// Quatd random_quat = Quatd::UnitRandom();
+		Quatd random_quat = Quatd::UnitRandom();
 		Eigen::VectorXf rand_translation = Eigen::VectorXf::Random(3);
-		// std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{random_quat.w(), random_quat.x(), random_quat.y() ,random_quat.z(), rand_translation[0], rand_translation[1], rand_translation[2] }};
+		std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{random_quat.w(), random_quat.x(), random_quat.y() ,random_quat.z(), rand_translation[0], rand_translation[1], rand_translation[2] }};
 		// std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{0.0, 1.0, 0.0 ,0.0, rand_translation[0], rand_translation[1], rand_translation[2] }};
-		// std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{1, 0, 0, 0, 0, 0, 0}};
-        std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 1,0,0,   0.3486, 0.647752, 0.2399}};
-        std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
+		std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
+        // std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 1,0,0,   0.3486, 0.647752, 0.2399}};
+        // std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
 
         std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
             -0.0025, -10.01, -0.0025, -0.0025, -0.0025, -0.0025
@@ -298,7 +323,7 @@ int main() {
 
         std::cout << "Attempting to generate problems for constraint " << num_constraints_added + 1 << std::endl;
 		size_t num_start_goal_pairs_added = 0;
-		for(size_t config_attempt = 0U; config_attempt < 1000; config_attempt++){
+		for(size_t config_attempt = 0U; config_attempt < 500; config_attempt++){
             // std::cout << "Num start goal pairs added " << num_start_goal_pairs_added << std::endl;
 			if(num_start_goal_pairs_added >= TOT_NUM_START_GOAL_PAIRS_PER_CONSTRAINT){
 				break;
@@ -323,7 +348,7 @@ int main() {
 				))
 				{
 					// std::cout << "Able to get start " << start << start_projected_vector.back() << std::endl;
-					for(size_t goal_config_attempt = 0U; goal_config_attempt < 1000; goal_config_attempt++){
+					for(size_t goal_config_attempt = 0U; goal_config_attempt < 500; goal_config_attempt++){
 						auto goal = rng->next();
 						typename Robot::template ConfigurationBlock<rake> block, projected_block;
 						std::vector<typename Robot::Configuration> goal_projected_vector;
@@ -341,6 +366,7 @@ int main() {
 								true
 							))
 							{
+								// std::cout << "Able to get goal " << goal << goal_projected_vector.back() << std::endl;
 
 								auto start_config = start_projected_vector.back();
 								auto goal_config = goal_projected_vector.back();
@@ -349,8 +375,10 @@ int main() {
 
 								// now check if plan is feasible
 								bool any_successful_plan = run_crrtc_attempts(start_config, goal_config, env_v, task_constraint, rng);
-								if (!any_successful_plan)
+								if (!any_successful_plan){
+                                    // std::cout << "Failed to find a successful plan for start config " << start_config << " and goal config " << goal_config << std::endl;
 									break;
+                                }
 
                                 
 								auto start_eef_pose = Robot::eefk(config_to_array(start_config))[0].matrix();
@@ -388,12 +416,12 @@ int main() {
                                     // obstacle_futures.push_back(std::async(std::launch::async, [&, num_obstacles]() {
                                         // std::cout << "Attempting with " << num_obstacles << " obstacles." << std::endl;
 										for (size_t obstacle_attempt = 0U; obstacle_attempt < 10; ++obstacle_attempt) {
-											auto sphere_obstacles = generate_sphere_obstacles(start_config, goal_config, num_obstacles, 0.05f, lower_bound, upper_bound);
+											auto cuboid_obstacles = generate_cube_obstacles(start_config, goal_config, num_obstacles, 0.05f, lower_bound, upper_bound);
 
 											EnvironmentInput environment;
 											// now try to solve the problem with these obstacles
-											for (const auto &sphere : sphere_obstacles) {
-												environment.spheres.emplace_back(vamp::collision::factory::sphere::array({sphere[0], sphere[1], sphere[2]}, sphere[3]));
+											for (const auto &cuboid : cuboid_obstacles) {
+												environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({cuboid[0], cuboid[1], cuboid[2]}, {0.0, 0.0, 0.0}, {cuboid[3], cuboid[4], cuboid[5]}));
 											}
 											environment.sort();
 											auto env_v = EnvironmentVector(environment);
@@ -411,9 +439,9 @@ int main() {
 												eef_transforms[0],
 												config_to_array(start_projected_vector.back()),
 												config_to_array(goal_projected_vector.back()),
-												sphere_obstacles
+												cuboid_obstacles
 											};
-                                            std::cout << "Adding start goal to problem set :) " << start_projected_vector.back() << goal_projected_vector.back() << p.obstacles.size() << std::endl;
+                                            std::cout << "Adding start goal to problem set :) " << start_projected_vector.back() << goal_projected_vector.back() << p.cuboid_obstacles.size() << std::endl;
                                             problems.push_back(p);
                                             num_obstacle_problems_added++;
                                             goal_added_for_start = true;
