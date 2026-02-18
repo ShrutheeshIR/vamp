@@ -72,7 +72,7 @@ inline auto compute_plan(
 
 int main(){
     std::array<float, 8> polygon_points = {
-        0.03, -0.07, 0.03, 0.07, -0.03, 0.07, -0.03, -0.07
+        0.03, -0.07, 0.03, 0.07, -0.01, 0.07, -0.01, -0.07
     };
 
     std::array<float, 6> lower_bound = {
@@ -159,13 +159,13 @@ int main(){
 
     std::vector<Attempt> succ_attempts;
 
-    float ranges[] = {0.75, 0.5};
+    float ranges[] = {0.75, 0.5, 1.0};
     bool dd[] = {false, true};
-    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM};
+    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM};
 
     float descend_rates[] = {0.75, 1.0};
     int num_projection_iterations[] = {10, 25};
-    bool insert_all_to_tree[] = {true};
+    bool insert_all_to_tree[] = {false, true};
 
     // float descend_rates[] = {1.0};
     for(const auto range: ranges){
