@@ -387,6 +387,7 @@ namespace vamp::binding
         using TSR_Constraint = vamp::planning::TaskSpaceConstraint<Robot, rake>;
         using COM_Constraint = vamp::planning::CoMTaskSpaceConstraint<Robot, rake, num_com_polygons>;
         using Bimanual_Constraint = vamp::planning::BimanualTaskSpaceConstraint<Robot, rake>;
+        using Closed_Link_Constraint = vamp::planning::ClosedLinkConstraint<Robot, rake>;
 
         using Composable_TSR = vamp::planning::ComposableConstraints<Robot, rake, TSR_Constraint>;
         using Composable_COM = vamp::planning::ComposableConstraints<Robot, rake, COM_Constraint>;
@@ -401,11 +402,20 @@ namespace vamp::binding
 
         using Composable_Bimanual = vamp::planning::ComposableConstraints<Robot, rake, Bimanual_Constraint>;
         using Composable_TSR_COM_Bimanual = vamp::planning::ComposableConstraints<Robot, rake, TSR_Constraint, COM_Constraint, Bimanual_Constraint>;
+        using Composable_TSR_COM_ClosedLink_Bimanual = vamp::planning::ComposableConstraints<Robot, rake, TSR_Constraint, COM_Constraint, Closed_Link_Constraint, Bimanual_Constraint>;
+        using Composable_TSR_COM_ClosedLink = vamp::planning::ComposableConstraints<Robot, rake, TSR_Constraint, COM_Constraint, Closed_Link_Constraint>;
+
+
         using CRRTC_Bimanual =
             ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, Bimanual_Constraint>, vamp::planning::RRTCSettings, Composable_Bimanual>;
 
         using CRRTC_TSR_COM_Bimanual =
             ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, TSR_Constraint, COM_Constraint, Bimanual_Constraint>, vamp::planning::RRTCSettings, Composable_TSR_COM_Bimanual>;
+
+        using CRRTC_TSR_COM_ClosedLink_Bimanual =
+            ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, TSR_Constraint, COM_Constraint, Closed_Link_Constraint, Bimanual_Constraint>, vamp::planning::RRTCSettings, Composable_TSR_COM_ClosedLink_Bimanual>;
+        using CRRTC_TSR_COM_ClosedLink =
+            ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, TSR_Constraint, COM_Constraint, Closed_Link_Constraint>, vamp::planning::RRTCSettings, Composable_TSR_COM_ClosedLink>;
 
 
         using Simplifier_TSR_COM_Bimanual =
@@ -414,6 +424,12 @@ namespace vamp::binding
             ConstrainedSimplifyHelper<Composable_TSR>;
         using Simplifier_Bimanual =
             ConstrainedSimplifyHelper<Composable_Bimanual>;
+        using Simplifier_ClosedLink =
+            ConstrainedSimplifyHelper<Composable_TSR_COM_ClosedLink>;
+        using Simplifier_TSR_COM_ClosedLink_Bimanual =
+            ConstrainedSimplifyHelper<Composable_TSR_COM_ClosedLink_Bimanual>;
+        using Simplifier_TSR_COM_ClosedLink =
+            ConstrainedSimplifyHelper<Composable_TSR_COM_ClosedLink>;
 
     };
 
@@ -754,6 +770,11 @@ namespace vamp::binding
                 CONSTRAINEDPLANNER("crrtc", CRRTC_Bimanual, "CRRTConnectBimanual");
                 CONSTRAINEDPLANNER("crrtc", CRRTC_TSR_COM_Bimanual, "CRRTConnectTSR_COM_Bimanual");
 
+                if constexpr(Robot::name == "digit") {
+                    CONSTRAINEDPLANNER("crrtc", CRRTC_TSR_COM_ClosedLink_Bimanual, "CRRTConnectTSR_COM_ClosedLink_Bimanual");
+                    CONSTRAINEDPLANNER("crrtc", CRRTC_TSR_COM_ClosedLink, "CRRTConnectTSR_COM_ClosedLink");
+                }
+
             }
 
     #define CONSTRAINEDSIMPLIFIER(name, func, desc, ...)                                                                       \
@@ -766,6 +787,10 @@ namespace vamp::binding
             if constexpr (Robot::n_eef > 1) {
                 CONSTRAINEDSIMPLIFIER("simplify_with_constraints", Simplifier_TSR_COM_Bimanual, "Simplifier_TSR_COM_Bimanual");
                 CONSTRAINEDSIMPLIFIER("simplify_with_constraints", Simplifier_Bimanual, "Simplifier_Bimanual");
+                if constexpr(Robot::name == "digit") {
+                    CONSTRAINEDSIMPLIFIER("simplify_with_constraints", Simplifier_TSR_COM_ClosedLink_Bimanual, "Simplifier_TSR_COM_ClosedLink_Bimanual");
+                    CONSTRAINEDSIMPLIFIER("simplify_with_constraints", Simplifier_TSR_COM_ClosedLink, "Simplifier_TSR_COM_ClosedLink");
+                }
 
             }
 

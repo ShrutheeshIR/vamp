@@ -88,25 +88,33 @@ using AttachmentInput = vamp::collision::Attachment<float>;
 //     0.00305,0.01553,-0.48345,-0.01069,0.00173,-0.00299,0.36992,0.00741,-0.22885,-0.85230,-0.02549,0.90910,-0.43356,0.01072,-0.10347,-0.22115,0.08292,1.04140,-0.33777,0.01560,0.22590,0.84363,0.02173,-0.90310,0.42748,0.06019,-0.22174,0.23454,-0.12485,-1.19928
 // };
 
-static constexpr Robot::ConfigurationArray standing_pose = {0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31631,-0.01347,-0.28807,0.11635,-0.00983,-0.10504,0.88852,-0.00624,0.37778,-0.36544,0.00508,-0.29158,-0.31758,0.01345,0.28939,-0.11670,0.01291,0.10456,-0.89396,0.00550,-0.36663};
+static constexpr Robot::ConfigurationArray standing_pose = {0.0287480000000000, -0.0189052000000000, -0.0145299000000000, 0.00967345000000000, 0.00825856000000000, -0.00215209000000000,
+0.397209000000000, -0.00820680000000000, 0.284002000000000, 0.290042000000000, -0.0213535000000000, -0.235481000000000, -0.0319210000000000, 0.00127043000000000,
+-0.0782953000000000, 1.04159000000000, 0.0284093000000000, -0.0123198000000000,
+-0.358284000000000, -0.0133610000000000, -0.278441000000000, -0.268447000000000, 0.0177607000000000, 0.212721000000000, -0.0692397000000000, -0.000343739000000000,
+0.0689620000000000, -1.23829000000000, 0.0369306000000000, -0.00862385000000000};
 // static constexpr Robot::ConfigurationArray box_top_shelf_pickup = {0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31794,-0.01125,-0.28643,0.11635,-0.00983,-0.15597,-0.29369,-0.00103,0.35552,-0.36544,0.00508,-0.29158,-0.32097,0.00882,0.28598,-0.11670,0.01291,-0.12971,0.29191,0.02145,-0.35453};
 // static constexpr Robot::ConfigurationArray rack_2 = {0.00305,0.01553,-0.48345,-0.01069,0.00173,-0.00299,0.36991,0.00741,-0.22885,-0.85230,-0.02549,0.90910,-0.43356,0.01072,-0.02876,-0.17999,0.16228,0.99774,-0.33776,0.01561,0.22590,0.84363,0.02173,-0.90309,0.42748,0.06021,-0.16520,0.35173,-0.06290,-1.30637};
 
 static constexpr Robot::ConfigurationArray box_top_shelf_pickup = {
-    0.00000,0.00184,-0.00516,-0.00096,0.00227,-0.00049,0.36547,-0.00525,0.29127,0.31794,-0.01125,-0.28643,0.11635,-0.00983,0.08084,-0.26989,-0.01151,0.12815,-0.36544,0.00508,-0.29158,-0.32097,0.00882,0.28598,-0.11670,0.01291,0.15245,0.28130,0.06021,-0.10471
+    0.00779,-0.02074,0.00461,-0.00428,-0.00896,-0.00528,0.38120,0.00154,0.28644,0.32323,-0.00734,-0.29696,0.07485,0.01125,0.08865,-0.26348,-0.00645,0.11539,-0.37495,-0.00330,-0.29074,-0.31914,0.01103,0.28118,-0.13812,0.00576,0.16191,0.27674,0.06755,-0.09470
 };
 
 static constexpr Robot::ConfigurationArray rack_2 = {
-    0.00306,0.01556,-0.48345,-0.01063,0.00173,-0.00292,0.37003,0.00751,-0.22884,-0.85230,-0.02549,0.90911,-0.43355,0.01078,-0.17309,-0.36296,0.06140,1.08973,-0.33766,0.01570,0.22586,0.84365,0.02174,-0.90312,0.42744,0.06025,-0.29859,0.37721,-0.15511,-1.16677
+    0.00927,-0.01219,-0.47283,-0.01411,-0.02955,-0.00937,0.40005,0.01408,-0.23717,-0.84704,-0.02429,0.90190,-0.48186,0.04543,-0.17059,-0.36363,0.06204,1.09005,-0.36164,-0.00267,0.22962,0.84538,0.02448,-0.90900,0.40052,0.03680,-0.29646,0.37895,-0.15478,-1.16821
 };
 
 static constexpr Robot::ConfigurationArray rack_3 = {
-    0.00654,0.00966,-0.29138,-0.00794,-0.00970,-0.00133,0.36653,0.00279,-0.01526,-0.40044,-0.03277,0.45986,-0.22197,0.00189,-0.10022,-0.29082,-0.02517,0.50293,-0.35429,0.00912,0.02117,0.40809,0.04398,-0.48963,0.24456,0.03610,-0.07963,0.30238,-0.05724,-0.51453
+    0.00927,-0.01219,-0.47283,-0.01411,-0.02955,-0.00937,0.40005,0.01408,-0.23717,-0.84704,-0.02429,0.90190,-0.48186,0.04543,-0.17059,-0.36363,0.06204,1.09005,-0.36164,-0.00267,0.22962,0.84538,0.02448,-0.90900,0.40052,0.03680,-0.29646,0.37895,-0.15478,-1.16821
 };
 
 
 static constexpr Robot::ConfigurationArray start = {
-    0.0179029,-0.0123365,-0.32563,0.0624259,-0.249669,0.0165472,0.393753,-0.0132126,0.294206,-0.388537,-0.126419,0.5798,-0.227956,-0.0541595,-0.241824,0.485057,0.443815,0.0534739,-0.32776,-0.0186532,-0.368169,0.201693,0.285052,-0.629981,0.232005,-0.0164111,-0.0694985,-0.648304,-0.03485,-0.230945
+    0.0287480000000000, -0.0189052000000000, -0.0145299000000000, 0.00967345000000000, 0.00825856000000000, -0.00215209000000000,
+0.397209000000000, -0.00820680000000000, 0.284002000000000, 0.290042000000000, -0.0213535000000000, -0.235481000000000, -0.0319210000000000, 0.00127043000000000,
+-0.0782953000000000, 1.04159000000000, 0.0284093000000000, -0.0123198000000000,
+-0.358284000000000, -0.0133610000000000, -0.278441000000000, -0.268447000000000, 0.0177607000000000, 0.212721000000000, -0.0692397000000000, -0.000343739000000000,
+0.0689620000000000, -1.23829000000000, 0.0369306000000000, -0.00862385000000000
 };
 
 static constexpr Robot::ConfigurationArray goal = {
@@ -150,33 +158,35 @@ auto main(int, char **) -> int
     }
 
 
+
     std::array<float, 8> polygon_points = {
-        0.02, -0.05, 0.02, 0.05, -0.03, 0.05, -0.03, -0.05
+        0.01, -0.01, 0.01, 0.03, -0.03, 0.03, -0.03, -0.01
     };
 
     std::array<float, 6> lower_bound = {
-        -0.001, -0.001, -0.001, -0.1, -10.1, -0.1
+        -0.001, -0.001, -0.001, -0.1, -10.1, -10.1
     };
     std::array<float, 6> upper_bound = {
-        0.001, 0.001, 0.001, 0.1, 10.1, 0.1
+        0.001, 0.001, 0.001, 0.1, 10.1, 10.1
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
         -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, 
         -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, 
-        -0.001, -0.001, -0.001, -0.01, -0.01, -0.01, 
-        -0.001, -0.001, -0.001, -0.01, -0.01, -0.01
+        -0.001, -0.001, -0.001, -0.1, -0.1, -0.1, 
+        -0.001, -0.001, -0.001, -0.1, -0.1, -0.1
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
         10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 
         10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 
-        0.001, 0.001, 0.001, 0.01, 0.01, 0.01, 
-        0.001, 0.001, 0.001, 0.01, 0.01, 0.01
+        0.001, 0.001, 0.001, 0.1, 0.1, 0.1, 
+        0.001, 0.001, 0.001, 0.1, 0.1, 0.1
     };
 
 
-    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{{1, 0,0,0,   0, 0, 0}, {1, 0,0,0,   0.0, 0.0, 0.0}, {0.603, 0.36, 0.36, 0.603, -0.04302,  0.10080, -0.96013}, {0.603, -0.36, 0.36, -0.603 , -0.04288, -0.09895, -0.96033}}};
+
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{{1, 0,0,0,   0, 0, 0}, {1, 0,0,0,   0.0, 0.0, 0.0}, {0.59, 0.38, 0.4, 0.59 , -0.02070, 0.06015, -0.95335}, {0.61, -0.36, 0.35, -0.61 , -0.02228, -0.11609, -0.94832}}};
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{{1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0}}};
 
     vamp::planning::FeetTaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
@@ -186,34 +196,34 @@ auto main(int, char **) -> int
         tsr_upper_bound
     );
 
-    // vamp::planning::TaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
-    //     eef_transforms_ref_frame_w_world,
-    //     eef_transforms,
-    //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
-    // );
-
     std::array<float, 7> transform = {0.1, 0.99, 0.00000, 0.04000, 0.01462, -0.03530, -0.36356};
     vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_task_constraint(transform, lower_bound, upper_bound);
-
-    // vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_constraint(
-    //     target_pose,
-    //     std::make_pair(lower_bound, upper_bound)
-    // );
     vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4> com_constraint(
         polygon_points
     );
 
     vamp::planning::ClosedLinkConstraint<Robot, rake> closed_link_constraint;
 
-    // vamp::planning::SelfCollisionConstraint<Robot, rake> self_collision_constraint;
-
-
-    vamp::planning::ComposableConstraints<Robot, rake, decltype(feet_tsr_constraint), decltype(com_constraint), decltype(bimanual_task_constraint), decltype(closed_link_constraint)> task_constraint(
+    vamp::planning::ComposableConstraints<Robot, rake, 
+        vamp::planning::FeetTaskSpaceConstraint<Robot, rake>,
+        vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4>, 
+        vamp::planning::ClosedLinkConstraint<Robot, rake>, 
+        vamp::planning::BimanualTaskSpaceConstraint<Robot, rake>>task_constraint(
         feet_tsr_constraint,
         com_constraint,
-        bimanual_task_constraint,
+        closed_link_constraint,
+        bimanual_task_constraint
+    );
+
+    vamp::planning::ComposableConstraints<Robot, rake, 
+        vamp::planning::FeetTaskSpaceConstraint<Robot, rake>,
+        vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4>, 
+        vamp::planning::ClosedLinkConstraint<Robot, rake>>non_transport_task_constraint(
+        feet_tsr_constraint,
+        com_constraint,
         closed_link_constraint
     );
+
 
     // 1. Extract the pointer to the data
     const float* data = transform.data();
@@ -384,6 +394,42 @@ auto main(int, char **) -> int
 
 
 
+    }
+
+    size_t pose_iterator = 0;
+    // for each of standing_pose, box_top_shelf_pickup, rack_2, rack_3, do projectConfiguration and print out projected block
+    for (const auto& config : {standing_pose, box_top_shelf_pickup, rack_2, rack_3}) {
+        // if standing pose, then use non_transport_task_constraint, else use task_constraint
+
+        std::cout << "----Projecting config----" << std::endl;
+        typename Robot::template ConfigurationBlock<rake> block;
+        for (auto i = 0U; i < Robot::dimension; ++i)
+            block[i] = Robot::Configuration(config).broadcast(i);
+        bool valid = Robot::template fkcc<rake>(env_v, block);
+        std::cout << "Config valid: " << valid << std::endl;
+
+        if (pose_iterator == 0) {
+            std::cout << "Using non-transport task constraint for standing pose" << std::endl;
+            non_transport_task_constraint.distanceToConstraint(block);
+            // non_transport_task_constraint.print_robot_tsr_error(block);
+
+            typename Robot::template ConfigurationBlock<rake> projected_block;
+            bool success = non_transport_task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM, 5.0, 1.0, 100, true);
+            for(auto i=0U; i < Robot::dimension; i++)
+                std::cout << projected_block[{i, 0}] << ",";
+            std::cout << success <<std::endl;
+        } else {
+            std::cout << "Using full task constraint for other poses" << std::endl;
+            task_constraint.distanceToConstraint(block);
+            // task_constraint.print_robot_tsr_error(block);
+
+            typename Robot::template ConfigurationBlock<rake> projected_block;
+            bool success = task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM, 5.0, 1.0, 100, true);
+            for(auto i=0U; i < Robot::dimension; i++)
+                std::cout << projected_block[{i, 0}] << ",";
+            std::cout << success <<std::endl;
+        }
+        pose_iterator++;
     }
 
 
