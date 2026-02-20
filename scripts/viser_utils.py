@@ -29,7 +29,10 @@ def add_spheres(
     """
     Add spheres to the env/
     """
-    if len(colors) == 1:
+    sphere_handles = [None] * len(sphere_positions)
+    if len(colors) == 0:
+        colors = [[255, 0, 0]] * len(sphere_positions)
+    elif len(colors) == 1:
         colors = colors * len(sphere_positions)
     else:
         assert len(colors) == len(sphere_positions)
