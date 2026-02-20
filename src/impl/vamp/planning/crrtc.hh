@@ -329,7 +329,7 @@ namespace vamp::planning
             std::cout << "Collision Inside : " << (float) collision_inside_counter / iter << std::endl;
             std::cout << "Validate Failed : " << (float) validate_failed / iter << std::endl;
             std::cout << "DynDom Failed : " << (float) dyndomfailed / iter << std::endl;
-            settings.display();
+            // settings.display();
             return result;
         }
     };

@@ -113,6 +113,17 @@ namespace vamp::binding
 
             return out;
         }
+
+        template <std::size_t rake>
+        inline static auto array_from_block(const ConfigurationBlock<rake> &block, size_t rake_index) -> Type
+        {
+            ConfigurationArray config;
+            for (auto i = 0U; i < Robot::dimension; ++i)
+            {
+                config[i] = block[{i, rake_index}];
+            }
+            return from(config);
+        }
     };
 
     template <typename Robot>
@@ -385,6 +396,9 @@ namespace vamp::binding
         };
 
         using TSR_Constraint = vamp::planning::TaskSpaceConstraint<Robot, rake>;
+        using FeetTSR_Constraint = vamp::planning::FeetTaskSpaceConstraint<Robot, rake>;
+
+
         using COM_Constraint = vamp::planning::CoMTaskSpaceConstraint<Robot, rake, num_com_polygons>;
         using Bimanual_Constraint = vamp::planning::BimanualTaskSpaceConstraint<Robot, rake>;
         using Closed_Link_Constraint = vamp::planning::ClosedLinkConstraint<Robot, rake>;
@@ -404,6 +418,8 @@ namespace vamp::binding
         using Composable_TSR_COM_Bimanual = vamp::planning::ComposableConstraints<Robot, rake, TSR_Constraint, COM_Constraint, Bimanual_Constraint>;
         using Composable_TSR_COM_ClosedLink_Bimanual = vamp::planning::ComposableConstraints<Robot, rake, TSR_Constraint, COM_Constraint, Closed_Link_Constraint, Bimanual_Constraint>;
         using Composable_TSR_COM_ClosedLink = vamp::planning::ComposableConstraints<Robot, rake, TSR_Constraint, COM_Constraint, Closed_Link_Constraint>;
+        using Composable_FeetTSR_COM_ClosedLink = vamp::planning::ComposableConstraints<Robot, rake, FeetTSR_Constraint, COM_Constraint, Closed_Link_Constraint>;
+        using Composable_FeetTSR_COM_ClosedLink_Bimanual = vamp::planning::ComposableConstraints<Robot, rake, FeetTSR_Constraint, COM_Constraint, Closed_Link_Constraint, Bimanual_Constraint>;
 
 
         using CRRTC_Bimanual =
@@ -416,6 +432,11 @@ namespace vamp::binding
             ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, TSR_Constraint, COM_Constraint, Closed_Link_Constraint, Bimanual_Constraint>, vamp::planning::RRTCSettings, Composable_TSR_COM_ClosedLink_Bimanual>;
         using CRRTC_TSR_COM_ClosedLink =
             ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, TSR_Constraint, COM_Constraint, Closed_Link_Constraint>, vamp::planning::RRTCSettings, Composable_TSR_COM_ClosedLink>;
+
+        using CRRTC_FeetTSR_COM_ClosedLink_Bimanual =
+            ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, FeetTSR_Constraint, COM_Constraint, Closed_Link_Constraint, Bimanual_Constraint>, vamp::planning::RRTCSettings, Composable_FeetTSR_COM_ClosedLink_Bimanual>;
+        using CRRTC_FeetTSR_COM_ClosedLink =
+            ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, FeetTSR_Constraint, COM_Constraint, Closed_Link_Constraint>, vamp::planning::RRTCSettings, Composable_FeetTSR_COM_ClosedLink>;
 
 
         using Simplifier_TSR_COM_Bimanual =
@@ -430,6 +451,11 @@ namespace vamp::binding
             ConstrainedSimplifyHelper<Composable_TSR_COM_ClosedLink_Bimanual>;
         using Simplifier_TSR_COM_ClosedLink =
             ConstrainedSimplifyHelper<Composable_TSR_COM_ClosedLink>;
+
+        using Simplifier_FeetTSR_COM_ClosedLink_Bimanual =
+            ConstrainedSimplifyHelper<Composable_FeetTSR_COM_ClosedLink_Bimanual>;
+        using Simplifier_FeetTSR_COM_ClosedLink =
+            ConstrainedSimplifyHelper<Composable_FeetTSR_COM_ClosedLink>;
 
     };
 
@@ -448,8 +474,15 @@ namespace vamp::binding
             .def("distanceToConstraint",
                 [](const vamp::planning::ComposableConstraints<Robot, rake, Constraints...>& self,  const NDArray &c_in) {
                 return self.distanceToConstraint(NA::template block<rake>(c_in))[{0, 0}];
-            }, "Get distance to constraint");
-
+            }, "Get distance to constraint")
+            .def("projectConfiguration",
+                    [](vamp::planning::ComposableConstraints<Robot, rake, Constraints...>& self,  const NDArray &c_in, int projection_method, float max_q_dist, float descent_rate, int num_projection_iterations, bool verbose) {
+                    auto c = NA::template block<rake>(c_in);
+                    auto c_out = NA::template block<rake>(c_in);
+                    self.projectConfiguration(c, c_out, static_cast<vamp::planning::ProjMethod>(projection_method),max_q_dist, descent_rate, num_projection_iterations, verbose);
+                    // convert the c_out back to NDArray and return
+                    return NA::array_from_block(c_out, 0);
+                }, "Project a configuration onto the constraint manifold");
     }
 
     template <typename Robot>
@@ -687,6 +720,31 @@ namespace vamp::binding
 
                 bind_composable<Robot ,typename HPN::Bimanual_Constraint>(submodule);
                 bind_composable<Robot ,typename HPN::TSR_Constraint, typename HPN::COM_Constraint, typename HPN::Bimanual_Constraint>(submodule);
+
+            if constexpr(Robot::name == "digit") {
+
+                nb::class_<typename HPN::FeetTSR_Constraint>(submodule, "FeetTaskSpaceConstraint")
+                    .def(nb::init<std::array<std::array<float, 7>, Robot::n_eef>, std::array<std::array<float, 7>, Robot::n_eef>, std::array<float, 6 * Robot::n_eef>, std::array<float, 6 * Robot::n_eef>>())                    // constructor args
+                    .def("distanceToConstraint",
+                        [](const typename HPN::FeetTSR_Constraint& self,  const NDArray &c_in) {
+                        return self.distanceToConstraint(NA::template block<rake>(c_in))[{0, 0}];
+                    }, "Get distance to constraint");
+
+                nb::class_<typename HPN::Closed_Link_Constraint>(submodule, "ClosedLinkConstraint")
+                    .def(nb::init<>())// constructor args
+                    .def("distanceToConstraint",
+                        [](const typename HPN::Closed_Link_Constraint& self,  const NDArray &c_in) {
+                        return self.distanceToConstraint(NA::template block<rake>(c_in))[{0, 0}];
+                    }, "Get distance to constraint");
+                
+                    bind_composable<Robot ,typename HPN::Closed_Link_Constraint>(submodule);
+                    bind_composable<Robot ,typename HPN::TSR_Constraint, typename HPN::COM_Constraint, typename HPN::Closed_Link_Constraint>(submodule);
+                    bind_composable<Robot ,typename HPN::TSR_Constraint, typename HPN::COM_Constraint, typename HPN::Closed_Link_Constraint, typename HPN::Bimanual_Constraint>(submodule);
+                    bind_composable<Robot ,typename HPN::FeetTSR_Constraint, typename HPN::COM_Constraint, typename HPN::Closed_Link_Constraint>(submodule);
+                    bind_composable<Robot ,typename HPN::FeetTSR_Constraint, typename HPN::COM_Constraint, typename HPN::Closed_Link_Constraint, typename HPN::Bimanual_Constraint>(submodule);
+
+
+            }
         }
 
 
@@ -773,6 +831,8 @@ namespace vamp::binding
                 if constexpr(Robot::name == "digit") {
                     CONSTRAINEDPLANNER("crrtc", CRRTC_TSR_COM_ClosedLink_Bimanual, "CRRTConnectTSR_COM_ClosedLink_Bimanual");
                     CONSTRAINEDPLANNER("crrtc", CRRTC_TSR_COM_ClosedLink, "CRRTConnectTSR_COM_ClosedLink");
+                    CONSTRAINEDPLANNER("crrtc", CRRTC_FeetTSR_COM_ClosedLink_Bimanual, "CRRTConnectFeetTSR_COM_ClosedLink_Bimanual");
+                    CONSTRAINEDPLANNER("crrtc", CRRTC_FeetTSR_COM_ClosedLink, "CRRTConnectFeetTSR_COM_ClosedLink");
                 }
 
             }
@@ -790,6 +850,8 @@ namespace vamp::binding
                 if constexpr(Robot::name == "digit") {
                     CONSTRAINEDSIMPLIFIER("simplify_with_constraints", Simplifier_TSR_COM_ClosedLink_Bimanual, "Simplifier_TSR_COM_ClosedLink_Bimanual");
                     CONSTRAINEDSIMPLIFIER("simplify_with_constraints", Simplifier_TSR_COM_ClosedLink, "Simplifier_TSR_COM_ClosedLink");
+                    CONSTRAINEDSIMPLIFIER("simplify_with_constraints", Simplifier_FeetTSR_COM_ClosedLink_Bimanual, "Simplifier_FeetTSR_COM_ClosedLink_Bimanual");
+                    CONSTRAINEDSIMPLIFIER("simplify_with_constraints", Simplifier_FeetTSR_COM_ClosedLink, "Simplifier_FeetTSR_COM_ClosedLink");
                 }
 
             }

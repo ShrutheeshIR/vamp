@@ -196,7 +196,7 @@ int main(){
 
 
                             EnvironmentInput environment;
-                            auto geoms = vamp::utils::parser::parseMJCF("/src/vamp/resources/environments/cuboids/wooden_shelf.xml");
+                            auto geoms = vamp::utils::parser::parseMJCF("/src/myfork/vamp/resources/environments/cuboids/wooden_shelf.xml");
                             for (const auto& g : geoms) {
                                 if (g.type == vamp::utils::parser::GeomType::BOX){
                                     std::cout << "Adding cuboid with pos " << g.world_pose.pos.x << "," << g.world_pose.pos.y << "," << g.world_pose.pos.z << " and size " << g.size.x << "," << g.size.y << "," << g.size.z << std::endl;

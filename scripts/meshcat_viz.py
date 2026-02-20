@@ -1,0 +1,164 @@
+import time
+import numpy as np
+import pinocchio
+from pinocchio.visualize import MeshcatVisualizer
+
+import meshcat.geometry as mg
+import matplotlib.pyplot as plt
+
+from meshcat.transformations import translation_matrix
+
+
+import tempfile
+
+def replace_package_path(urdf_path):
+    '''
+    Take in a urdf path, search for instances of package://franka_description,
+    and then replace with the working directory path.
+    
+    Args:
+        urdf_path (str): The path to the URDF file.
+    
+    Returns:
+        str: The modified URDF path with package paths replaced.
+    '''
+    import os
+    import re
+    
+    # Get all parents in the path
+    parents = os.path.dirname(urdf_path).split(os.sep)
+    replace_with = os.path.join(os.getcwd(), *parents) + '/meshes/'
+        
+    # Read the URDF file
+    with open(urdf_path, 'r') as f:
+        urdf_content = f.read()
+    
+    # Replace package://franka_description with the current working directory
+    modified_content = re.sub(r'meshes/', replace_with, urdf_content)
+    
+    # Write to a temp file
+    tmp = tempfile.NamedTemporaryFile(delete=False)
+    with open(tmp.name, 'w') as f:
+        f.write(modified_content)
+        
+    return tmp.name
+    
+
+
+
+# roll pitch yaw
+axis_directions = np.pi/2 * np.array([[1, 0, 0], [0, 0, 0], [0, 0, 1]])
+
+axis_colors = [[80, 230, 100],   # Green
+               [255, 140, 0],    # Orange
+               [190, 80, 250]]   # Purple 
+
+def color_to_hex(color):
+    '''
+    convert RGB color in [0, 255] to int hex
+    '''
+    return (color[0] << 16) + (color[1] << 8) + color[2]
+
+
+viz = None
+model = None
+axs = None
+
+def init_viz():
+    # Load robot model
+    _model, coll_model, vis_model = pinocchio.buildModelsFromUrdf(
+        replace_package_path('resources/digit_description/digit_model_trace_collision_spherized.urdf'), '/src/myfork/vamp/resources/digit_description/meshes',)
+
+    # Set up visualizer
+    _viz = MeshcatVisualizer(_model, coll_model, vis_model)
+    _viz.initViewer(zmq_url="tcp://127.0.0.1:6000")
+    _viz.loadViewerModel()
+    
+    fig, _axs = plt.subplots(2, 3, sharex=True, sharey='row', figsize=(12, 8))
+    plt.tight_layout(pad=1.0)
+    plt.ion()
+    
+    # Set viz, model, axs for callback
+    global viz, model, axs
+    viz = _viz
+    model = _model
+    axs = _axs
+    
+    return viz
+
+def clear_all_waypoints():
+    '''
+    Clear all waypoints from both sets.
+    '''
+    global viz
+    viz.viewer["waypoints_a"].delete()
+    viz.viewer["waypoints_b"].delete()
+    # viz.viewer["given_waypoints"].delete()
+    viz.viewer["waypoints"].delete()
+
+waypoints_set = 'a'
+
+def render_eefs(eeposes):
+    """
+    Renders the trajectory of a specific frame as a series of coordinate axes.
+
+    Parameters
+    ----------
+    eeposes
+    """
+    global waypoints_set, viz
+    visualizer = viz
+    model = viz.model
+    clear_all_waypoints()
+    
+    # Draw waypoints as spheres
+    for i, eepose in enumerate(eeposes):
+        visualizer.viewer[f"waypoints_{waypoints_set}/waypoint_{i}"].set_object(
+            mg.Sphere(0.005),
+            mg.MeshLambertMaterial(color=color_to_hex([255, 140, 0]))
+        )
+        visualizer.viewer[f"waypoints_{waypoints_set}/waypoint_{i}"].set_transform(eepose)
+    
+    # Toggle the other set of waypoints and delete it
+    # (We do this so there isn't a flash when updating)
+    waypoints_set = 'b' if waypoints_set == 'a' else 'a'
+    visualizer.viewer[f"waypoints_{waypoints_set}"].delete()
+
+
+        
+def animate(positions, all_times, rate=1.0, loop=False):
+    '''
+    Generate a nice interpolated trajectory animation.
+    '''
+    global viz
+    # Get interpolated trajectory
+    # all_times, positions = interpolate_trajectory(qs, vs, dts, time_step=0.01)
+    
+    # Assert all_times is strictly increasing
+    assert np.all(np.diff(all_times) > 0), "all_times must be strictly increasing"
+    
+    # Animate
+    start_time = time.perf_counter()
+    i = 0
+    while True:
+        # Move to the right time
+        elapsed = (time.perf_counter() - start_time) * rate
+        if elapsed > all_times[-1]:
+            start_time = time.perf_counter()
+            if loop: continue
+            else: break
+        
+        # Bisect find i
+        i = np.searchsorted(all_times, elapsed, side="right") - 1
+        i = np.clip(i, 0, positions.shape[0] - 1)
+        
+        viz.display(positions[i]) # assume 7
+        
+    viz.viewer["waypoints"].delete()
+
+if __name__ == '__main__':
+    traj = np.loadtxt("/src/trajectory.txt", delimiter = ",")
+    init_viz()
+    clear_all_waypoints()
+    print(traj.shape)
+    animate(traj, np.arange(0, len(traj), dtype=np.float64) / 100, loop=True)

@@ -160,7 +160,7 @@ auto main(int, char **) -> int
 
 
     std::array<float, 8> polygon_points = {
-        0.01, -0.01, 0.01, 0.03, -0.03, 0.03, -0.03, -0.01
+        0.01, -0.01, 0.01, 0.03, -0.05, 0.03, -0.05, -0.01
     };
 
     std::array<float, 6> lower_bound = {
