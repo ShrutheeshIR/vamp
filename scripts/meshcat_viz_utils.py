@@ -35,11 +35,11 @@ def replace_package_path(urdf_path):
     
     # Replace package://franka_description with the current working directory
     modified_content = re.sub(r'package://franka_description/meshes/', replace_with, urdf_content)
-    modified_content = re.sub(r'package://meshes/', replace_with, urdf_content)
+    # modified_content = re.sub(r'package://meshes/', replace_with, urdf_content)
 
     # some urdfs have "package://franka_description/meshes/..." and some have meshes/ without the package prefix.
     # Uncomment the following if your case is the latter, and comment out the above replacement.
-    modified_content = re.sub(r'meshes/', replace_with, urdf_content)
+    # modified_content = re.sub(r'meshes/', replace_with, urdf_content)
     
     # Write to a temp file
     tmp = tempfile.NamedTemporaryFile(delete=False)
@@ -75,7 +75,7 @@ class MeshcatViz:
     def init_viz(self, robot_urdf_path=None, robot_mesh_path=None):
         # Load robot model
         self.model, coll_model, vis_model = pinocchio.buildModelsFromUrdf(
-            replace_package_path(robot_urdf_path), robot_mesh_path)
+            replace_package_path(robot_urdf_path), robot_mesh_path, )
 
         # Set up visualizer
         self.viz = MeshcatVisualizer(self.model, coll_model, vis_model)
@@ -114,12 +114,44 @@ class MeshcatViz:
                 mg.Sphere(0.005),
                 mg.MeshLambertMaterial(color=color_to_hex([255, 140, 0]))
             )
+            eepose[2, 3] -= 0.16
             visualizer.viewer[f"waypoints_{self.waypoints_set}/waypoint_{i}"].set_transform(eepose)
         
         # Toggle the other set of waypoints and delete it
         # (We do this so there isn't a flash when updating)
         self.waypoints_set = 'b' if self.waypoints_set == 'a' else 'a'
         visualizer.viewer[f"waypoints_{self.waypoints_set}"].delete()
+
+    def add_cuboids(self, cuboids, colors=(12, 89, 178)):
+        '''
+        cuboids: list of dicts with [x, y, z, yaw, pitch, roll, dx, dy, dz]
+        colors: list of RGB tuples in [0, 255] or a single RGB tuple
+        '''
+
+        visualizer = self.viz
+        for i, cuboid in enumerate(cuboids):
+            x, y, z = cuboid[0], cuboid[1], cuboid[2]
+            yaw, pitch, roll = cuboid[3], cuboid[4], cuboid[5]
+            dx, dy, dz = cuboid[6], cuboid[7], cuboid[8]
+            
+            # Create transformation matrix
+            T = translation_matrix([x, y, z])
+            # Rz = pinocchio.rpy.rpyToMatrix([0, 0, yaw])
+            # Ry = pinocchio.rpy.rpyToMatrix([0, pitch, 0])
+            # Rx = pinocchio.rpy.rpyToMatrix([roll, 0, 0])
+            # R = Rz @ Ry @ Rx
+            # T[:3, :3] = R
+            
+            visualizer.viewer[f"cuboids/cuboid_{i}"].set_object(
+                mg.Box([dx, dy, dz]),
+                mg.MeshLambertMaterial(color=color_to_hex(colors[i] if isinstance(colors, list) else colors))
+            )
+            # visualizer.viewer[f"cuboids/cuboid_{i}/edges"].set_object(
+            #     mg.Box([dx, dy, dz]),
+            #     mg.MeshBasicMaterial(color=0x000000, wireframe=True)
+            # )
+
+            visualizer.viewer[f"cuboids/cuboid_{i}"].set_transform(T)
 
     def animate(self, positions, all_times, rate=1.0, loop=False):
         '''
@@ -131,6 +163,8 @@ class MeshcatViz:
         # Assert all_times is strictly increasing
         assert np.all(np.diff(all_times) > 0), "all_times must be strictly increasing"
         
+        padded_positions = np.zeros((positions.shape[0], self.model.nq))
+        padded_positions[:, :positions.shape[1]] = positions
         # Animate
         start_time = time.perf_counter()
         i = 0
@@ -146,7 +180,7 @@ class MeshcatViz:
             i = np.searchsorted(all_times, elapsed, side="right") - 1
             i = np.clip(i, 0, positions.shape[0] - 1)
             
-            self.viz.display(positions[i]) # assume 7
+            self.viz.display(padded_positions[i]) # assume 7
             
         self.viz.viewer["waypoints"].delete()
 
