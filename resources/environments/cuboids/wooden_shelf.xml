@@ -10,7 +10,7 @@
         <texture type="2d" name="bookshelf_cover" file="assets/light-wood.png"/>
     </asset>
     <worldbody>
-        <body name="shelf" pos="0.65 0.03 -0.97">
+        <body name="shelf" pos="0.57 0.03 -0.97">
             <geom type="box" name="shelf_board_3" pos="0 0 0.025"      size="0.15 0.35 0.025"   material="bookshelf_cover" contype="0" conaffinity="0" group="2"/>
             <geom type="box" name="shelf_board_4" pos="0 0 0.425"      size="0.15 0.35 0.025"   material="bookshelf_cover" contype="0" conaffinity="0" group="2"/>
             <geom type="box" name="shelf_board_5" pos="0 0 0.825"      size="0.15 0.35 0.025"   material="bookshelf_cover" contype="0" conaffinity="0" group="2"/>
