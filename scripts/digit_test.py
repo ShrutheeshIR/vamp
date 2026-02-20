@@ -19,23 +19,29 @@ start = [
     0.0689620000000000, -1.23829000000000, 0.0369306000000000, -0.00862385000000000
 ]
 
+box_top_shelf_pregrasp = [
+    1.11889839e-02, -1.99530125e-02,  5.81884384e-03, -3.29416106e-03, -1.42211439e-02, -5.99248195e-03,  
+    3.84082675e-01,  5.58406231e-04, 2.98647016e-01,  3.22717577e-01, -3.98048153e-03, -3.00990015e-01, 1.07899308e-02,  1.02880923e-02,  
+    3.03654131e-02,  1.43816188e-01, -0.139, -5.22131145e-01,
+     -3.72209966e-01, -3.30008916e-03, -2.98724055e-01, -3.18776041e-01,  8.88650957e-03,  2.83709198e-01, -1.18316561e-01,  6.75600534e-03,  
+    4.73398268e-02, -1.23632416e-01,  0.139,  4.99689251e-01
+]
+
+
 box_top_shelf_pickup = [
-    1.11889839e-02, -1.99530125e-02,  5.81884384e-03, -3.29416106e-03      ,                                                                                                                   
- -1.42211439e-02, -5.99248195e-03,  3.84082675e-01,  5.58406231e-04        ,                                                                                                                 
-  2.98647016e-01,  3.22717577e-01, -3.98048153e-03, -3.00990015e-01        ,                                                                                                                 
-  1.07899308e-02,  1.02880923e-02,  3.03654131e-02,  1.43816188e-01        ,                                                                                                                 
- -3.00536864e-04, -5.22131145e-01, -3.72209966e-01, -3.30008916e-03        ,                                                                                                                 
- -2.98724055e-01, -3.18776041e-01,  8.88650957e-03,  2.83709198e-01        ,                                                                                                                 
- -1.18316561e-01,  6.75600534e-03,  4.73398268e-02, -1.23632416e-01        ,                                                                                                                 
-  2.74537895e-02,  4.99689251e-01
+    1.11889839e-02, -1.99530125e-02,  5.81884384e-03, -3.29416106e-03, -1.42211439e-02, -5.99248195e-03,
+    3.84082675e-01,  5.58406231e-04, 2.98647016e-01,  3.22717577e-01, -3.98048153e-03, -3.00990015e-01, 1.07899308e-02,  1.02880923e-02,  
+    3.03654131e-02,  1.43816188e-01, -3.00536864e-04, -5.22131145e-01,
+     -3.72209966e-01, -3.30008916e-03, -2.98724055e-01, -3.18776041e-01,  8.88650957e-03,  2.83709198e-01, -1.18316561e-01,  6.75600534e-03,  
+    4.73398268e-02, -1.23632416e-01, 2.74537895e-02,  4.99689251e-01
 ]
 
 rack_2 = [
-    0.01814485, -0.01102245, -0.4702971 , -0.01578958, -0.02233502, -0.00822024,                                                                                                                 
-  0.40243718,  0.00760839, -0.2222104 , -0.8473681 , -0.01940396,  0.89499557  ,                                                                                                               
- -0.5288469 ,  0.04388458, -0.01270674,  0.3497003 ,  0.09755287,  0.8987735   ,                                                                                                               
- -0.35999396, -0.00482713,  0.21748814,  0.8451087 ,  0.02017486, -0.90229964  ,                                                                                                               
-  0.41662216,  0.03758987, -0.15651442, -0.29156512, -0.1713613 , -0.96002305,
+0.01738501, -0.01096749, -0.47006118, -0.01586935, -0.02395158, -0.00807717  ,                                                                                                               
+  0.4024402 ,  0.00743171, -0.22230545, -0.8472173 , -0.01932546,  0.8947249 ,                                                                                                                 
+ -0.5300461 ,  0.04379871,  0.09859389,  0.35082862,  0.08830395,  0.13806033,                                                                                                                 
+ -0.35991108, -0.00484328,  0.21751796,  0.8449603 ,  0.02007664, -0.9019995 ,                                                                                                                 
+  0.41773874,  0.03763357,  0.11142297, -0.31057477, -0.08879709, -0.08477921,
 ]
 
 rack_3 = [
@@ -108,10 +114,10 @@ def run_planner(
     ]
 
     bimanual_limit_lower_bound = [
-        -0.001, -0.001, -0.001, -0.1, -10.1, -10.1
+        -0.001, -0.001, -0.001, -0.1, -0.1, -10.1
     ]
     bimanual_limit_upper_bound = [
-        0.001, 0.001, 0.001, 0.1, 10.1, 10.1
+        0.001, 0.001, 0.001, 0.1, 0.1, 10.1
     ]
 
     tsr_lower_bound = [
@@ -224,8 +230,12 @@ def run_planner(
     print(task_constraint.distanceToConstraint(np.array(start)))
     print(task_constraint.distanceToConstraint(np.array(goal)))
 
-    print(task_constraint.projectConfiguration(np.array(start), 0, 10.0, 0.75, 50, True))
-    print(task_constraint.projectConfiguration(np.array(goal), 0, 10.0, 0.75, 50, True))
+    c1 = task_constraint.projectConfiguration(np.array(start), 0, 10.0, 0.5, 50, True)
+    c2 = task_constraint.projectConfiguration(np.array(goal), 0, 10.0, 0.5, 50, True)
+
+    # print c1 with commas
+    print("c1: ", ", ".join([f"{x:.4f}" for x in c1]))
+    print("c2: ", ", ".join([f"{x:.4f}" for x in c2]))
 
 
     result = planner_func(start, goal, e, plan_settings, task_constraint, sampler)
@@ -269,17 +279,34 @@ if __name__ == '__main__':
     viz.clear_all_waypoints()
 
 
-    result1, simple1 = run_planner(start, box_top_shelf_pickup, best_combination[0], constraint = 0)
+    env_geoms = mjcf_parser.parse_mjcf('resources/environments/cuboids/wooden_shelf.xml')
+    env_cuboids = [[geom.world_pose.pos.x, geom.world_pose.pos.y, geom.world_pose.pos.z, 0, 0, 0, geom.size.x * 2.0, geom.size.y * 2.0, geom.size.z*2.0] for geom in env_geoms if geom.type == mjcf_parser.GeomType.BOX]
+    viz.add_cuboids(env_cuboids, colors=(90, 60, 0))
+ 
+    # for geom in env_geoms:
+    #     if geom.type == mjcf_parser.GeomType.BOX:
+    #         viz.add_cuboids([
+    #             [geom.world_pose.pos.x, geom.world_pose.pos.y, geom.world_pose.pos.z, 0, 0, 0, geom.size.x * 2.0, geom.size.y * 2.0, geom.size.z*2.0]
+    #         ], colors=(150, 75, 0))
+
+
+
+    result1, simple1 = run_planner(start, box_top_shelf_pregrasp, best_combination[0], constraint = 0)
     simple1.path.interpolate_to_resolution(vamp.digit.resolution())
     traj1 = simple1.path.numpy()
 
-    result2, simple2 = run_planner(box_top_shelf_pickup, rack_2, best_combination[0], constraint = 1)
+    result2, simple2 = run_planner(box_top_shelf_pregrasp, box_top_shelf_pickup, best_combination[0], constraint = 0)
     simple2.path.interpolate_to_resolution(vamp.digit.resolution())
     traj2 = simple2.path.numpy()
 
+
+    result3, simple3 = run_planner(box_top_shelf_pickup, rack_2, best_combination[0], constraint = 2)
+    simple3.path.interpolate_to_resolution(vamp.digit.resolution())
+    traj3 = simple3.path.numpy()
+
     # now combine the trajectories
 
-    final_traj = np.concatenate((traj1, traj2), axis=0)
+    final_traj = np.concatenate((traj1, traj2, traj3), axis=0)
     # print(final_traj.shape)
     # stop
 
@@ -294,7 +321,7 @@ if __name__ == '__main__':
     final_waypoints[:, 24:30] = waypoints_no_floating[:, 18:24]
     np.savetxt('/src/vamp/shelf_top_to_down.txt', final_waypoints, fmt='%.4f', delimiter = ',')
 
-    print("Final time: ", result1.nanoseconds/1e6 + result2.nanoseconds/1e6)
+    print("Final time: ", result1.nanoseconds/1e6 + result2.nanoseconds/1e6 + result3.nanoseconds/1e6)
 
 
     eef_poses = get_eef_of_waypoints(final_traj)
@@ -307,6 +334,10 @@ if __name__ == '__main__':
 
         # traj = simple.path.numpy()
         eef_poses = get_eef_of_waypoints(final_traj)
+
+        # find norm between positions of both hands for each waypoint
+        hand_distances = np.linalg.norm(eef_poses[:, 0, :3, 3] - eef_poses[:, 1, :3, 3], axis=1)
+        print("min hand distances:", np.min(hand_distances))
 
         # for viz flatten the first two dimensions so it's just a list of eef poses        
         viz.render_eefs(eef_poses.reshape(-1, 4, 4))
