@@ -168,6 +168,12 @@ find_package(nlohmann_json REQUIRED)
   add_executable(benchmark_line_plane_problems scripts/cpp/benchmarks/benchmark_line_plane_problems.cc)
   target_link_libraries(benchmark_line_plane_problems PRIVATE vamp_cpp)
 
+
+  add_executable(benchmark_maze_marker_vamp scripts/cpp/benchmarks/benchmark_maze_marker_vamp.cc)
+  target_link_libraries(benchmark_maze_marker_vamp PRIVATE vamp_cpp nlohmann_json::nlohmann_json)
+
+
+
   # add_executable(vamp_crrtc_transport_mug scripts/cpp/vamp_crrtc_transport_mug.cc)
 # target_link_libraries(vamp_crrtc_transport_mug PRIVATE vamp_cpp)
 
@@ -226,6 +232,9 @@ if(VAMP_BUILD_OMPL_DEMO)
 
   add_executable(benchmark_maze_ompl_pinocchio scripts/cpp/benchmarks/benchmark_maze_ompl_pinocchio.cc)
   target_link_libraries(benchmark_maze_ompl_pinocchio PRIVATE ompl::ompl vamp_cpp pinocchio::pinocchio Eigen3::Eigen)
+
+  add_executable(benchmark_maze_marker_ompl_pinocchio scripts/cpp/benchmarks/benchmark_maze_marker_ompl_pinocchio.cc)
+  target_link_libraries(benchmark_maze_marker_ompl_pinocchio PRIVATE vamp_cpp nlohmann_json::nlohmann_json ompl::ompl pinocchio::pinocchio Eigen3::Eigen)
 
   # Disable strict warnings for demos to maintain compatibility
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
