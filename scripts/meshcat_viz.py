@@ -63,6 +63,9 @@ def color_to_hex(color):
 viz = None
 model = None
 axs = None
+eef_frame_name = "left_arm_eef"
+eef_frame = None
+data = None
 
 def init_viz():
     # Load robot model
@@ -71,7 +74,7 @@ def init_viz():
 
     # Set up visualizer
     _viz = MeshcatVisualizer(_model, coll_model, vis_model)
-    _viz.initViewer(zmq_url="tcp://127.0.0.1:6000")
+    _viz.initViewer(zmq_url="tcp://127.0.0.1:6001")
     _viz.loadViewerModel()
     
     fig, _axs = plt.subplots(2, 3, sharex=True, sharey='row', figsize=(12, 8))
@@ -79,10 +82,14 @@ def init_viz():
     plt.ion()
     
     # Set viz, model, axs for callback
-    global viz, model, axs
+    global viz, model, axs, eef_frame
     viz = _viz
     model = _model
     axs = _axs
+    eef_frame = model.getFrameId(eef_frame_name, pinocchio.BODY)
+    global data
+    data = model.createData()
+
     
     return viz
 
@@ -124,7 +131,17 @@ def render_eefs(eeposes):
     waypoints_set = 'b' if waypoints_set == 'a' else 'a'
     visualizer.viewer[f"waypoints_{waypoints_set}"].delete()
 
-
+def set_attach_object_to_robot(spheres):
+    visualizer = viz
+    for i, (x, y, z, r) in enumerate(spheres):
+        sphere_name = f"/robot/left_ee_tool/sphere_{i}"
+        visualizer.viewer[sphere_name].set_object(mg.Sphere(r), mg.MeshLambertMaterial(color=0xff0000))
+        
+        # Optional: initial offset relative to end-effector
+        T_offset = np.eye(4)
+        T_offset[:3, 3] = [x, y, z]
+        visualizer.viewer[sphere_name].set_transform(T_offset)
+        
 def add_cuboids(cuboids, colors=(12, 89, 178)):
     '''
     cuboids: list of dicts with [x, y, z, yaw, pitch, roll, dx, dy, dz]
@@ -146,9 +163,7 @@ def add_cuboids(cuboids, colors=(12, 89, 178)):
         visualizer.viewer[f"cuboids/cuboid_{idx}"].set_transform(T)
         print(idx, x, y, z, dx, dy, dz)
 
-
-        
-def animate(positions, all_times, rate=1.0, loop=False):
+def animate(positions, all_times, attachment_spheres=None, attachment_masks=None, rate=1.0, loop=False):
     '''
     Generate a nice interpolated trajectory animation.
     '''
@@ -175,6 +190,16 @@ def animate(positions, all_times, rate=1.0, loop=False):
         i = np.clip(i, 0, positions.shape[0] - 1)
         
         viz.display(positions[i]) # assume 7
+
+        if attachment_spheres is not None and (attachment_masks is None or attachment_masks[i]):
+            pinocchio.forwardKinematics(model, data, positions[i])
+            pinocchio.updateFramePlacements(model, data)
+            ee_pose = data.oMf[eef_frame].homogeneous
+            for j, (x, y, z, r) in enumerate(attachment_spheres):
+                # print(f"Animating sphere {j} at position ({x}, {y}, {z}) with radius {r}")
+                sphere_name = f"/robot/left_ee_tool/sphere_{j}"
+                sphere_poses = ee_pose @ translation_matrix([x, y, z])  # apply offset relative to EE
+                viz.viewer[sphere_name].set_transform(sphere_poses)
         
     viz.viewer["waypoints"].delete()
 

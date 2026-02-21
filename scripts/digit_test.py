@@ -48,6 +48,21 @@ rack_3 = [
     0.00927,-0.01219,-0.47283,-0.01411,-0.02955,-0.00937,0.40005,0.01408,-0.23717,-0.84704,-0.02429,0.90190,-0.48186,0.04543,-0.17059,-0.36363,0.06204,1.09005,-0.36164,-0.00267,0.22962,0.84538,0.02448,-0.90900,0.40052,0.03680,-0.29646,0.37895,-0.15478,-1.16821
 ]
 
+attach_spheres = [
+    [-0.02, 0.0, -0.09],
+    [-0.02, -0.02, -0.18],
+    [-0.02, -0.04, -0.26],
+    [-0.02, 0.05, -0.09],
+    [-0.02, 0.03, -0.18],
+    [-0.02, 0.01, -0.26],
+    [0.04, 0.0, -0.09],
+    [0.04, -0.02, -0.18],
+    [0.04, -0.04, -0.26],
+    [0.04, 0.05, -0.09],
+    [0.04, 0.03, -0.18],
+    [0.04, 0.01, -0.26],
+]
+
 
 def convert_trajectory_eef_to_controller_format(trajectory, eef_waypoints):
     # create a 8 + 7 + 7 + 7 = 29 dim waypoint
@@ -114,10 +129,10 @@ def run_planner(
     ]
 
     bimanual_limit_lower_bound = [
-        -0.001, -0.001, -0.001, -0.1, -0.1, -10.1
+        -0.01, -0.01, -0.01, -0.1, -0.1, -10.1
     ]
     bimanual_limit_upper_bound = [
-        0.001, 0.001, 0.001, 0.1, 0.1, 10.1
+        0.01, 0.01, 0.01, 0.1, 0.1, 10.1
     ]
 
     tsr_lower_bound = [
@@ -181,34 +196,21 @@ def run_planner(
     env_geoms = mjcf_parser.parse_mjcf('resources/environments/cuboids/wooden_shelf.xml')
     for geom in env_geoms:
         if geom.type == mjcf_parser.GeomType.BOX:
+            if 'transport' in geom.geom_name and constraint!= 0:
+                continue
             e.add_cuboid(vamp.Cuboid([geom.world_pose.pos.x, geom.world_pose.pos.y, geom.world_pose.pos.z], [0, 0, 0], [geom.size.x, geom.size.y, geom.size.z]))
 
     tf = np.identity(4)
     tf[:3, 3] = np.array([0, 0, 0])
     attachment = vamp.Attachment(tf)
 
-
-    attach_spheres = [
-        [-0.02, 0.0, -0.09],
-        [-0.02, -0.02, -0.18],
-        [-0.02, -0.04, -0.26],
-        [-0.02, 0.05, -0.09],
-        [-0.02, 0.03, -0.18],
-        [-0.02, 0.01, -0.26],
-        [0.04, 0.0, -0.09],
-        [0.04, -0.02, -0.18],
-        [0.04, -0.04, -0.26],
-        [0.04, 0.05, -0.09],
-        [0.04, 0.03, -0.18],
-        [0.04, 0.01, -0.26],
-    ]
-
-    # attachment.add_spheres(
-    #     [
-    #         vamp.Sphere(sphere, 0.05) for sphere in attach_spheres
-    #     ]
-    # )
-    e.attach(attachment, 0);
+    attachment.add_spheres(
+        [
+            vamp.Sphere(sphere, 0.05) for sphere in attach_spheres
+        ]
+    )
+    if constraint != 0:
+        e.attach(attachment, 0);
 
     sampler = vamp_module.halton()
 
@@ -272,7 +274,7 @@ if __name__ == '__main__':
     # find the combination with the best mean
     best_combination = sorted(combination_means, key=lambda x: x[1])[0]
     print(best_combination)
-
+    # best_combination = [(0.75, False)]
 
 
     viz.init_viz()
@@ -282,7 +284,9 @@ if __name__ == '__main__':
     env_geoms = mjcf_parser.parse_mjcf('resources/environments/cuboids/wooden_shelf.xml')
     env_cuboids = [[geom.world_pose.pos.x, geom.world_pose.pos.y, geom.world_pose.pos.z, 0, 0, 0, geom.size.x * 2.0, geom.size.y * 2.0, geom.size.z*2.0] for geom in env_geoms if geom.type == mjcf_parser.GeomType.BOX]
     viz.add_cuboids(env_cuboids, colors=(90, 60, 0))
- 
+
+    attach_sphere_w_r = [[x, y, z, 0.05] for x, y, z in attach_spheres] 
+    viz.set_attach_object_to_robot(attach_sphere_w_r)
     # for geom in env_geoms:
     #     if geom.type == mjcf_parser.GeomType.BOX:
     #         viz.add_cuboids([
@@ -307,6 +311,8 @@ if __name__ == '__main__':
     # now combine the trajectories
 
     final_traj = np.concatenate((traj1, traj2, traj3), axis=0)
+    attachment_masks = np.concatenate((np.zeros(len(traj1)), np.zeros(len(traj2)), np.ones(len(traj3))), axis=0)
+
     # print(final_traj.shape)
     # stop
 
@@ -341,7 +347,7 @@ if __name__ == '__main__':
 
         # for viz flatten the first two dimensions so it's just a list of eef poses        
         viz.render_eefs(eef_poses.reshape(-1, 4, 4))
-        viz.animate(final_traj, np.arange(0, len(final_traj), dtype=np.float64) / 10, loop=True)
+        viz.animate(final_traj, np.arange(0, len(final_traj), dtype=np.float64) / 10, attachment_spheres=attach_sphere_w_r, attachment_masks=attachment_masks, loop=True)
 
 
         while True:
