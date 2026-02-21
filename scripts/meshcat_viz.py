@@ -71,7 +71,7 @@ def init_viz():
 
     # Set up visualizer
     _viz = MeshcatVisualizer(_model, coll_model, vis_model)
-    _viz.initViewer(zmq_url="tcp://127.0.0.1:6001")
+    _viz.initViewer(zmq_url="tcp://127.0.0.1:6000")
     _viz.loadViewerModel()
     
     fig, _axs = plt.subplots(2, 3, sharex=True, sharey='row', figsize=(12, 8))
@@ -123,6 +123,28 @@ def render_eefs(eeposes):
     # (We do this so there isn't a flash when updating)
     waypoints_set = 'b' if waypoints_set == 'a' else 'a'
     visualizer.viewer[f"waypoints_{waypoints_set}"].delete()
+
+
+def add_cuboids(cuboids, colors=(12, 89, 178)):
+    '''
+    cuboids: list of dicts with [x, y, z, yaw, pitch, roll, dx, dy, dz]
+    colors: list of RGB tuples in [0, 255] or a single RGB tuple
+    '''
+    visualizer = viz
+
+    for idx, cuboid in enumerate(cuboids):
+        x, y, z = cuboid[0], cuboid[1], cuboid[2]
+        yaw, pitch, roll = cuboid[3], cuboid[4], cuboid[5]
+        dx, dy, dz = cuboid[6], cuboid[7], cuboid[8]
+        
+        T = translation_matrix([x, y, z])
+        
+        visualizer.viewer[f"cuboids/cuboid_{idx}"].set_object(
+            mg.Box([dx, dy, dz]),
+            mg.MeshLambertMaterial(color=color_to_hex(colors[idx] if isinstance(colors, list) else colors))
+        )
+        visualizer.viewer[f"cuboids/cuboid_{idx}"].set_transform(T)
+        print(idx, x, y, z, dx, dy, dz)
 
 
         
