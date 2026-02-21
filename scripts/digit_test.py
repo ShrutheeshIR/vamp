@@ -7,6 +7,7 @@ from fire import Fire
 import itertools
 import meshcat_viz as viz
 from scipy.spatial.transform import Rotation as R
+import matplotlib.pyplot as plt
 
 import mjcf_parser
 
@@ -29,19 +30,11 @@ box_top_shelf_pregrasp = [
 
 
 box_top_shelf_pickup = [
-    1.11889839e-02, -1.99530125e-02,  5.81884384e-03, -3.29416106e-03, -1.42211439e-02, -5.99248195e-03,
-    3.84082675e-01,  5.58406231e-04, 2.98647016e-01,  3.22717577e-01, -3.98048153e-03, -3.00990015e-01, 1.07899308e-02,  1.02880923e-02,  
-    3.03654131e-02,  1.43816188e-01, -3.00536864e-04, -5.22131145e-01,
-     -3.72209966e-01, -3.30008916e-03, -2.98724055e-01, -3.18776041e-01,  8.88650957e-03,  2.83709198e-01, -1.18316561e-01,  6.75600534e-03,  
-    4.73398268e-02, -1.23632416e-01, 2.74537895e-02,  4.99689251e-01
+    0.0111889839,-0.0199530125,0.00581884384,-0.00329416106,-0.0142211439,-0.00599248195,0.384082675,0.000558406231,0.298647016,0.322717577,-0.00398048153,-0.300990015,0.0107899308,0.0102880923,0.0303654131,0.143816188,0.246,-0.522131145,-0.372209966,-0.00330008916,-0.298724055,-0.318776041,0.00888650957,0.283709198,-0.118316561,0.00675600534,0.0473398268,-0.123632416,-0.217,0.499689251
 ]
 
 rack_2 = [
-0.01738501, -0.01096749, -0.47006118, -0.01586935, -0.02395158, -0.00807717  ,                                                                                                               
-  0.4024402 ,  0.00743171, -0.22230545, -0.8472173 , -0.01932546,  0.8947249 ,                                                                                                                 
- -0.5300461 ,  0.04379871,  0.09859389,  0.35082862,  0.08830395,  0.13806033,                                                                                                                 
- -0.35991108, -0.00484328,  0.21751796,  0.8449603 ,  0.02007664, -0.9019995 ,                                                                                                                 
-  0.41773874,  0.03763357,  0.11142297, -0.31057477, -0.08879709, -0.08477921,
+0.0160, -0.0108, -0.4697, -0.0161, -0.0261, -0.0077, 0.4025, 0.0070, -0.2220, -0.8470, -0.0190, 0.8941, -0.5331, 0.0436, 0.1756, 0.3280, 0.1925, -0.1410, -0.3597, -0.0049, 0.2170, 0.8447, 0.0197, -0.9012, 0.4206, 0.0378, 0.0701, -0.2473, -0.3055, 0.1341
 ]
 
 rack_3 = [
@@ -49,20 +42,47 @@ rack_3 = [
 ]
 
 attach_spheres = [
-    [-0.02, 0.0, -0.09],
-    [-0.02, -0.02, -0.18],
-    [-0.02, -0.04, -0.26],
-    [-0.02, 0.05, -0.09],
-    [-0.02, 0.03, -0.18],
-    [-0.02, 0.01, -0.26],
-    [0.04, 0.0, -0.09],
-    [0.04, -0.02, -0.18],
-    [0.04, -0.04, -0.26],
-    [0.04, 0.05, -0.09],
-    [0.04, 0.03, -0.18],
-    [0.04, 0.01, -0.26],
+    [-0.05, 0.0, -0.04],
+    [-0.05, -0.02, -0.07],
+    [-0.05, -0.04, -0.11],
+    [-0.05, -0.06, -0.13],
+    [-0.05, 0.05, -0.04],
+    [-0.05, 0.03, -0.07],
+    [-0.05, 0.01, -0.11],
+    [-0.05, -0.01, -0.13],
+    [-0.02, 0.0, -0.04],
+    [-0.02, -0.02, -0.07],
+    [-0.02, -0.04, -0.11],
+    [-0.02, -0.06, -0.13],
+    [-0.02, 0.05, -0.04],
+    [-0.02, 0.03, -0.07],
+    [-0.02, 0.01, -0.11],
+    [-0.02, -0.01, -0.13],
+    [0.01, 0.0, -0.04],
+    [0.01, -0.02, -0.07],
+    [0.01, -0.04, -0.11],
+    [0.01, -0.06, -0.13],
+    [0.01, 0.05, -0.04],
+    [0.01, 0.03, -0.07],
+    [0.01, 0.01, -0.11],
+    [0.01, -0.01, -0.13],
+    [0.04, 0.0, -0.04],
+    [0.04, -0.02, -0.07],
+    [0.04, -0.04, -0.11],
+    [0.04, -0.06, -0.13],
+    [0.04, 0.05, -0.04],
+    [0.04, 0.03, -0.07],
+    [0.04, 0.01, -0.11],
+    [0.04, -0.01, -0.13],
+    [0.07, 0.0, -0.04],
+    [0.07, -0.02, -0.07],
+    [0.07, -0.04, -0.11],
+    [0.07, -0.06, -0.13],
+    [0.07, 0.05, -0.04],
+    [0.07, 0.03, -0.07],
+    [0.07, 0.01, -0.11],
+    [0.07, -0.01, -0.13],
 ]
-
 
 def convert_trajectory_eef_to_controller_format(trajectory, eef_waypoints):
     # create a 8 + 7 + 7 + 7 = 29 dim waypoint
@@ -129,10 +149,10 @@ def run_planner(
     ]
 
     bimanual_limit_lower_bound = [
-        -0.01, -0.01, -0.01, -0.1, -0.1, -10.1
+        -0.005, -0.005, -0.005, -0.1, -0.1, -10.1
     ]
     bimanual_limit_upper_bound = [
-        0.01, 0.01, 0.01, 0.1, 0.1, 10.1
+        0.005, 0.005, 0.005, 0.1, 0.1, 10.1
     ]
 
     tsr_lower_bound = [
@@ -153,7 +173,7 @@ def run_planner(
     eef_transforms = [[1, 0,0,0,   0, 0, 0], [1, 0,0,0,   0.0, 0.0, 0.0], [0.59, 0.38, 0.4, 0.59 , -0.02070, 0.06015, -0.95335], [0.61, -0.36, 0.35, -0.61 , -0.02228, -0.11609, -0.94832]];
     eef_transforms_ref_frame_w_world = [[1, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0]];
 
-    bimanual_transform = [0.1, 0.99, 0.00000, 0.04000, 0.01462, -0.03530, -0.36356];
+    bimanual_transform = [0.05, 0.95, 0.00000, 0.3, 0.06308, -0.00, -0.17395];
 
 
 
@@ -206,7 +226,7 @@ def run_planner(
 
     attachment.add_spheres(
         [
-            vamp.Sphere(sphere, 0.05) for sphere in attach_spheres
+            vamp.Sphere(sphere, 0.02) for sphere in attach_spheres
         ]
     )
     if constraint != 0:
@@ -232,8 +252,8 @@ def run_planner(
     print(task_constraint.distanceToConstraint(np.array(start)))
     print(task_constraint.distanceToConstraint(np.array(goal)))
 
-    c1 = task_constraint.projectConfiguration(np.array(start), 0, 10.0, 0.5, 50, True)
-    c2 = task_constraint.projectConfiguration(np.array(goal), 0, 10.0, 0.5, 50, True)
+    c1 = task_constraint.projectConfiguration(np.array(start), 0, 10.0, 0.75, 50, True)
+    c2 = task_constraint.projectConfiguration(np.array(goal), 0, 10.0, 0.75, 50, True)
 
     # print c1 with commas
     print("c1: ", ", ".join([f"{x:.4f}" for x in c1]))
@@ -247,10 +267,10 @@ def run_planner(
 
 
 if __name__ == '__main__':
-    # ranges = [0.5, 0.75, 1.0, 1.5]
-    # dyndoms = [False, True]
-    ranges = [0.75, 0.5, 1.0]
-    dyndoms = [False]
+    ranges = [0.5, 0.75, 1.0, 1.5]
+    dyndoms = [False, True]
+    # ranges = [0.75]
+    # dyndoms = [False]
 
     all_combinations = list(itertools.product(ranges, dyndoms))
 
@@ -260,7 +280,8 @@ if __name__ == '__main__':
     for _ in range(1):
         for combination in all_combinations:
             print("Running combination ", combination)
-            result, simple = run_planner(start, box_top_shelf_pickup, combination, constraint = (start == box_top_shelf_pickup))
+            # result, simple = run_planner(start, box_top_shelf_pickup, combination, constraint = (start == box_top_shelf_pickup))
+            result, simple = run_planner(box_top_shelf_pickup, rack_2, combination, constraint = 1)
             planning_times[combination].append(result.nanoseconds/1e6)
     print("Execution completed")
     print("Planning times for each combination:")
@@ -285,7 +306,7 @@ if __name__ == '__main__':
     env_cuboids = [[geom.world_pose.pos.x, geom.world_pose.pos.y, geom.world_pose.pos.z, 0, 0, 0, geom.size.x * 2.0, geom.size.y * 2.0, geom.size.z*2.0] for geom in env_geoms if geom.type == mjcf_parser.GeomType.BOX]
     viz.add_cuboids(env_cuboids, colors=(90, 60, 0))
 
-    attach_sphere_w_r = [[x, y, z, 0.05] for x, y, z in attach_spheres] 
+    attach_sphere_w_r = [[x, y, z, 0.02] for x, y, z in attach_spheres] 
     viz.set_attach_object_to_robot(attach_sphere_w_r)
     # for geom in env_geoms:
     #     if geom.type == mjcf_parser.GeomType.BOX:
@@ -343,7 +364,16 @@ if __name__ == '__main__':
 
         # find norm between positions of both hands for each waypoint
         hand_distances = np.linalg.norm(eef_poses[:, 0, :3, 3] - eef_poses[:, 1, :3, 3], axis=1)
-        print("min hand distances:", np.min(hand_distances))
+        # print("min hand distances:", np.min(hand_distances[attachment_masks==1]))
+        transport_hand_distances = hand_distances[attachment_masks==1]
+        # plot the transport_hand_distances
+        plt.figure()
+        plt.plot(transport_hand_distances)
+        plt.title("Distance between hands during transport")
+        plt.xlabel("Waypoint index")
+        plt.ylabel("Distance (m)")
+        plt.savefig("/src/vamp/hand_distances.png")
+
 
         # for viz flatten the first two dimensions so it's just a list of eef poses        
         viz.render_eefs(eef_poses.reshape(-1, 4, 4))
