@@ -177,7 +177,7 @@ class SE3Constraint : public ob::Constraint
 
                 // Eigen::MatrixXd H = J.transpose()*J + lambda*Eigen::MatrixXd::Identity(model_.nv, model_.nv);
                 // Eigen::VectorXd delta = H.ldlt().solve(-J.transpose()*f);
-                x = pinocchio::integrate(*model_ptr_, x, -delta * 0.75);
+                x = pinocchio::integrate(*model_ptr_, x, -delta * 1.0);
                 // x += delta;  
 
                 if(delta.norm() < dist_tol) {
@@ -544,6 +544,7 @@ auto run_rrtc(const Problem &problem) {
         // pinocchio::urdf::buildGeom(model, urdf_file, pinocchio::COLLISION, collision_model);
         // pinocchio::FrameIndex eeFrame = model.getFrameId("panda_grasptarget");
 
+        ompl::RNG::setSeed(42);   // fixed seed
         auto rvss = std::make_shared<ob::RealVectorStateSpace>(dimension);
 
         // ob::RealVectorBounds bounds(dimension);
@@ -653,7 +654,7 @@ auto run_rrtc(const Problem &problem) {
         auto planner = std::make_shared<og::RRTConnect>(csi);
 
         planner->setProblemDefinition(pdef);
-        planner->setRange(0.3);
+        planner->setRange(0.4);
         planner->setup();
 
 
