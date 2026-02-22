@@ -37,8 +37,17 @@ rack_2 = [
 0.0160, -0.0108, -0.4697, -0.0161, -0.0261, -0.0077, 0.4025, 0.0070, -0.2220, -0.8470, -0.0190, 0.8941, -0.5331, 0.0436, 0.1756, 0.3280, 0.1925, -0.1410, -0.3597, -0.0049, 0.2170, 0.8447, 0.0197, -0.9012, 0.4206, 0.0378, 0.0701, -0.2473, -0.3055, 0.1341
 ]
 
+rack_2_release = [
+0.0160, -0.0108, -0.4697, -0.0161, -0.0261, -0.0077, 
+0.4025, 0.0070, -0.2220, -0.8470, -0.0190, 0.8941, -0.5331, 0.0436, 
+0.1756, 0.3280, 0.01925, -0.1410, 
+-0.3597, -0.0049, 0.2170, 0.8447, 0.0197, -0.9012, 0.4206, 0.0378, 
+0.0701, -0.2473, -0.0055, 0.1341
+]
+
+
 rack_3 = [
-    0.00927,-0.01219,-0.47283,-0.01411,-0.02955,-0.00937,0.40005,0.01408,-0.23717,-0.84704,-0.02429,0.90190,-0.48186,0.04543,-0.17059,-0.36363,0.06204,1.09005,-0.36164,-0.00267,0.22962,0.84538,0.02448,-0.90900,0.40052,0.03680,-0.29646,0.37895,-0.15478,-1.16821
+    0.0207, -0.0116, -0.4709, -0.0138, -0.0174, -0.0089, 0.4015, 0.0084, -0.2226, -0.8477, -0.0198, 0.8960, -0.5230, 0.0441, 0.0881, 0.7864, -0.3927, -0.8881, -0.3608, -0.0046, 0.2179, 0.8458, 0.0208, -0.9040, 0.4115, 0.0377, -0.3408, -0.0583, -0.9770, 0.2251
 ]
 
 attach_spheres = [
@@ -281,7 +290,7 @@ if __name__ == '__main__':
         for combination in all_combinations:
             print("Running combination ", combination)
             # result, simple = run_planner(start, box_top_shelf_pickup, combination, constraint = (start == box_top_shelf_pickup))
-            result, simple = run_planner(box_top_shelf_pickup, rack_2, combination, constraint = 1)
+            result, simple = run_planner(rack_3, rack_3, combination, constraint = 1)
             planning_times[combination].append(result.nanoseconds/1e6)
     print("Execution completed")
     print("Planning times for each combination:")
@@ -329,10 +338,20 @@ if __name__ == '__main__':
     simple3.path.interpolate_to_resolution(vamp.digit.resolution())
     traj3 = simple3.path.numpy()
 
+    result4, simple4 = run_planner(rack_2, rack_2_release, best_combination[0], constraint = 0)
+    simple4.path.interpolate_to_resolution(vamp.digit.resolution())
+    traj4 = simple4.path.numpy()
+
+    # result5, simple5 = run_planner(rack_2_release, rack_3, best_combination[0], constraint = 0)
+    # simple4.path.interpolate_to_resolution(vamp.digit.resolution())
+    # traj4 = simple4.path.numpy()
+
+
+
     # now combine the trajectories
 
-    final_traj = np.concatenate((traj1, traj2, traj3), axis=0)
-    attachment_masks = np.concatenate((np.zeros(len(traj1)), np.zeros(len(traj2)), np.ones(len(traj3))), axis=0)
+    final_traj = np.concatenate((traj1, traj2, traj3, traj4), axis=0)
+    attachment_masks = np.concatenate((np.zeros(len(traj1)), np.zeros(len(traj2)), np.ones(len(traj3)), np.zeros(len(traj4))), axis=0)
 
     # print(final_traj.shape)
     # stop
@@ -348,7 +367,7 @@ if __name__ == '__main__':
     final_waypoints[:, 24:30] = waypoints_no_floating[:, 18:24]
     np.savetxt('/src/vamp/shelf_top_to_down.txt', final_waypoints, fmt='%.4f', delimiter = ',')
 
-    print("Final time: ", result1.nanoseconds/1e6 + result2.nanoseconds/1e6 + result3.nanoseconds/1e6)
+    print("Final time: ", result1.nanoseconds/1e6 + result2.nanoseconds/1e6 + result3.nanoseconds/1e6 + result4.nanoseconds/1e6)
 
 
     eef_poses = get_eef_of_waypoints(final_traj)
