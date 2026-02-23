@@ -67,10 +67,59 @@ namespace vamp::planning
         typename Robot::template ConfigurationBlock<rake> projected_block;
         typename Robot::template ConfigurationBlock<rake> initial_projected_block;
 
+
         // HACK: broadcast() implicitly assumes that the rake is exactly VectorWidth
         for (auto i = 0U; i < Robot::dimension; ++i)
         {
-            block[i] = start.broadcast(i) + (vector.broadcast(i) * percents);
+            block[i] = (start + vector).broadcast(i);
+            start_block[i] = start.broadcast(i);
+        }
+        // std::cout << "Proj method " << projection_method << std::endl;
+
+        bool end_config_able_to_project = constraint.projectConfiguration(block, initial_projected_block, projection_method, distance, projection_descent_rate, num_projection_iterations);
+        if (not end_config_able_to_project)
+        {
+            // std::cout << "Unable to project " << std::endl;
+            unable_to_project_counter++;
+            return false;
+        }
+
+        // check if projected end config is too far from start config. If so, return false immediately without checking inter-rake distances
+        float projected_distance = 0.F;
+        typename Robot::ConfigurationArray end_config_projected_array;
+        for (auto i = 0U; i < Robot::dimension; ++i)
+        {
+            float diff = initial_projected_block[{i, rake - 1}] - start_block[{i, rake - 1}];
+            projected_distance = projected_distance + diff * diff;
+            if (projected_distance > 4 * (distance) * (distance))
+            {
+                invalid_distance_counter_outside++;
+                return false;
+            }
+            end_config_projected_array[i] = initial_projected_block[{i, rake - 1}];
+        }
+        typename Robot::Configuration end_config_projected(end_config_projected_array);
+
+        // now check if the projected end config is valid. If not, return false immediately without checking inter-rake distances
+        bool end_projected_valid = (environment.eef_attachments.size()) ?
+                         Robot::template fkcc_attach<rake>(environment, initial_projected_block) :
+                         Robot::template fkcc<rake>(environment, initial_projected_block);
+        if (not end_projected_valid)
+        {
+            collision_counter++;
+            return false;
+        }
+
+        
+        auto adjusted_vector = end_config_projected - start;
+        // First project just the final config
+        distance = std::sqrt(projected_distance);
+
+
+        // HACK: broadcast() implicitly assumes that the rake is exactly VectorWidth
+        for (auto i = 0U; i < Robot::dimension; ++i)
+        {
+            block[i] = start.broadcast(i) + (adjusted_vector.broadcast(i) * percents);
             start_block[i] = start.broadcast(i);
         }
 

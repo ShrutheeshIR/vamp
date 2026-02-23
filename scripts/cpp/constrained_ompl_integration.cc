@@ -239,7 +239,7 @@ public:
         ConfigurationBlock block = turn_configuration_into_configuration_block(configuration);
         ConfigurationBlock last_projected_block;
         // std::cout << "After converted to configuration block, it is " << block << "\n";
-        bool result = constraints.projectConfiguration(block, last_projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0, 25, false);
+        bool result = constraints.projectConfiguration(block, last_projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0, 15, false);
         //std::cout << "After pojection, the configuration block is " << block << "\n";
         //std::cout << "Result of projection is " << result << "\n";
         typename Robot::ConfigurationArray last_projected;
@@ -381,7 +381,10 @@ struct VAMPMotionValidator : public ob::MotionValidator
             configuration2,
             projected_vector_dummy,
             custom_constraint->constraints,
-            env_v
+            env_v,
+            vamp::planning::ProjMethod::OuterLM,
+            1.0,
+            20
         );
 
         if (!result) {

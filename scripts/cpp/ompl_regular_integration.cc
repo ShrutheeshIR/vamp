@@ -133,7 +133,7 @@ std::vector<double> extractStateReals(
     return values;
 }
 
-//outputs into state. takes a double vector and turns it into state for projectedstatespace
+//outputs into state. takes a double vector and turns it into state for ProjectedStateSpace
 void fillStateFromReals(
     const std::vector<double> &values,
     ob::State *state,
@@ -269,7 +269,7 @@ public:
         // std::cout << "Projecting configuration block...";
         // return true;
 
-        bool result = constraints.projectConfiguration(config_block, last_projected_block, vamp::planning::ProjMethod::OuterLM, 5.0, 1.0, 25, false);
+        bool result = constraints.projectConfiguration(config_block, last_projected_block, vamp::planning::ProjMethod::InnerLM, 5.0, 1.0, 25, false);
         if (result){
             for (auto i = 0U; i < Robot::dimension; ++i) {
                 x[i] = static_cast<double>(last_projected_block[{i, rake - 1}]);
@@ -280,6 +280,38 @@ public:
         return result;
 
     }
+
+    void jacobian(const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::MatrixXd> out) const override
+    {
+        Eigen::Matrix<double, 1, 7> mat = Eigen::Matrix<double, 1, 7>::Zero();
+
+        // Set the top-left 6x6 block to identity
+        mat.block<1,1>(0,0) = Eigen::Matrix<double, 1, 1>::Identity();
+        out = mat.normalized();
+
+        // std::array<float, Robot::dimension> float_config_from_x;
+        // for (auto i = 0U; i < Robot::dimension; ++i) {
+        //     // cast x[i] to float
+        //     float_config_from_x[i] = static_cast<float>(x[i]);
+        // }
+        // auto config_block = turn_configuration_into_configuration_block(Configuration(float_config_from_x));
+        // ConfigurationBlock last_projected_block;
+        // // bool result = true;
+        // // std::cout << "Projecting configuration block...";
+        // // return true;
+
+        // bool result = constraints.projectConfiguration(config_block, last_projected_block, vamp::planning::ProjMethod::InnerLM, 5.0, 1.0, 25, false);
+        // if (result){
+        //     for (auto i = 0U; i < Robot::dimension; ++i) {
+        //         x[i] = static_cast<double>(last_projected_block[{i, rake - 1}]);
+        //         // std::cout << x[i] << " ";
+        //     }
+        // }
+        // // std::cout << "Projection result " << result << std::endl;
+        // return result;
+
+    }
+
 
     double distance(const Eigen::Ref<const Eigen::VectorXd> &x) const override {
         // need to convert x to a configuration block
@@ -358,7 +390,7 @@ struct VAMPStateValidator : public ob::StateValidityChecker
         Configuration robot_config(float_config_from_x);
 
         std::vector <typename Robot::Configuration> projected_vector;
-        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(robot_config, robot_config, projected_vector, task_constraint, env_v, vamp::planning::ProjMethod::OuterLM, 1.0, 20, false);
+        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(robot_config, robot_config, projected_vector, task_constraint, env_v, vamp::planning::ProjMethod::InnerLM, 1.0, 20, false);
         // std::cout << "Projection result: " << projection_result << std::endl;
         return projection_result;
 
@@ -404,7 +436,7 @@ struct VAMPMotionValidator : public ob::MotionValidator
         Configuration robot_config_2(float_config_from_x2);
 
         std::vector <typename Robot::Configuration> projected_vector;
-        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(robot_config_1, robot_config_2, projected_vector, task_constraint, env_v, vamp::planning::ProjMethod::OuterLM, 1.0, 20, false);
+        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(robot_config_1, robot_config_2, projected_vector, task_constraint, env_v, vamp::planning::ProjMethod::InnerLM, 1.0, 20, false);
         return projection_result;
     }
 
@@ -482,14 +514,13 @@ int main()
 
 
     std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-        -10.01, -10.01, -0.01, -0.01, -0.01, -10.01
+        -0.01, -10.01, -0.01, -0.01, -0.01, -0.01
     };
 
     std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
-        10.01, 10.01, 0.01, 0.01, 0.01, 10.01
+        0.01, 10.01, 0.01, 0.01, 0.01, 0.01
     };
-
-    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 1.0, 0, 0.0, 0.29276255, -0.55347496, 0.20607783}};
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 1,0,0,   0.3486, 0.647752, 0.2399}};
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
 
     vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
@@ -498,6 +529,7 @@ int main()
         tsr_lower_bound,
         tsr_upper_bound
     );
+
     vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>> task_constraint(
         tsr_constraint
     );
@@ -526,8 +558,8 @@ int main()
         // {0.55, 0, 0.25},
         // {0.55, 0, 0.50},
         // {0.55, 0, 0.60},
-        // {0.56, 0, 0.450},
-        // {0.1, 0, 0.7},
+        {0.56, 0, 0.450},
+        {0.1, 0, 0.7},
         // {0.35, 0.35, 0.25},
         {0, 0.55, 0.25},
         {-0.55, 0, 0.25},
@@ -543,42 +575,14 @@ int main()
         {0.35, -0.35, 0.8},
     };
     // Radius for obstacle spheres
-    // static constexpr float radius = 0.15;
-    // for (const auto &sphere : problem)
-    // {
-    //     environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
-    // }
+    static constexpr float radius = 0.15;
+    for (const auto &sphere : problem)
+    {
+        environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
+    }
 
     // Try a few likely paths for the JSON file
-    const std::vector<std::string> candidate_paths = {
-        "/src/myfork/vamp/resources/environments/cuboids/real_maze.json",
-    };
-
-    bool loaded = false;
-    for (const auto &p : candidate_paths) {
-        if (load_cuboids_from_json(environment, p)) {
-            std::cout << "Loaded cuboids from: " << p << std::endl;
-            loaded = true;
-            break;
-        }
-    }
-    if (!loaded) {
-        std::cerr << "Failed to load cuboids JSON from any candidate path. Exiting." << std::endl;
-        return 1;
-    }
     environment.sort();
-
-    std::vector<vamp::collision::Sphere<float>> spheres;
-    for(auto i=0U; i < 9; i++){
-        spheres.push_back(vamp::collision::Sphere<float>(0.0, 0.0, i * 0.02, 0.01));
-    }
-    auto attach_transform = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
-    attach_transform.translation().z() = 0.0;
-    AttachmentInput attachment(attach_transform);
-
-    attachment.spheres.insert(attachment.spheres.end(), spheres.cbegin(), spheres.cend());
-    environment.attach(attachment, 0);
-
     auto env_v = EnvironmentVector(environment);
 
     csi->setStateValidityChecker(std::make_shared<VAMPStateValidator>(csi, env_v, task_constraint));
@@ -592,8 +596,8 @@ int main()
 
     // Start and goal vectors.
     Eigen::VectorXd sv(dimension), gv(dimension);
-    sv << -0.88021, 0.53120, -0.20601, -1.61905, 0.11733, 2.14908, 1.19294;
-    gv << 1.40490, 0.35201, -0.22762, -1.90963, 0.10796, 2.26183, 0.22238;
+    sv << 1.01600, 0.68800, 0.08700, -1.28100, -0.06000, 1.95500, 1.89100;
+    gv << -1.18400, 0.68900, 0.15400, -1.27400, -0.10600, 1.95500, -0.24000;
 
     // Scoped states that we will add to simple setup.
     ob::ScopedState<> start(css);
@@ -607,6 +611,8 @@ int main()
     //   css->anchorChart(start.get());
     //   css->anchorChart(goal.get());
     // Which gives a starting point for the atlas to grow.
+    // css->setBackoff(0.05);
+    // css->setAtlasBoundary(0.1);
 
 
     auto pdef = std::make_shared<ob::ProblemDefinition>(csi);

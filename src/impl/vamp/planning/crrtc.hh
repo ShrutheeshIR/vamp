@@ -62,20 +62,33 @@ namespace vamp::planning
 
             auto start_time = std::chrono::steady_clock::now();
 
-            // for (const auto &goal : goals)
-            // {
-            //     if (project_constraint_motion<Robot, rake, resolution>(start, goal, projected_vector, constraint, environment))
-            //     {
-            //         result.path.emplace_back(start);
-            //         result.path.emplace_back(goal);
-            //         result.nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
-            //         result.iterations = 0;
-            //         result.size.emplace_back(1);
-            //         result.size.emplace_back(1);
+            for (const auto &goal : goals)
+            {
 
-            //         return result;
-            //     }
-            // }
+                if (project_constraint_motion<Robot, rake, resolution>(
+                        start, goal,
+                        projected_vector,
+                        constraint,
+                        environment,
+                        static_cast<ProjMethod>(settings.projection_method),
+                        settings.descend_rate,
+                        settings.num_projection_iterations,
+                        settings.insert_all_to_tree
+                    ))
+                {
+                    if((projected_vector.back() - goal).l2_norm() < 0.001F){
+
+                        result.path.emplace_back(start);
+                        result.path.emplace_back(goal);
+                        result.nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
+                        result.iterations = 0;
+                        result.size.emplace_back(1);
+                        result.size.emplace_back(1);
+
+                        return result;
+                    }
+                }
+            }
 
             // trees
             bool tree_a_is_start = not settings.start_tree_first;
