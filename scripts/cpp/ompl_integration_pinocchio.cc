@@ -76,36 +76,42 @@ struct TSR
     Eigen::Matrix<double,6,1> upper;       // upper bounds
 };
 
-
 class SE3Constraint : public ob::Constraint
 {
     public:
-        SE3Constraint(const pinocchio::Model &model,
-                        pinocchio::FrameIndex eeFrame,
-                        const TSR &tsr)
-                : ob::Constraint(model.nq, 6, dist_tol), // nq is config dim, 6 is constraint dim
-                model_(model),
-                data_(model_),
-                eeFrame_(eeFrame),
-                tsr_(tsr)
-            {
-                // Convert Eigen::Isometry3d to pinocchio::SE3
-                T_ref_pin_ = pinocchio::SE3(tsr.T_ref.rotation(), tsr.T_ref.translation());
-                std::cout << "Created model " << std::endl;
-            }
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+    SE3Constraint(const std::string& urdf_path, 
+                const TSR &tsr)
+        : ob::Constraint(get_model(urdf_path)->nq, 6, 1e-3),
+        tsr_(tsr)
+        {
+            // 1. Get the shared model (loads only once)
+            model_ptr_ = get_model(urdf_path);
+            
+            // 2. Get the Frame ID
+            eeFrame_ = model_ptr_->getFrameId("panda_grasptarget");
+            // pinocchio::FrameIndex eeFrame = model.getFrameId("panda_grasptarget");
+            // 3. Setup Reference
+            T_ref_pin_ = pinocchio::SE3(tsr.T_ref.rotation(), tsr.T_ref.translation());
+        }
+
         void function(const Eigen::Ref<const Eigen::VectorXd> &q,
                         Eigen::Ref<Eigen::VectorXd> out) const override
             {
+                static thread_local pinocchio::Data data(*model_ptr_);
                 // Use a local data object if multi-threading, or lock this section
-                pinocchio::forwardKinematics(model_, data_, q);
-                pinocchio::updateFramePlacements(model_, data_);
+                pinocchio::forwardKinematics(*model_ptr_, data, q);
+                pinocchio::updateFramePlacements(*model_ptr_, data);
 
                 // Compute error in local-world aligned or local frame
                 // T_err = T_ref^-1 * T_ee
-                const pinocchio::SE3 &T_ee = data_.oMf[eeFrame_];
+                const pinocchio::SE3 &T_ee = data.oMf[eeFrame_];
                 const pinocchio::SE3 T_err = T_ref_pin_.actInv(T_ee);
                 
                 // Log map gives the 6D error vector
+                // Eigen::VectorXd error = pinocchio::log6(T_err).toVector();
+                //
                 Eigen::VectorXd error = pinocchio::log6(T_err).toVector();
 
                 // Apply TSR bounds: (val - upper).max(0) + (val - lower).min(0)
@@ -122,15 +128,16 @@ class SE3Constraint : public ob::Constraint
                     Eigen::Ref<Eigen::MatrixXd> out) const override
         {
 
+            static thread_local pinocchio::Data data(*model_ptr_);
 
-            pinocchio::forwardKinematics(model_, data_, q);
-            pinocchio::computeJointJacobians(model_, data_, q);
-            pinocchio::updateFramePlacements(model_, data_);
+            pinocchio::forwardKinematics(*model_ptr_, data, q);
+            pinocchio::computeJointJacobians(*model_ptr_, data, q);
+            pinocchio::updateFramePlacements(*model_ptr_, data);
 
-            pinocchio::Data::Matrix6x J(6, model_.nv);
+            pinocchio::Data::Matrix6x J(6, model_ptr_->nv);
             // Get Jacobian in the LOCAL frame of the end effector
-            pinocchio::getFrameJacobian(model_, data_, eeFrame_, pinocchio::LOCAL, J);
-            const pinocchio::SE3 &T_ee = data_.oMf[eeFrame_];
+            pinocchio::getFrameJacobian(*model_ptr_, data, eeFrame_, pinocchio::LOCAL, J);
+            const pinocchio::SE3 &T_ee = data.oMf[eeFrame_];
             const pinocchio::SE3 T_err = T_ref_pin_.actInv(T_ee);
 
             pinocchio::Data::Matrix6 Jlog;
@@ -143,64 +150,156 @@ class SE3Constraint : public ob::Constraint
         bool project (Eigen::Ref< Eigen::VectorXd > x) const override
         {
             Eigen::VectorXd f(6);
-            Eigen::MatrixXd J(6, model_.nv);
+            Eigen::MatrixXd J(6, model_ptr_->nv);
 
             for(int i=0;i<max_iters_;++i)
             {
                 // std::cout << i << std::endl;
                 function(x, f);
                 if(f.norm() < dist_tol) {
-                    // std::cout << "Project succeeded : " << x.transpose() << std::endl;
                     return true;
                 }
 
                 jacobian(x, J);
 
 
-                Eigen::VectorXd delta(model_.nv);
+                Eigen::VectorXd delta(model_ptr_->nv);
                 pinocchio::Data::Matrix6 JJt;
                 JJt.noalias() = J * J.transpose();
                 JJt.diagonal().array() += lambda_;
                 delta.noalias() = -J.transpose() * JJt.ldlt().solve(f);
 
+                if (delta.norm() > 10.0)
+                    return false;
+
                 // Eigen::MatrixXd H = J.transpose()*J + lambda*Eigen::MatrixXd::Identity(model_.nv, model_.nv);
                 // Eigen::VectorXd delta = H.ldlt().solve(-J.transpose()*f);
-                x = pinocchio::integrate(model_, x, -delta * 0.25);
-                // x += delta;
+                x = pinocchio::integrate(*model_ptr_, x, -delta * 1.0);
+                // x += delta;  
 
                 if(delta.norm() < dist_tol) {
                     return true;
                 }
 
             }
-            // std::cout << "Projection failed " << std::endl;
             return false; // did not converge
         }
 
-        double distance(const Eigen::Ref<const Eigen::VectorXd> &x) const override {
-            // need to convert x to a configuration block
-
-            Eigen::VectorXd out;
+        double distance(const Eigen::Ref<const Eigen::VectorXd> &x) const override
+        {
+            Eigen::VectorXd out(6);   // ✅ correct size
             function(x, out);
-            auto dist =  out.squaredNorm();
-            std::cout << dist << std::endl;
-            return dist;
+            // std::cout << "Distance called, value: " << (out.squaredNorm() < 1e-3) << std::endl;
+            return out.squaredNorm();
         }
+
         bool isSatisfied(const Eigen::Ref<const Eigen::VectorXd> &x) const override
         {
             bool result = distance(x) < 0.0001;
-            std::cout << "our custom implementation of isSatisfied is called " << result << std::endl;
+            // std::cout << "our custom implementation of isSatisfied is called " << result << std::endl;
             return result;
         }
 
 
     private:
-        pinocchio::Model model_;
-        mutable pinocchio::Data data_;
+        // std::shared_ptr<const pinocchio::Model> model_ptr_; 
+        static std::shared_ptr<pinocchio::Model> get_model(const std::string& path) {
+            static std::shared_ptr<pinocchio::Model> shared_model;
+            if (!shared_model) {
+                shared_model = std::make_shared<pinocchio::Model>();
+                pinocchio::urdf::buildModel(path, *shared_model);
+            }
+            return shared_model;
+        }
+        std::shared_ptr<const pinocchio::Model> model_ptr_;
         pinocchio::FrameIndex eeFrame_;
         pinocchio::SE3 T_ref_pin_;
         TSR tsr_;
+        size_t max_iters_ = 50;
+        double dist_tol = 1e-3;
+        double lambda_ = 1e-3;
+};
 
+
+class ParallelSE3Constraint : public ob::Constraint
+{
+    public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+    ParallelSE3Constraint(
+        std::shared_ptr<vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>> task_constraint)
+        : ob::Constraint(7, 1, 1e-3),
+          task_constraint_(task_constraint)
+        {
+            ;
+
+        }
+
+        ConfigurationBlock turn_configuration_into_configuration_block(const Robot::Configuration &c) const{
+            typename Robot::template ConfigurationBlock<rake> block;
+
+            for (auto i = 0U; i < Robot::dimension; ++i) {
+                block[i] = c.broadcast(i) + 0.0;
+            }
+            return block;
+        }
+
+        void function(const Eigen::Ref<const Eigen::VectorXd> &q,
+                        Eigen::Ref<Eigen::VectorXd> out) const override
+            {
+                // need to convert x to a configuration block
+                std::array<float, Robot::dimension> float_config_from_x;
+                for (auto i = 0U; i < Robot::dimension; ++i) {
+                    // cast x[i] to float
+                    float_config_from_x[i] = static_cast<float>(q[i]);
+                }
+                auto config_block = turn_configuration_into_configuration_block(Configuration(float_config_from_x));
+                vamp::FloatVector<rake, 1> distance = task_constraint_->distanceToConstraint(config_block);
+                out[0] = std::sqrt(distance[{0, 0}]);
+            }
+
+
+        // Optional LM projection
+        bool project (Eigen::Ref< Eigen::VectorXd > x) const override
+        {
+            std::array<float, Robot::dimension> float_config_from_x;
+            for (auto i = 0U; i < Robot::dimension; ++i) {
+                // cast x[i] to float
+                float_config_from_x[i] = static_cast<float>(x[i]);
+            }
+            auto config_block = turn_configuration_into_configuration_block(Configuration(float_config_from_x));
+            ConfigurationBlock last_projected_block;
+            bool result = task_constraint_->projectConfiguration(config_block, last_projected_block, vamp::planning::ProjMethod::OuterLM, 5.0, 1.0, max_iters_, false);
+            if (result){
+                for (auto i = 0U; i < Robot::dimension; ++i) {
+                    x[i] = static_cast<double>(last_projected_block[{i, rake - 1}]);
+                    // std::cout << x[i] << " ";
+                }
+            }
+            return result;
+
+
+        }
+
+        double distance(const Eigen::Ref<const Eigen::VectorXd> &x) const override
+        {
+            Eigen::VectorXd out(1);   // ✅ correct size
+            function(x, out);
+            // std::cout << "Distance called, value: " << (out.squaredNorm() < 1e-3) << std::endl;
+            return out.squaredNorm();
+        }
+
+        bool isSatisfied(const Eigen::Ref<const Eigen::VectorXd> &x) const override
+        {
+            bool result = distance(x) < 0.0001;
+            // std::cout << "our custom implementation of isSatisfied is called " << result << std::endl;
+            return result;
+        }
+
+
+    private:
+        
+        std::shared_ptr<vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>> task_constraint_;
         size_t max_iters_ = 50;
         double dist_tol = 1e-3;
         double lambda_ = 1e-3;
@@ -208,15 +307,16 @@ class SE3Constraint : public ob::Constraint
 
 
 
+
 struct VAMPStateValidator : public ob::StateValidityChecker
 {
-    VAMPStateValidator(ob::SpaceInformation *si, const EnvironmentVector &env_v)
-      : ob::StateValidityChecker(si), env_v(env_v)
+    VAMPStateValidator(ob::SpaceInformation *si, std::shared_ptr<ob::Constraint> constraint, const EnvironmentVector &env_v)
+      : ob::StateValidityChecker(si), constraint_(constraint), env_v(env_v)
     {
     }
 
-    VAMPStateValidator(const ob::SpaceInformationPtr &si, const EnvironmentVector &env_v)
-      : ob::StateValidityChecker(si), env_v(env_v)
+    VAMPStateValidator(const ob::SpaceInformationPtr &si, std::shared_ptr<ob::Constraint> constraint, const EnvironmentVector &env_v)
+      : ob::StateValidityChecker(si), constraint_(constraint), env_v(env_v)
     {
     }
 
@@ -227,17 +327,22 @@ struct VAMPStateValidator : public ob::StateValidityChecker
 
         const Eigen::Map<Eigen::VectorXd> &x = *state->as<ob::ConstrainedStateSpace::StateType>();
 
+        bool constraint_satisfied = constraint_->isSatisfied(x);
+        if (!constraint_satisfied) {
+            // std::cout << "State is invalid, constraint not satisfied" << std::endl;
+            return false;
+        }
+
         std::array<float, Robot::dimension> float_config_from_x;
         for (auto i = 0U; i < Robot::dimension; ++i) {
-            // cast x[i] to float
             float_config_from_x[i] = static_cast<float>(x[i]);
         }
         Configuration robot_config(float_config_from_x);
         bool val_res = vamp::planning::validate_motion<Robot, rake, 1>(robot_config, robot_config, env_v);
-        // std::cout << "Running is valid " << val_res << std::endl;
         return val_res;
     }
     const EnvironmentVector &env_v;
+    std::shared_ptr<ob::Constraint> constraint_;
     // vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>&task_constraint;
 
 };
@@ -297,38 +402,22 @@ struct OMPLMotionValidator : public ob::MotionValidator
 
     auto checkMotion(const ob::State *s1, const ob::State *s2) const -> bool override
     {
-        // std::cout << "Calling geodesic checkMotion\n";
+        // std::cout << "Calling geodesic checkMotion between " << s1->as<ob::RealVectorStateSpace::StateType>()->values[0] << " and " << s2->as<ob::RealVectorStateSpace::StateType>()->values[0] << std::endl;
+
         auto *css = dynamic_cast<ob::ProjectedStateSpace*>(si_->getStateSpace().get());
-        // if (!css)
-        //     throw ompl::Exception("Expected ProjectedStateSpace");
 
-        // auto constraint_base = css->getConstraint();
+        // make a pointer to std::Vector<State *>* geodesic path, so that can be passed into the geodesic function
+        std::vector<ob::State*> geodesic_path;
 
-        // auto *custom_constraint = dynamic_cast<CustomConstraint*>(constraint_base.get());
-        // if (!custom_constraint)
-        //     throw ompl::Exception("Expected CustomConstraint");
-
-        // Configuration configuration2 = double_vector_to_vamp(extractStateReals(s2, css));
-        // if (!(custom_constraint->isSatisfied(configuration2))) {
-        //     std::cout << "configuration2 is not satisfied within checkMotion!\n";
-        //     return false;
-        // }
-
-        auto discrete_geodesic = css->discreteGeodesic(s1, s2, false);
+        auto discrete_geodesic = css->discreteGeodesic(s1, s2, false, &geodesic_path);
         if (!discrete_geodesic) {
-            // std::cout << "discrete_geodesic is not satisfied within checkMotion!\n";
-            // css->printState(s1, std::cout);
-            // css->printState(s2, std::cout);
-
             project_constrained_motion_failed_counter++;
         }
         else {
             ;
-            // std::cout << "discrete_geodesic is satisfied within checkMotion!\n";
-            // css->printState(s1, std::cout);
-            // css->printState(s2, std::cout);
         }
-        // std::cout << project_constrained_motion_failed_counter << std::endl;
+        // now free the geodesic path
+
         return discrete_geodesic;
 
 
@@ -343,67 +432,6 @@ struct OMPLMotionValidator : public ob::MotionValidator
 };
 
 
-// class SE3TSRValidityChecker : public ob::StateValidityChecker
-// {
-// public:
-//     SE3TSRValidityChecker(const ob::SpaceInformationPtr &si,
-//                           const pinocchio::Model &model,
-//                           pinocchio::FrameIndex eeFrame,
-//                           const TSR &tsr,
-//                           const EnvironmentVector &env_v)
-//         : ob::StateValidityChecker(si),
-//           model_(model),
-//           data_(model_),
-//           eeFrame_(eeFrame),
-//           tsr_(tsr),
-//           env_v(env_v)
-//     {}
-
-//     bool isValid(const ob::State *state) const override
-//     {
-//         const auto *rv =
-//             state->as<ob::RealVectorStateSpace::StateType>();
-
-//         Eigen::VectorXd q(model_.nq);
-//         std::vector<double> q_v(model_.nq);
-//         for(int i=0;i<model_.nq;++i){
-//             q[i] = rv->values[i];
-//             q_v[i] = rv->values[i];
-//         }
-
-//         // FK
-//         pinocchio::forwardKinematics(model_, data_, q);
-//         pinocchio::updateFramePlacements(model_, data_);
-
-//         const pinocchio::SE3 &T_ee = data_.oMf[eeFrame_];
-
-//         // Compute SE3 log error relative to reference pose
-//         pinocchio::SE3 T_err = tsr_.T_ref.inverse() * T_ee;
-//         Eigen::Matrix<double,6,1> err = pinocchio::log6(T_err).toVector();
-
-//         // Check TSR bounds
-//         for(int i=0;i<6;++i)
-//         {
-//             if(err[i] < tsr_.lower[i] || err[i] > tsr_.upper[i])
-//                 return false;
-//         }
-//         Configuration c = double_vector_to_vamp(q_v);
-//         typename Robot::template ConfigurationBlock<rake> temp_block;
-//         for (std::size_t i = 0; i < Robot::dimension; ++i)
-//         {
-//             temp_block[i] = c.broadcast(i);
-//         }
-//         return Robot::template fkcc<rake>(env_v, temp_block);
-
-//     }
-
-// private:
-//     pinocchio::Model model_;
-//     mutable pinocchio::Data data_;
-//     pinocchio::FrameIndex eeFrame_;
-//     TSR tsr_;
-//     const EnvironmentVector &env_v;
-// };
 
 // State validator using VAMP
 inline static auto ompl_to_vamp(const ob::State *state) -> Configuration
@@ -434,34 +462,49 @@ inline static auto vamp_to_ompl(const Configuration &c, ob::State *state)
     }
 }
 
-// struct VAMPMotionValidator : public ob::MotionValidator
-// {
-//     VAMPMotionValidator(ob::SpaceInformation *si, const EnvironmentVector &env_v)
-//       : ob::MotionValidator(si), env_v(env_v)
-//     {
-//     }
+struct VAMPMotionValidator : public ob::MotionValidator
+{
+    VAMPMotionValidator(ob::SpaceInformation *si, const EnvironmentVector &env_v, vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>&task_constraint)
+      : ob::MotionValidator(si), env_v(env_v), task_constraint(task_constraint)
+    {
+    }
 
-//     VAMPMotionValidator(const ob::SpaceInformationPtr &si, const EnvironmentVector &env_v)
-//       : ob::MotionValidator(si), env_v(env_v)
-//     {
-//     }
+    VAMPMotionValidator(const ob::SpaceInformationPtr &si, const EnvironmentVector &env_v, vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>&task_constraint)
+      : ob::MotionValidator(si), env_v(env_v), task_constraint(task_constraint)
+    {
+    }
 
-//     auto checkMotion(const ob::State *s1, const ob::State *s2) const -> bool override
-//     {
-//         // std::cout << "Checking motion " << std::endl;
-//         // Convert OMPL states to VAMP vectors and check motion between states
-//         return vamp::planning::validate_motion<Robot, rake, Robot::resolution>(
-//             ompl_to_vamp(s1), ompl_to_vamp(s2), env_v);
-//     }
+    auto checkMotion(const ob::State *s1, const ob::State *s2) const -> bool override
+    {
 
-//     auto checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const
-//         -> bool override
-//     {
-//         throw ompl::Exception("Not implemented!");
-//     }
+        std::array<float, Robot::dimension> float_config_from_x1, float_config_from_x2;
+        const Eigen::Map<Eigen::VectorXd> &x1 = *s1->as<ob::ConstrainedStateSpace::StateType>();
+        const Eigen::Map<Eigen::VectorXd> &x2 = *s2->as<ob::ConstrainedStateSpace::StateType>();
 
-//     const EnvironmentVector &env_v;
-// };
+
+        for (auto i = 0U; i < Robot::dimension; ++i) {
+            // cast x[i] to float
+            float_config_from_x1[i] = static_cast<float>(x1[i]);
+            float_config_from_x2[i] = static_cast<float>(x2[i]);
+        }
+        Configuration robot_config_1(float_config_from_x1);
+        Configuration robot_config_2(float_config_from_x2);
+
+        std::vector <typename Robot::Configuration> projected_vector;
+        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(robot_config_1, robot_config_2, projected_vector, task_constraint, env_v, vamp::planning::ProjMethod::InnerLM, 0.75, 25, false);
+        return projection_result;
+    }
+
+    auto checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const
+        -> bool override
+    {
+        throw ompl::Exception("Not implemented!");
+    }
+
+    const EnvironmentVector &env_v;
+    vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>&task_constraint;
+};
+
 
 auto main(int argc, char **) -> int
 {
@@ -479,7 +522,16 @@ auto main(int argc, char **) -> int
 
     const std::array<std::array<float, Robot::dimension>, Robot::n_eef> eef_transforms = {{0, 1,0,0,   0.3486, 0.647752, 0.2399}};
 
-
+    vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
+        eef_transforms_ref_frame_w_world,
+        eef_transforms,
+        tsr_lower_bound,
+        tsr_upper_bound
+    );
+    vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>> task_constraint(
+        tsr_constraint
+    );
+    
     // 1. Extract the pointer to the data
     const float* data = eef_transforms[0].data();
 
@@ -510,14 +562,8 @@ auto main(int argc, char **) -> int
     tsr.upper = Eigen::Map<const Eigen::Matrix<float, 6, 1>>(tsr_upper_bound.data()).cast<double>();
 
     std::string urdf_file = "/src/myfork/vamp/resources/panda/panda_spherized.urdf";
-    pinocchio::Model model;
-    pinocchio::GeometryModel collision_model;
-
-    pinocchio::urdf::buildModel(urdf_file, model);
-    pinocchio::urdf::buildGeom(model, urdf_file, pinocchio::COLLISION, collision_model);
-    pinocchio::FrameIndex eeFrame = model.getFrameId("panda_grasptarget");
-
     auto rvss = std::make_shared<ob::RealVectorStateSpace>(dimension);
+    ompl::RNG::setSeed(42);   // fixed seed
 
     // ob::RealVectorBounds bounds(dimension);
     // bounds.setLow(-2);
@@ -547,9 +593,11 @@ auto main(int argc, char **) -> int
     // auto constraint = std::make_shared<CustomConstraint>(task_constraint);
 
     // Combine the ambient space and the constraint into a constrained state space.
-    auto constraint = std::make_shared<SE3Constraint>(model, eeFrame , tsr);
+    auto constraint = std::make_shared<SE3Constraint>(urdf_file, tsr);
+    // auto constraint = std::make_shared<ParallelSE3Constraint>(std::make_shared<vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>>(task_constraint));
 
     auto css = std::make_shared<ob::ProjectedStateSpace>(rvss, constraint);
+    css->setDelta(1.0F/Robot::resolution); // Set the projection step size (delta) to control the resolution of the projection
 
     // Define the constrained space information for this constrained state space.
     auto csi = std::make_shared<ob::ConstrainedSpaceInformation>(css);
@@ -593,13 +641,15 @@ auto main(int argc, char **) -> int
     environment.sort();
     auto env_v = EnvironmentVector(environment);
 
-    csi->setStateValidityChecker(std::make_shared<VAMPStateValidator>(csi, env_v));
+    csi->setStateValidityChecker(std::make_shared<VAMPStateValidator>(csi, constraint, env_v));
     csi->setMotionValidator(std::make_shared<OMPLMotionValidator>(csi, env_v));
+    // csi->setMotionValidator(std::make_shared<VAMPMotionValidator>(csi, env_v, task_constraint));
+
+    std::cout << css->getDelta() << " : " << 1.0F/Robot::resolution << std::endl;
 
     csi->setup();
 
     // si->setStateValidityChecker(std::make_shared<VAMPStateValidator>(si, env_v));
-    // si->setMotionValidator(std::make_shared<VAMPMotionValidator>(si, env_v));
     // si->setup();
 
     // Start and goal vectors.
