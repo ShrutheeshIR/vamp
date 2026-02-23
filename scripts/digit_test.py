@@ -239,9 +239,9 @@ def run_planner(
 
 
     result = planner_func(start, goal, e, plan_settings, task_constraint, sampler)
-    simple = vamp_module.simplify_with_constraints(result.path, e, task_constraint, simp_settings, sampler)
+    # simple = vamp_module.simplify_with_constraints(result.path, e, task_constraint, simp_settings, sampler)
 
-    return result, simple
+    return result, result
 
 
 if __name__ == '__main__':
