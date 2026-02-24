@@ -113,17 +113,17 @@ namespace vamp::binding
 
             return out;
         }
-
         template <std::size_t rake>
-        inline static auto array_from_block(const ConfigurationBlock<rake> &block, size_t rake_index) -> Type
-        {
-            ConfigurationArray config;
-            for (auto i = 0U; i < Robot::dimension; ++i)
-            {
-                config[i] = block[{i, rake_index}];
+        inline static auto array_from_block(const ConfigurationBlock<rake> &block, size_t rake_index) -> Type                                                                                                                                                                   
+        {                                                                                                                                                                                                                                                                       
+            ConfigurationArray config;                                                                                                                                                                                                                                          
+            for (auto i = 0U; i < Robot::dimension; ++i)                                                                                                                                                                                                                        
+            {                                                                                                                                                                                                                                                                   
+                config[i] = block[{i, rake_index}];                                                                                                                                                                                                                             
             }
             return from(config);
-        }
+        }                                                                                                                                                                                                                                                                       
+
     };
 
     template <typename Robot>
@@ -503,9 +503,10 @@ namespace vamp::binding
                     auto c = NA::template block<rake>(c_in);
                     auto c_out = NA::template block<rake>(c_in);
                     self.projectConfiguration(c, c_out, static_cast<vamp::planning::ProjMethod>(projection_method),max_q_dist, descent_rate, num_projection_iterations, verbose);
-                    // convert the c_out back to NDArray and return
+                    // convert the c_out back to NDArray and return 
                     return NA::array_from_block(c_out, 0);
                 }, "Project a configuration onto the constraint manifold");
+
     }
 
     template <typename Robot>
