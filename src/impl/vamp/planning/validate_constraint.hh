@@ -18,6 +18,36 @@ namespace vamp::planning
     static int unable_to_project_inside_counter = 0;
     static int collision_inside_counter = 0;
 
+
+    // Generate stddev samples: 0, -0.25, +0.25, -0.5, +0.5, -0.75, +0.75, -1.0
+    template <std::size_t I>
+    inline constexpr auto stddev_sample() -> float
+    {
+        if constexpr (I == 0)
+        {
+            return 0.0F;
+        }
+        else
+        {
+            const auto step = (I + 1) / 2;  // 1, 1, 2, 2, 3, 3, 4 for I = 1, 2, 3, 4, 5, 6, 7
+            const auto magnitude = static_cast<float>(step) * 0.25F;
+            return (I % 2 == 1) ? -magnitude : magnitude;  // odd indices negative, even positive
+        }
+    }
+
+    template <std::size_t n, std::size_t... I>
+    inline constexpr auto generate_stddev_samples(std::index_sequence<I...>) -> std::array<float, n>
+    {
+        return {stddev_sample<I>()...};
+    }
+
+    template <std::size_t n>
+    struct StdDevSamples
+    {
+        inline static constexpr auto samples = generate_stddev_samples<n>(std::make_index_sequence<n>());
+    };
+
+
     template <std::size_t rake, std::size_t dimension>
     inline constexpr auto inter_lane_distance_block(const vamp::FloatVector<rake, dimension> &block,
                                                     const vamp::FloatVector<dimension> &start) -> vamp::FloatVector<rake, dimension>
@@ -67,17 +97,18 @@ namespace vamp::planning
         typename Robot::template ConfigurationBlock<rake> projected_block;
         typename Robot::template ConfigurationBlock<rake> initial_projected_block;
 
+        const auto stddev_multipliers = FloatVector<rake>(StdDevSamples<rake>::samples);
 
         // HACK: broadcast() implicitly assumes that the rake is exactly VectorWidth
         for (auto i = 0U; i < Robot::dimension; ++i)
         {
-            block[i] = (start + vector).broadcast(i);
+            // block[i] = (start + vector).broadcast(i);
+            block[i] = (start).broadcast(i) + (vector.broadcast(i) * (1.0F + stddev_multipliers * 0.1F));  // 0.1F is a scaling factor for std_dev
             start_block[i] = start.broadcast(i);
         }
-        // std::cout << "Proj method " << projection_method << std::endl;
 
-        bool end_config_able_to_project = constraint.projectConfiguration(block, initial_projected_block, projection_method, distance, projection_descent_rate, num_projection_iterations);
-        if (not end_config_able_to_project)
+        int end_config_projection_index = constraint.projectAnyConfiguration(block, initial_projected_block, projection_method, distance, projection_descent_rate, num_projection_iterations, false);
+        if (end_config_projection_index == -1)
         {
             // std::cout << "Unable to project " << std::endl;
             unable_to_project_counter++;
@@ -89,14 +120,14 @@ namespace vamp::planning
         typename Robot::ConfigurationArray end_config_projected_array;
         for (auto i = 0U; i < Robot::dimension; ++i)
         {
-            float diff = initial_projected_block[{i, rake - 1}] - start_block[{i, rake - 1}];
+            float diff = initial_projected_block[{i, end_config_projection_index}] - start_block[{i, end_config_projection_index}];
             projected_distance = projected_distance + diff * diff;
             if (projected_distance > 4 * (distance) * (distance))
             {
                 invalid_distance_counter_outside++;
                 return false;
             }
-            end_config_projected_array[i] = initial_projected_block[{i, rake - 1}];
+            end_config_projected_array[i] = initial_projected_block[{i, end_config_projection_index}];
         }
         typename Robot::Configuration end_config_projected(end_config_projected_array);
 
