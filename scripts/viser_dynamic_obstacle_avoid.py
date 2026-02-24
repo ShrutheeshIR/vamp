@@ -10,33 +10,20 @@ import json
 from sensor_msgs.msg import JointState
 
 
-def add_json_cuboids(filename, color=(12, 89, 178)):
-    """
-    Add cuboids from a JSON file. The JSON should be a list of objects, each with keys:
-    'name', 'x', 'y', 'z', 'dx', 'dy', 'dz' and optional 'roll','pitch','yaw'.
-
-    This function reads the JSON, iterates over entries, and adds a box for each item.
-    Dimensions are used as provided in the JSON (assumed full extents).
-    """
-    with open(filename, "r") as f:
-        data = json.load(f)
-
-    vamp_cuboids = []
-
-    for i, obj in enumerate(data):
-        name = obj.get("name", f"cuboid_{i}")
-        x = obj.get("x", 0.0)
-        y = obj.get("y", 0.0)
-        z = obj.get("z", 0.0)
-        dx = obj.get("dx", 0.0)
-        dy = obj.get("dy", 0.0)
-        dz = obj.get("dz", 0.0)
-
-        vamp_cuboids.append(vamp.Cuboid([x, y, z], [0.0, 0.0, 0.0], [dx / 2, dy / 2, dz / 2]))
-
-    return vamp_cuboids
-
-
+rack_2 = [
+0.01738501, -0.01096749, -0.47006118, -0.01586935, -0.02395158, -0.00807717  ,                                                                                                               
+  0.4024402 ,  0.00743171, -0.22230545, -0.8472173 , -0.01932546,  0.8947249 ,                                                                                                                 
+ -0.5300461 ,  0.04379871,  0.09859389,  0.35082862,  0.08830395,  0.13806033,                                                                                                                 
+ -0.35991108, -0.00484328,  0.21751796,  0.8449603 ,  0.02007664, -0.9019995 ,                                                                                                                 
+  0.41773874,  0.03763357,  0.11142297, -0.31057477, -0.08879709, -0.08477921,
+]
+box_top_shelf_pickup = [
+    1.11889839e-02, -1.99530125e-02,  5.81884384e-03, -3.29416106e-03, -1.42211439e-02, -5.99248195e-03,
+    3.84082675e-01,  5.58406231e-04, 2.98647016e-01,  3.22717577e-01, -3.98048153e-03, -3.00990015e-01, 1.07899308e-02,  1.02880923e-02,  
+    3.03654131e-02,  1.43816188e-01, -3.00536864e-04, -5.22131145e-01,
+     -3.72209966e-01, -3.30008916e-03, -2.98724055e-01, -3.18776041e-01,  8.88650957e-03,  2.83709198e-01, -1.18316561e-01,  6.75600534e-03,  
+    4.73398268e-02, -1.23632416e-01, 2.74537895e-02,  4.99689251e-01
+]
 
 
 class ConstrainedVampPubSub(Node):
@@ -46,40 +33,112 @@ class ConstrainedVampPubSub(Node):
         """Initialize the VAMP planner and configure constraints."""
 
 
+        polygon_points = [
+            0.005, -0.01, 0.005, 0.03, -0.05, 0.03, -0.05, -0.01
+        ]
+
+        bimanual_limit_lower_bound = [
+            -0.001, -0.001, -0.001, -0.1, -0.1, -10.1
+        ]
+        bimanual_limit_upper_bound = [
+            0.001, 0.001, 0.001, 0.1, 0.1, 10.1
+        ]
+
+        tsr_lower_bound = [
+            -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, 
+            -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, 
+            -0.001, -0.001, -0.001, -0.03, -0.03, -0.03, 
+            -0.001, -0.001, -0.001, -0.03, -0.03, -0.03
+        ]
+
+        tsr_upper_bound = [
+            10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 
+            10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 
+            0.001, 0.001, 0.001, 0.03, 0.03, 0.03, 
+            0.001, 0.001, 0.001, 0.03, 0.03, 0.03
+        ]
+
+
+        eef_transforms = [[1, 0,0,0,   0, 0, 0], [1, 0,0,0,   0.0, 0.0, 0.0], [0.59, 0.38, 0.4, 0.59 , -0.02070, 0.06015, -0.95335], [0.61, -0.36, 0.35, -0.61 , -0.02228, -0.11609, -0.94832]];
+        eef_transforms_ref_frame_w_world = [[1, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0]];
+
+        bimanual_transform = [0.1, 0.99, 0.00000, 0.04000, 0.01462, -0.03530, -0.36356];
+
+
+
+
         (self.vamp_module, self.planner_func, self.plan_settings, self.simp_settings) = (
-            vamp.configure_robot_and_planner_with_kwargs("panda", "crrtc", **kwargs)
+            vamp.configure_robot_and_planner_with_kwargs("digit", "crrtc", **kwargs)
         )
-        tsr = self.vamp_module.TaskSpaceConstraint(
-            [[1, 0, 0, 0, 0, 0, 0]],
-            [[0, 1.0, 0, 0.0, 0.29276255, -0.55347496, 0.20607783]],
-            [-10.01, -10.01, -0.01, -0.01, -0.01, -10.01],
-            [10.01, 10.01, 0.01, 0.01, 0.01, 10.01]
+
+        bimanual_constraint = self.vamp_module.BimanualTaskSpaceConstraint(
+            bimanual_transform,
+            bimanual_limit_lower_bound,
+            bimanual_limit_upper_bound
         )
-        self.constraints = self.vamp_module.Composable_TaskSpaceConstraint(tsr)
-        
+        com_constraint = self.vamp_module.CoMTaskSpaceConstraint(
+            polygon_points,
+        )
+
+
+        feet_tsr_constraint = self.vamp_module.FeetTaskSpaceConstraint(
+            eef_transforms_ref_frame_w_world,
+            eef_transforms,
+            tsr_lower_bound,
+            tsr_upper_bound
+        )
+
+        closed_link_constraint = self.vamp_module.ClosedLinkConstraint()
+
+
+        self.constraints = self.vamp_module.Composable_F_C_CL_B(feet_tsr_constraint, com_constraint, closed_link_constraint, bimanual_constraint)
+
+
+
+
         self.sampler = self.vamp_module.halton()
 
         self.goals = [
-            [-0.88021, 0.53120, -0.20601, -1.61905, 0.11733, 2.14908, 1.19294],
-            [1.40490, 0.35201, -0.22762, -1.90963, 0.10796, 2.26183, 0.22238]
+            box_top_shelf_pickup,
+            rack_2
         ]
-        self.plan_settings.max_iterations = 100000
-        self.plan_settings.range = 0.2
+        self.plan_settings.max_iterations = 1000
+        self.plan_settings.range = 0.75
+        self.plan_settings.dynamic_domain = False
+        self.plan_settings.insert_all_to_tree = True
+        self.plan_settings.descend_rate = 1.0;
+        self.plan_settings.radius = 10.0;
+        self.plan_settings.num_projection_iterations = 10;
 
-        self.vamp_cuboids = add_json_cuboids("resources/environments/cuboids/real_maze.json")
+
 
         self.current_goal = 1
 
-        # For the maze
         tf = np.identity(4)
         self.attachment = vamp.Attachment(tf)
-        attach_positions = np.zeros((10, 3))
-        attach_positions[:, 2] = np.linspace(0, 0.16, len(attach_positions))
+
+
+        attach_spheres = [
+            [-0.02, 0.0, -0.09],
+            [-0.02, -0.02, -0.18],
+            [-0.02, -0.04, -0.26],
+            [-0.02, 0.05, -0.09],
+            [-0.02, 0.03, -0.18],
+            [-0.02, 0.01, -0.26],
+            [0.04, 0.0, -0.09],
+            [0.04, -0.02, -0.18],
+            [0.04, -0.04, -0.26],
+            [0.04, 0.05, -0.09],
+            [0.04, 0.03, -0.18],
+            [0.04, 0.01, -0.26],
+        ]
+
+
 
         # Add a single sphere to the attachment - spheres are added in the attachment's local frame
         self.attachment.add_spheres(
             [
-                vamp.Sphere(pos, 0.01) for pos in attach_positions
+                vamp.Sphere(pos, 0.04) for pos in attach_spheres
             ]
         )
 
@@ -90,10 +149,7 @@ class ConstrainedVampPubSub(Node):
         t1 = time.perf_counter_ns()
         env = vamp.Environment()
         env.add_sphere(vamp.Sphere(self.obstacle_pose_and_dim[:3], self.obstacle_pose_and_dim[-1]))
-        for cuboid in self.vamp_cuboids:
-            env.add_cuboid(cuboid)
         env.attach(self.attachment, 0)
-
 
         if self.constraints.distanceToConstraint(np.array(start_config)) > 1e-3:
             start_config = self.constraints.projectConfiguration(np.array(start_config), 1, 0.5, 1.0, 10, False).tolist()
@@ -113,7 +169,7 @@ class ConstrainedVampPubSub(Node):
                     all_waypoints_valid = False
                     break
             if all_waypoints_valid:
-                print("No change, computed in %.2f ms" % ((time.perf_counter_ns() - t1) / 1e6))
+                # print("No change, computed in %.2f ms" % ((time.perf_counter_ns() - t1) / 1e6))
                 return
         else:
             if self.trajectory is not None and self.trajectory.shape[0] > 0:
@@ -204,16 +260,19 @@ class ConstrainedVampPubSub(Node):
         # start_config = self.goals[self.current_goal - 1]
         goal_config = self.goals[self.current_goal]
         self.plan(start_config, goal_config)
-        
+
         # Publish end-effector trajectory
         if self.trajectory is not None and self.trajectory.shape[0] > 0:
-            ee_positions = []
+            ee_poses = []
             for config in self.trajectory:
-                ee_pos = self.vamp_module.eefk(config)[0][:3, 3].tolist()
-                ee_positions.extend(ee_pos)
+                eefks = self.vamp_module.eefk(config)
+                ee_poses.extend(eefks[0][:3, :4].flatten().tolist())
+                ee_poses.extend(eefks[1][:3, :4].flatten().tolist())
+
+
             
             ee_msg = Float32MultiArray()
-            ee_msg.data = [float(v) for v in ee_positions]
+            ee_msg.data = [float(v) for v in ee_poses]
             self.ee_trajectory_publisher.publish(ee_msg)
 
     def timer_callback(self):
@@ -251,6 +310,9 @@ class ConstrainedVampPubSub(Node):
         # Publish the waypoint
         out = Float32MultiArray()
         out.data = [float(v) for v in wp]
+        #  get the eefk of wp and extend it to out.data as well
+        out.data.extend(self.vamp_module.eefk(wp)[0][:3, :4].flatten().tolist())
+
         self.publisher.publish(out)
         self.current_waypoint = wp
 

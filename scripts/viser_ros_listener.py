@@ -5,6 +5,7 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray
 import json
+from scipy.spatial.transform import Rotation
 from viser_utils import setup_viser_with_robot
 
 def add_constraint_plane(server, position=(0.29276255, -0.55347496, 0.00607783), wxyz=(0, 1, 0, 0)):
@@ -61,16 +62,16 @@ class ViserWaypointListener(Node):
 		ee_trajectory_topic = self.get_parameter("ee_trajectory_topic").get_parameter_value().string_value
 		frame_publish_rate_hz = self.get_parameter("frame_publish_rate_hz").get_parameter_value().double_value
 
-		# robot_dir = Path(__file__).parents[1] / "resources" / "panda"
-		robot_dir = Path("/src/myfork_cricket/cricket/resources/panda_marker/")
-		self.server, self.robot = setup_viser_with_robot(robot_dir, "panda_expo.urdf")
+		robot_dir = Path(__file__).parents[1] / "resources" / "digit_description"
+		# robot_dir = Path("/src/myfork_cricket/cricket/resources/panda_marker/")
+		self.server, self.robot = setup_viser_with_robot(robot_dir, "digit_model_trace_collision_spherized.urdf")
 
-		self.robot_dof = 7
+		self.robot_dof = 30
 		self.current_waypoint = np.array(
 			[-0.88021, 0.53120, -0.20601, -1.61905, 0.11733, 2.14908, 1.19294],
 			dtype=np.float64,
 		)
-		self.robot.update_cfg(self.current_waypoint.tolist())
+		# self.robot.update_cfg(self.current_waypoint.tolist())
 		
 		# Track waypoint spheres for trajectory visualization
 		self.waypoint_sphere_handles = []
@@ -111,17 +112,24 @@ class ViserWaypointListener(Node):
 
 		self.timing_handle = self.server.gui.add_number("Elapsed (ms)", 0.001, disabled=True)
 
-
-		add_constraint_plane(self.server)  # Add a constraint plane to the scene
-		add_json_cuboids(self.server, "resources/environments/cuboids/real_maze.json")  # Add cuboids from JSON file
-
+		# Add a box cuboid that will be transformed based on EE position
+		self.ee_box_handle = self.server.scene.add_box(
+			name="/ee_box",
+			dimensions=(0.1, 0.1, 0.36),
+			position=(0.0, 0.0, 0.0),
+			wxyz=(1.0, 0.0, 0.0, 0.0),
+			color=(255, 165, 0),  # Orange color
+			opacity=0.7,
+		)
 
 		self.get_logger().info(
 			f"Viser listener ready. Subscribed to '{waypoint_topic}', publishing frame pose on '{frame_pose_topic}'."
 		)
 
 	def on_waypoint(self, msg: Float32MultiArray) -> None:
-		waypoint = np.array(msg.data, dtype=np.float64)
+		waypoint = np.array(msg.data, dtype=np.float64)[:self.robot_dof]
+		eefk_data = np.array(msg.data, dtype=np.float64)[self.robot_dof:self.robot_dof+12]
+
 		if waypoint.size != self.robot_dof:
 			self.get_logger().warn(
 				f"Received waypoint with {waypoint.size} values, expected {self.robot_dof}. Ignoring."
@@ -130,6 +138,27 @@ class ViserWaypointListener(Node):
 
 		self.current_waypoint = waypoint
 		self.robot.update_cfg(self.current_waypoint.tolist())
+		
+		# Transform the box using eefk_data (assuming it's a 3x4 transformation matrix flattened as 12 elements)
+		if eefk_data.size >= 12:
+			# Extract position from the transformation matrix (last column: indices 3, 7, 11)
+			position = (float(eefk_data[3]), float(eefk_data[7])  - 0.16, float(eefk_data[11]))  # Adjust Z by subtracting 0.16 to align with the end of the box
+			
+			# Extract rotation matrix (3x3) and convert to quaternion
+			rotation_matrix = np.array([
+				[eefk_data[0], eefk_data[1], eefk_data[2]],
+				[eefk_data[4], eefk_data[5], eefk_data[6]],
+				[eefk_data[8], eefk_data[9], eefk_data[10]]
+			])
+			
+			# Convert rotation matrix to quaternion using scipy
+			# scipy returns (x, y, z, w), but viser expects (w, x, y, z)
+			quat_xyzw = Rotation.from_matrix(rotation_matrix).as_quat()
+			wxyz = (quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2])
+			
+			# Update box position and orientation
+			self.ee_box_handle.position = position
+			self.ee_box_handle.wxyz = wxyz
 
 	def on_ee_trajectory(self, msg: Float32MultiArray) -> None:
 		"""Receive EE trajectory and visualize as waypoint spheres."""
@@ -143,18 +172,31 @@ class ViserWaypointListener(Node):
 			self.get_logger().warn(f"EE trajectory data length {len(msg.data)} is not divisible by 3")
 			return
 		
-		num_waypoints = len(msg.data) // 3
+		num_waypoints = len(msg.data) // 24 # assuming 2 eefs with a 3x4 matrix each
 		for i in range(num_waypoints):
-			x = msg.data[3*i]
-			y = msg.data[3*i + 1]
-			z = msg.data[3*i + 2]
+			x = msg.data[24*i + 3]
+			y = msg.data[24*i + 7]
+			z = msg.data[24*i + 11]
 			
 			# Add a small sphere at each waypoint position
 			handle = self.server.scene.add_icosphere(
-				name=f"/trajectory_waypoint_{i}",
+				name=f"/trajectory_waypoint_eef_1{i}",
 				radius=0.0075,
-				position=(x, y, z-0.18),
+				position=(x, y, z),
 				color=(0.0, 1.0, 0.0),  # Green color for waypoints
+			)
+			self.waypoint_sphere_handles.append(handle)
+
+			# now for the other eef
+			x = msg.data[24*i + 15]
+			y = msg.data[24*i + 19]
+			z = msg.data[24*i + 23]
+
+			handle = self.server.scene.add_icosphere(
+				name=f"/trajectory_waypoint_eef_2{i}",
+				radius=0.0075,
+				position=(x, y, z),
+				color=(0.0, 1.0, 0.0),  #
 			)
 			self.waypoint_sphere_handles.append(handle)
 		
