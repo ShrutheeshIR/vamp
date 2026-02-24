@@ -1790,7 +1790,8 @@ namespace vamp::planning
 
                 while ((project_iter < num_projection_iterations) and (not dist.test_any_less_equal(0.0001F)))
                 {
-                    dist = projectStep(q_old, q_new, projection_method, descend_rate);
+                    q_new = projectStep(q_old, projection_method, descend_rate);
+                    dist = distanceToConstraint(q_new);
                     // std::cout << "Iteration " << project_iter << " Distance: " << dist << std::endl;
                     // std::cout << q_old << q_new << std::endl;
                     auto q_dist_from_prev = (q_new[0] - q_old[0]) * (q_new[0] - q_old[0]);
