@@ -258,13 +258,13 @@ int main() {
             nanoseconds_per_problem.push_back(result.nanoseconds);
             iterations_per_problem.push_back(result.iterations);
             vamp::planning::SimplifySettings simplify_settings;
-            auto simplify_result = vamp::planning::constraint::simplify_with_constraints<Robot, rake, Robot::resolution, decltype(tsr_constraint)>(
-                result.path, env_v, task_constraint, simplify_settings, rng);
+            // auto simplify_result = vamp::planning::constraint::simplify_with_constraints<Robot, rake, Robot::resolution, decltype(tsr_constraint)>(
+            //     result.path, env_v, task_constraint, simplify_settings, rng);
     
             // Create SolvedResult object with the simplified path
             SolvedResult solved(
                 true,                                   // success
-                simplify_result.path,                   // plan (trajectories)
+                result.path,                   // plan (trajectories)
                 static_cast<double>(result.nanoseconds), // solve_time
                 problem.cuboid_obstacles.size()         // num_cuboid_obstacles
             );
