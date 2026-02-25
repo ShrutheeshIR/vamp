@@ -86,6 +86,7 @@ namespace vamp::planning
         ProjMethod projection_method = ProjMethod::InnerLM,
         float projection_descent_rate = 1.0F,
         int num_projection_iterations = 25,
+        float std_dev_scaling_factor = 0.1F,
         bool insert_all_to_tree = false) -> bool
     {
         projected_vector.clear();
@@ -103,7 +104,7 @@ namespace vamp::planning
         for (auto i = 0U; i < Robot::dimension; ++i)
         {
             // block[i] = (start + vector).broadcast(i);
-            block[i] = (start).broadcast(i) + (vector.broadcast(i) * (1.0F + stddev_multipliers * 0.1F));  // 0.1F is a scaling factor for std_dev
+            block[i] = (start).broadcast(i) + (vector.broadcast(i) * (1.0F + stddev_multipliers * std_dev_scaling_factor));  // 0.1F is a scaling factor for std_dev
             start_block[i] = start.broadcast(i);
         }
 
@@ -128,6 +129,8 @@ namespace vamp::planning
                 return false;
             }
             end_config_projected_array[i] = initial_projected_block[{i, end_config_projection_index}];
+            // rewrite initial_projected_block to be the projected end config
+            initial_projected_block[i] = initial_projected_block[i].broadcast(end_config_projection_index);
         }
         typename Robot::Configuration end_config_projected(end_config_projected_array);
 
