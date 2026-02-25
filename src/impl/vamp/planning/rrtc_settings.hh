@@ -20,6 +20,7 @@ namespace vamp::planning
         int projection_method = 0;
 
         float descend_rate = 1.0;
+        float std_dev_scaling_factor = 0.2F;
         int num_projection_iterations = 25;
         bool insert_all_to_tree = true;
 

@@ -59,6 +59,7 @@ struct Attempt {
     vamp::planning::ProjMethod proj_method;
     float descend_rate;
     int num_projection_iterations;
+    float std_dev_scaling_factor;
     bool insert_all_to_tree;
     bool success;
     std::size_t planning_time;
@@ -85,7 +86,7 @@ auto main(int, char **) -> int
     float ranges[] = {0.5, 1.0, 1.5, 2.0};
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     bool dd[] = {false, true};
-    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};
+    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM}; //, vamp::planning::ProjMethod::GradDesc};
 
     // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
     float descend_rates[] = {0.75, 1.0};
@@ -93,6 +94,7 @@ auto main(int, char **) -> int
     //
     int num_projection_iterations[] = {5, 10, 25, 50, 100};
     bool insert_all_to_tree[] = {false, true};
+    float std_dev_scaling_factors[] = {0.01F, 0.1F, 0.2F};
 
     std::vector<Attempt> succ_attempts;
 
@@ -102,6 +104,7 @@ auto main(int, char **) -> int
                 for(const auto descent_rate: descend_rates){
                     for(const auto num_projection_iterations: num_projection_iterations){
                         for(const auto insert_all_to_tree: insert_all_to_tree){
+                            for(const auto std_dev_scaling_factor: std_dev_scaling_factors){
 
                 // if(pm < 2) continue;
 
@@ -169,6 +172,7 @@ auto main(int, char **) -> int
     rrtc_settings.radius = 1.0;
     rrtc_settings.num_projection_iterations = num_projection_iterations;
     rrtc_settings.insert_all_to_tree = insert_all_to_tree;
+    rrtc_settings.std_dev_scaling_factor = std_dev_scaling_factor;
     // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
     std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
     vamp::planning::invalid_distance_counter_outside = 0;
@@ -188,6 +192,7 @@ auto main(int, char **) -> int
             pm,
             descent_rate,
             num_projection_iterations,
+            std_dev_scaling_factor,
             insert_all_to_tree,
             true,
             result.nanoseconds,
@@ -237,10 +242,11 @@ auto main(int, char **) -> int
     }
         }
     }
+}
     std::cout << "------Final Result --------" << std::endl;
     std::sort(succ_attempts.rbegin(), succ_attempts.rend());
     for (const auto &a : succ_attempts) {
-        std::cout << a.range << ", " << a.dynamic_domain << ", " << a.proj_method << ", " << a.descend_rate << ", " << a.num_projection_iterations << ", " << a.insert_all_to_tree << ", " << a.planning_time/1e6 << ", " << a.planning_iterations << ", " << a.path_length << std::endl;
+        std::cout << a.range << ", " << a.dynamic_domain << ", " << a.proj_method << ", " << a.descend_rate << ", " << a.num_projection_iterations << ", " << a.std_dev_scaling_factor << ", " << a.insert_all_to_tree << ", " << a.planning_time/1e6 << ", " << a.planning_iterations << ", " << a.path_length << std::endl;
 
     }
     std::cout << "---------------------------" << std::endl;
