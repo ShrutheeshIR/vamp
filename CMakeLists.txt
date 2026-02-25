@@ -150,8 +150,8 @@ find_package(nlohmann_json REQUIRED)
 #   add_executable(vamp_crrtc_example scripts/cpp/vamp_crrtc_example.cc)
 #   target_link_libraries(vamp_crrtc_example PRIVATE vamp_cpp nlohmann_json::nlohmann_json)
 
-#   add_executable(vamp_crrtc_spheres scripts/cpp/vamp_crrtc_spheres.cc)
-#   target_link_libraries(vamp_crrtc_spheres PRIVATE vamp_cpp)
+  # add_executable(vamp_crrtc_spheres scripts/cpp/vamp_crrtc_spheres.cc)
+  # target_link_libraries(vamp_crrtc_spheres PRIVATE vamp_cpp)
 
 # add_executable(vamp_crrtc_transport_mug scripts/cpp/vamp_crrtc_transport_mug.cc)
 # target_link_libraries(vamp_crrtc_transport_mug PRIVATE vamp_cpp)
@@ -174,8 +174,8 @@ find_package(nlohmann_json REQUIRED)
 # add_executable(vamp_bimanual_example_iiwa scripts/cpp/vamp_bimanual_example_iiwa.cc)
 # target_link_libraries(vamp_bimanual_example_iiwa PRIVATE vamp_cpp)
 
-#   add_executable(vamp_com_constraint_example scripts/cpp/vamp_com_constraint_example.cc)
-#   target_link_libraries(vamp_com_constraint_example PRIVATE vamp_cpp)
+  add_executable(vamp_com_constraint_example scripts/cpp/vamp_com_constraint_example.cc)
+  target_link_libraries(vamp_com_constraint_example PRIVATE vamp_cpp)
 
   # Disable strict warnings for demos to maintain compatibility
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
