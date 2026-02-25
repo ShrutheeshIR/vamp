@@ -208,7 +208,7 @@ namespace vamp::planning
                     for(auto i=0U; i < 6; i++)
                         err[i] = y[42 + i];
                     for(auto i=0U; i < 42; i++)
-                        J[i] = y[42];
+                        J[i] = y[i];
                     return *this;
                 }
 
@@ -270,13 +270,13 @@ namespace vamp::planning
 
         const auto distanceToConstraint(const ConfigurationBlock &q)
         {
-            for (int i=0U; i < Robot::dimension; i++)
+            for (size_t i=0U; i < Robot::dimension; i++)
                 tsr_function_inp.q[i] = q[i];
             
             // Robot::tsr_function_ori_blend_simd(tsr_function_inp, jac_proj_inp);
             Robot::tsr_function_ori_blend_simd(tsr_function_inp, jac_proj_inp);
 
-            for(int i=0U; i < 6;i++)
+            for(size_t i=0U; i < 6;i++)
             {
                 jac_proj_inp[i + 42] = (jac_proj_inp[i + 42] - tsr_function_inp[ 21 + i]).min(0.F)
                                     + (jac_proj_inp[i + 42] - tsr_function_inp[ 27 + i]).max(0.F);
