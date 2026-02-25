@@ -39,6 +39,7 @@ namespace vamp::planning
             std::cout << "Start Tree First: " << start_tree_first << ", ";
             std::cout << "Projection Method: " << projection_method << ", ";
             std::cout << "Descend Rate: " << descend_rate << ", ";
+            std::cout << "Std Dev Scaling Factor: " << std_dev_scaling_factor << ", ";
             std::cout << "Num Projection Iterations: " << num_projection_iterations << ", ";
             std::cout << "Insert All to Tree: " << insert_all_to_tree << "\n";
         }

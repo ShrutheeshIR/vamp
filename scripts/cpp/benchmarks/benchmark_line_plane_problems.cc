@@ -295,7 +295,7 @@ int main() {
 
         }
         else {
-            std::cout << "Unable to solve problem with start and goal configs : " << start << " and " << goal << std::endl;
+            std::cout << "Unable to solve problem " << total_num_problems << " with start and goal configs : " << start << " and " << goal << std::endl;
             // std::ofstream outfile("/src/trajectory.txt");
             // std::vector<Configuration> start_goal_configs = {start, goal};
             // for (const auto &config : start_goal_configs)
