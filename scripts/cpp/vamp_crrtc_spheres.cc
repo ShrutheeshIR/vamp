@@ -9,6 +9,7 @@
 #include <vamp/planning/crrtc.hh>
 #include <vamp/planning/task_space_constraint.hh>
 #include <vamp/planning/validate_constraint.hh>
+#include <vamp/planning/simplify_constraints.hh>
 
 // #include <vamp/planning/simplify.hh>
 #include <vamp/robots/panda.hh>
@@ -65,11 +66,16 @@ struct Attempt {
     std::size_t planning_time;
     std::size_t planning_iterations;
     std::size_t path_length;
+    std::size_t simplify_time;
+    std::size_t simplify_path_length;
+    std::size_t total_time;
+    float simplified_path_cost;
 
     bool operator<(const Attempt& other) const {
         return planning_time < other.planning_time;
     }
 };
+
 
 // std::ostream& dump(std::ostream &o, const Attempt& a)
 // {
@@ -174,7 +180,7 @@ auto main(int, char **) -> int
     rrtc_settings.insert_all_to_tree = insert_all_to_tree;
     rrtc_settings.std_dev_scaling_factor = std_dev_scaling_factor;
     // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
-    std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
+    // std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
     vamp::planning::invalid_distance_counter_outside = 0;
     vamp::planning::invalid_distance_counter_inside = 0;
     vamp::planning::collision_counter = 0;
@@ -186,6 +192,11 @@ auto main(int, char **) -> int
 
     if(result.path.size() > 0)
     {
+
+        vamp::planning::SimplifySettings simplify_settings;
+        auto simplify_result = vamp::planning::constraint::simplify_with_constraints<Robot, rake, Robot::resolution, decltype(tsr_constraint)>(
+            result.path, env_v, task_constraint, simplify_settings, rng, pm, descent_rate, num_projection_iterations, std_dev_scaling_factor, insert_all_to_tree);
+
         Attempt a{
             range,
             dyndom,
@@ -197,7 +208,11 @@ auto main(int, char **) -> int
             true,
             result.nanoseconds,
             result.iterations,
-            result.path.size()
+            result.path.size(),
+            simplify_result.nanoseconds,
+            simplify_result.path.size(),
+            result.nanoseconds + simplify_result.nanoseconds,
+            simplify_result.path.cost()
         };
 
 
@@ -246,7 +261,7 @@ auto main(int, char **) -> int
     std::cout << "------Final Result --------" << std::endl;
     std::sort(succ_attempts.rbegin(), succ_attempts.rend());
     for (const auto &a : succ_attempts) {
-        std::cout << a.range << ", " << a.dynamic_domain << ", " << a.proj_method << ", " << a.descend_rate << ", " << a.num_projection_iterations << ", " << a.std_dev_scaling_factor << ", " << a.insert_all_to_tree << ", " << a.planning_time/1e6 << ", " << a.planning_iterations << ", " << a.path_length << std::endl;
+        std::cout << a.range << ", " << a.dynamic_domain << ", " << a.proj_method << ", " << a.descend_rate << ", " << a.num_projection_iterations << ", " << a.std_dev_scaling_factor << ", " << a.insert_all_to_tree << ", " << a.planning_time/1e6 << ", " << a.planning_iterations << ", " << a.path_length << ", " << a.simplify_time/1e6 << ", " << a.simplify_path_length << ", " << a.total_time/1e6 << ", " << a.simplified_path_cost << std::endl;
 
     }
     std::cout << "---------------------------" << std::endl;
