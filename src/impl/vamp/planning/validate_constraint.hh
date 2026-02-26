@@ -86,7 +86,7 @@ namespace vamp::planning
         ProjMethod projection_method = ProjMethod::InnerLM,
         float projection_descent_rate = 1.0F,
         int num_projection_iterations = 25,
-        float std_dev_scaling_factor = 0.1F,
+        float std_dev_scaling_factor = 0.001F,
         bool insert_all_to_tree = false) -> bool
     {
         projected_vector.clear();
@@ -142,6 +142,16 @@ namespace vamp::planning
         {
             collision_counter++;
             return false;
+        }
+        if (distance > 100.F){
+            typename Robot::ConfigurationArray last_projected_initial_attempt;
+            for (auto j = 0U; j < Robot::dimension; j++)
+            {
+                last_projected_initial_attempt[j] = initial_projected_block[{j, 0}];
+            }
+            projected_vector.push_back(typename Robot::Configuration(last_projected_initial_attempt));
+            return end_projected_valid;
+
         }
 
         

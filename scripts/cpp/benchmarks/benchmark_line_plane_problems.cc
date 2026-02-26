@@ -109,11 +109,12 @@ struct SolvedResult {
 	std::vector<Configuration> plan;
 	double solve_time;  // Single time in nanoseconds (instead of multiple independent times)
 	std::size_t num_cuboid_obstacles;
+    float path_cost;
 
 	SolvedResult(bool success_ = false, std::vector<Configuration> plan_ = {}, 
-	             double solve_time_ = 0.0, std::size_t num_cuboid_obstacles_ = 0)
+	             double solve_time_ = 0.0, std::size_t num_cuboid_obstacles_ = 0, float path_cost_ = 0.0f)
 		: success(success_), plan(plan_), solve_time(solve_time_), 
-		  num_cuboid_obstacles(num_cuboid_obstacles_) {}
+		  num_cuboid_obstacles(num_cuboid_obstacles_), path_cost(path_cost_){}
 
 	// Convert to JSON for saving
 	json to_json() const {
@@ -122,7 +123,7 @@ struct SolvedResult {
 		j["solve_time_ns"] = solve_time;
 		j["total_solve_time"] = solve_time / 1000000.0;
 		j["num_cuboid_obstacles"] = num_cuboid_obstacles;
-		
+		j["path_cost"] = path_cost;
 		// Serialize trajectory
 		std::vector<std::vector<float>> plan_data;
 		for (const auto &config : plan) {
@@ -178,7 +179,7 @@ int main() {
 
 
     // load the json file of problems from the specified path
-    std::string problem_json_path = "/src/tsr_panda_problems_curobo_cuboid.json";
+    std::string problem_json_path = "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_prespecified_line_curobo_likes.json";
     load_problems_from_json(problems, problem_json_path);
 
     vamp::planning::RRTCSettings rrtc_settings;
@@ -191,7 +192,7 @@ int main() {
 
 
     for(const auto &problem: problems){
-        // std::cout << "Planning problem " << total_num_problems + 1 << " / " << problems.size() << std::endl;
+        std::cout << "Planning problem " << total_num_problems + 1 << " / " << problems.size() << std::endl;
         total_num_problems++;
 		auto rng = std::make_shared<vamp::rng::Halton<Robot>>();
 
@@ -201,6 +202,12 @@ int main() {
 
         std::array<float, 6 * Robot::n_eef> tsr_lower_bound = problem.tsr_lower_bound;
         std::array<float, 6 * Robot::n_eef> tsr_upper_bound = problem.tsr_upper_bound;
+
+        // set the last 3 of tsr_lower_bound to -inf and the last 3 of tsr_upper_bound to inf to ignore orientation constraints
+        // for (size_t i = 3; i < 6; i++) {
+        //     tsr_lower_bound[i] = -1000.0f; // Use a large negative value instead of -inf to avoid potential issues with optimization
+        //     tsr_upper_bound[i] = 1000.0f;  // Use a large positive value instead of inf
+        // }
 
         // std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = problem.eef_transforms;
         // std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = problem.eef_transforms_ref_frame_w_world;
@@ -225,14 +232,15 @@ int main() {
             tsr_constraint
         );
 
-        rrtc_settings.range = 1.5;
+        rrtc_settings.range = 1.0f;
         rrtc_settings.max_iterations = 200000;
         rrtc_settings.dynamic_domain = 0;
-        rrtc_settings.projection_method = vamp::planning::ProjMethod::InnerLM;
-        rrtc_settings.descend_rate = 0.75;
+        rrtc_settings.projection_method = vamp::planning::ProjMethod::OuterLM;
+        rrtc_settings.descend_rate = 1.0;
         rrtc_settings.radius = 1.0;
-        rrtc_settings.num_projection_iterations = 20;
+        rrtc_settings.num_projection_iterations = 50;
         rrtc_settings.insert_all_to_tree = 1;
+        rrtc_settings.std_dev_scaling_factor = 0.1F;
         // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
         vamp::planning::invalid_distance_counter_outside = 0;
         vamp::planning::invalid_distance_counter_inside = 0;
@@ -258,21 +266,27 @@ int main() {
             nanoseconds_per_problem.push_back(result.nanoseconds);
             iterations_per_problem.push_back(result.iterations);
             vamp::planning::SimplifySettings simplify_settings;
-            // auto simplify_result = vamp::planning::constraint::simplify_with_constraints<Robot, rake, Robot::resolution, decltype(tsr_constraint)>(
-            //     result.path, env_v, task_constraint, simplify_settings, rng);
+            vamp::planning::PlanningResult<Robot> simplify_result = result;
+            if (result.path.size() > 2) {
+                simplify_result = vamp::planning::constraint::simplify_with_constraints<Robot, rake, Robot::resolution, decltype(tsr_constraint)>(
+                    result.path, env_v, task_constraint, simplify_settings, rng);
+
+                }
+            // result.path.interpolate_to_resolution(Robot::resolution);
     
             // Create SolvedResult object with the simplified path
             SolvedResult solved(
                 true,                                   // success
-                result.path,                   // plan (trajectories)
+                simplify_result.path,                   // plan (trajectories)
                 static_cast<double>(result.nanoseconds), // solve_time
-                problem.cuboid_obstacles.size()         // num_cuboid_obstacles
+                problem.cuboid_obstacles.size(),         // num_cuboid_obstacles
+                simplify_result.path.cost()                // path_cost
             );
             all_solved_results.push_back(solved);
     
             // std::cout << "Planning took " << result.nanoseconds / 1000000.0 << " ms and " << result.iterations << " iterations, original path size: " << result.path.size() << ", simplified took : " << simplify_result.nanoseconds / 1000000.0 << " ms, path size: " << simplify_result.path.size() << std::endl;
-            // std::ofstream outfile("/src/trajectory.txt");
-            // for (const auto &config : simplify_result.path)
+            // std::ofstream outfile("/src/dummy_plan.txt");
+            // for (const auto &config : result.path)
             // {
             //     const auto &array = config.to_array();
             //     Robot::ConfigurationArray soln;
@@ -290,12 +304,28 @@ int main() {
             //     outfile << "\n";
             // }
             // outfile.close();
+
+            // std::ofstream obstacles_outfile("/src/cuboids.txt");
+            // for (const auto &cuboid : problem.cuboid_obstacles) {
+            //     obstacles_outfile << cuboid[0] << "," << cuboid[1] << "," << cuboid[2] << "," << cuboid[3] << "," << cuboid[4] << "," << cuboid[5] << "\n";
+            // }
+            // obstacles_outfile.close();
+
+
             // // sleep for a bit to ensure file is written before next problem (since we are overwriting the same file for each problem)
             // std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
         }
         else {
             std::cout << "Unable to solve problem " << total_num_problems << " with start and goal configs : " << start << " and " << goal << std::endl;
+            SolvedResult solved(
+                false,                                   // success
+                {},
+                0.0,                                    // solve_time
+                problem.cuboid_obstacles.size(),         // num_cuboid_obstacles
+                0.0f                                     // path_cost
+            );
+            all_solved_results.push_back(solved);
             // std::ofstream outfile("/src/trajectory.txt");
             // std::vector<Configuration> start_goal_configs = {start, goal};
             // for (const auto &config : start_goal_configs)
@@ -321,6 +351,7 @@ int main() {
 
 
         }
+
     }
 
     // print summary of results
@@ -345,7 +376,7 @@ int main() {
     }
     
     // Save all results to JSON
-    SolvedResult::save_solved_results(all_solved_results, "/src/tsr_panda_problems_curobo_cuboid_plane_vamp_results.json");
+    SolvedResult::save_solved_results(all_solved_results, "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_plane_vamp_results.json");
     
     return 0;
 }

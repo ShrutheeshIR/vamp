@@ -230,6 +230,10 @@ if(VAMP_BUILD_OMPL_DEMO)
   add_executable(ompl_integration_pinocchio scripts/cpp/ompl_integration_pinocchio.cc)
   target_link_libraries(ompl_integration_pinocchio PRIVATE ompl::ompl vamp_cpp pinocchio::pinocchio Eigen3::Eigen)
 
+
+  add_executable(benchmark_line_plane_problems_ompl_pinocchio scripts/cpp/benchmarks/benchmark_line_plane_problems_ompl_pinocchio.cc)
+  target_link_libraries(benchmark_line_plane_problems_ompl_pinocchio PRIVATE ompl::ompl vamp_cpp pinocchio::pinocchio Eigen3::Eigen)
+
   add_executable(benchmark_maze_ompl_pinocchio scripts/cpp/benchmarks/benchmark_maze_ompl_pinocchio.cc)
   target_link_libraries(benchmark_maze_ompl_pinocchio PRIVATE ompl::ompl vamp_cpp pinocchio::pinocchio Eigen3::Eigen)
 

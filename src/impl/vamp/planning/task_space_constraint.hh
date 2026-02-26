@@ -1492,7 +1492,7 @@ namespace vamp::planning
 
                 // std::cout << q << std::endl;
 
-                while ((project_iter < num_projection_iterations) and (not dist.test_all_less_equal(0.0001F)))
+                while ((project_iter < num_projection_iterations) and (not dist.test_all_less_equal(0.000001F)))
                 {
                     dist = projectStep(q_old, q_new, projection_method, descend_rate);
                     // std::cout << "Iteration " << project_iter << " Distance: " << dist << std::endl;
@@ -1523,7 +1523,7 @@ namespace vamp::planning
                     q_old = q_new;
                     project_iter += 1;
                 }
-                if (dist.test_all_less_equal(0.0001F))
+                if (dist.test_all_less_equal(0.000001F))
                 {
                     success = true;
                 }
@@ -1566,7 +1566,7 @@ namespace vamp::planning
 
                 // std::cout << q << std::endl;
 
-                while ((project_iter < num_projection_iterations) and (not dist.test_any_less_equal(0.0001F)))
+                while ((project_iter < num_projection_iterations) and (not dist.test_any_less_equal(0.000001F)))
                 {
                     dist = projectStep(q_old, q_new, projection_method, descend_rate);
                     // std::cout << "Iteration " << project_iter << " Distance: " << dist << std::endl;
@@ -1597,10 +1597,10 @@ namespace vamp::planning
                     q_old = q_new;
                     project_iter += 1;
                 }
-                if (dist.test_any_less_equal(0.0001F))
+                if (dist.test_any_less_equal(0.000001F))
                 {
                     for(size_t i = 0; i < rake; i++){
-                        if (dist[{0, i}] <= 0.0001F){
+                        if (dist[{0, i}] <= 0.000001F){
                             success_position = i;
                             break;
                         }

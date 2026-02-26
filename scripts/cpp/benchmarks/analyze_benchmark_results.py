@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-Analyze benchmark results from two JSON files and create comparison plots.
+Analyze benchmark results from N JSON files and create comparison plots.
 Plots: 
   1. num_obstacles vs success rate
   2. num_obstacles vs mean planning time
   3. num_obstacles vs median planning time
+    4. num_obstacles vs mean path cost
 """
 
 import json
@@ -36,7 +37,8 @@ def compute_statistics(results):
     stats_by_obstacles = defaultdict(lambda: {
         'success_count': 0,
         'total_count': 0,
-        'times_ms': []
+        'times_ms': [],
+        'path_costs': []
     })
     
     for result in results:
@@ -46,6 +48,7 @@ def compute_statistics(results):
         if result['success']:
             stats_by_obstacles[num_obs]['success_count'] += 1
             stats_by_obstacles[num_obs]['times_ms'].append(result['total_solve_time'])
+            stats_by_obstacles[num_obs]['path_costs'].append(result.get('path_cost', 0.0))
     
     # Compute derived statistics
     for num_obs in stats_by_obstacles:
@@ -61,44 +64,41 @@ def compute_statistics(results):
         else:
             stats['mean_time_ms'] = 0.0
             stats['median_time_ms'] = 0.0
+
+        if stats['path_costs']:
+            stats['mean_path_cost'] = np.mean(stats['path_costs'])
+        else:
+            stats['mean_path_cost'] = 0.0
     
     return dict(stats_by_obstacles)
 
 
-def plot_comparison(stats1, stats2, label1, label2, output_prefix="benchmark_comparison"):
-    """Create three comparison plots."""
+def plot_comparison(stats_list, labels, output_prefix="benchmark_comparison"):
+    """Create four comparison plots for N methods."""
+
+    # Extract sorted obstacle counts from all methods
+    all_obstacles = sorted(set().union(*(stats.keys() for stats in stats_list)))
     
-    # Extract sorted obstacle counts
-    all_obstacles = sorted(set(list(stats1.keys()) + list(stats2.keys())))
-    
-    # Prepare data
-    success_rate_1 = [stats1.get(obs, {}).get('success_rate', 0) for obs in all_obstacles]
-    success_rate_2 = [stats2.get(obs, {}).get('success_rate', 0) for obs in all_obstacles]
-    
-    mean_time_1 = [stats1.get(obs, {}).get('mean_time_ms', 0) for obs in all_obstacles]
-    mean_time_2 = [stats2.get(obs, {}).get('mean_time_ms', 0) for obs in all_obstacles]
-    
-    median_time_1 = [stats1.get(obs, {}).get('median_time_ms', 0) for obs in all_obstacles]
-    median_time_2 = [stats2.get(obs, {}).get('median_time_ms', 0) for obs in all_obstacles]
-    
-    # Create figure with 3 subplots
-    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+    # Create figure with 4 subplots
+    fig, axes = plt.subplots(1, 4, figsize=(24, 5))
     
     # Plot 1: Success Rate vs Num Obstacles
     ax = axes[0]
-    ax.plot(all_obstacles, success_rate_1, '-', label=label1, linewidth=2)
-    ax.plot(all_obstacles, success_rate_2, '-', label=label2, linewidth=2)
+    for stats, label in zip(stats_list, labels):
+        success_rate = [stats.get(obs, {}).get('success_rate', 0) for obs in all_obstacles]
+        ax.plot(all_obstacles, success_rate, '-', label=label, linewidth=2)
     ax.set_xlabel('Number of Obstacles', fontsize=12)
     ax.set_ylabel('Success Rate (%)', fontsize=12)
     ax.set_title('Success Rate vs Number of Obstacles', fontsize=13, fontweight='bold')
     ax.legend(fontsize=11)
     ax.grid(True, alpha=0.3)
-    ax.set_ylim([0, 105])
+    ax.set_ylim([70, 105])
     
     # Plot 2: Mean Planning Time vs Num Obstacles
     ax = axes[1]
-    ax.plot(all_obstacles, mean_time_1, '-', label=label1, linewidth=2)
-    ax.plot(all_obstacles, mean_time_2, '-', label=label2, linewidth=2)
+    for stats, label in zip(stats_list, labels):
+        mean_time = [stats.get(obs, {}).get('mean_time_ms', 0) for obs in all_obstacles]
+        ax.plot(all_obstacles, mean_time, '-', label=label, linewidth=2)
     ax.set_xlabel('Number of Obstacles', fontsize=12)
     ax.set_ylabel('Mean Planning Time (ms)', fontsize=12)
     ax.set_title('Mean Planning Time vs Number of Obstacles', fontsize=13, fontweight='bold')
@@ -108,13 +108,25 @@ def plot_comparison(stats1, stats2, label1, label2, output_prefix="benchmark_com
     
     # Plot 3: Median Planning Time vs Num Obstacles
     ax = axes[2]
-    ax.plot(all_obstacles, median_time_1, '-', label=label1, linewidth=2)
-    ax.plot(all_obstacles, median_time_2, '-', label=label2, linewidth=2)
+    for stats, label in zip(stats_list, labels):
+        median_time = [stats.get(obs, {}).get('median_time_ms', 0) for obs in all_obstacles]
+        ax.plot(all_obstacles, median_time, '-', label=label, linewidth=2)
     ax.set_xlabel('Number of Obstacles', fontsize=12)
     ax.set_ylabel('Median Planning Time (ms)', fontsize=12)
     ax.set_title('Median Planning Time vs Number of Obstacles', fontsize=13, fontweight='bold')
     ax.legend(fontsize=11)
     ax.set_yscale('log')
+    ax.grid(True, alpha=0.3)
+
+    # Plot 4: Mean Path Cost vs Num Obstacles
+    ax = axes[3]
+    for stats, label in zip(stats_list, labels):
+        mean_path_cost = [stats.get(obs, {}).get('mean_path_cost', 0) for obs in all_obstacles]
+        ax.plot(all_obstacles, mean_path_cost, '-', label=label, linewidth=2)
+    ax.set_xlabel('Number of Obstacles', fontsize=12)
+    ax.set_ylabel('Mean Path Cost', fontsize=12)
+    ax.set_title('Mean Path Cost vs Number of Obstacles', fontsize=13, fontweight='bold')
+    ax.legend(fontsize=11)
     ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
@@ -127,62 +139,71 @@ def plot_comparison(stats1, stats2, label1, label2, output_prefix="benchmark_com
     plt.show()
 
 
-def print_statistics(stats1, stats2, label1, label2):
-    """Print statistics summary."""
-    all_obstacles = sorted(set(list(stats1.keys()) + list(stats2.keys())))
-    
-    print("\n" + "="*100)
-    print(f"{'Num Obs':<10} {label1 + ' Success':<20} {label2 + ' Success':<20} {label1 + ' Mean (ms)':<20} {label2 + ' Mean (ms)':<20}")
-    print("="*100)
-    
+def print_statistics(stats_list, labels):
+    """Print statistics summary for N methods."""
+    all_obstacles = sorted(set().union(*(stats.keys() for stats in stats_list)))
+
+    columns = ["Num Obs"]
+    for label in labels:
+        columns.extend([f"{label} Success", f"{label} Mean (ms)", f"{label} Median (ms)"])
+
+    col_width = 24
+    header = f"{columns[0]:<10}" + "".join(f"{col:<{col_width}}" for col in columns[1:])
+    line_len = max(100, len(header))
+
+    print("\n" + "=" * line_len)
+    print(header)
+    print("=" * line_len)
+
     for obs in all_obstacles:
-        s1 = stats1.get(obs, {})
-        s2 = stats2.get(obs, {})
-        
-        sr1 = s1.get('success_rate', 0)
-        sr2 = s2.get('success_rate', 0)
-        mean1 = s1.get('mean_time_ms', 0)
-        mean2 = s2.get('mean_time_ms', 0)
-        
-        print(f"{obs:<10} {sr1:>6.1f}% ({s1.get('success_count', 0):>2}/{s1.get('total_count', 0):<2})  "
-              f"{sr2:>6.1f}% ({s2.get('success_count', 0):>2}/{s2.get('total_count', 0):<2})  "
-              f"{mean1:>10.2f}              {mean2:>10.2f}")
-    
-    print("="*100 + "\n")
+        row = f"{obs:<10}"
+        for stats in stats_list:
+            s = stats.get(obs, {})
+            success_str = f"{s.get('success_rate', 0):>6.1f}% ({s.get('success_count', 0):>2}/{s.get('total_count', 0):<2})"
+            mean_str = f"{s.get('mean_time_ms', 0):>10.2f}"
+            med_str = f"{s.get('median_time_ms', 0):>10.2f}"
+            row += f"{success_str:<{col_width}}{mean_str:<{col_width}}{med_str:<{col_width}}"
+        print(row)
+
+    print("=" * line_len + "\n")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Analyze and compare benchmark results from two JSON files"
+        description="Analyze and compare benchmark results from N JSON files"
     )
-    parser.add_argument('json_file_1', help='First JSON results file')
-    parser.add_argument('json_file_2', help='Second JSON results file')
-    parser.add_argument('--label1', default='Method 1', help='Label for first method')
-    parser.add_argument('--label2', default='Method 2', help='Label for second method')
+    parser.add_argument('json_files', nargs='+', help='JSON results files to compare (2 or more)')
+    parser.add_argument('--labels', nargs='*', default=None, help='Optional labels matching json_files order')
     parser.add_argument('--output', default='benchmark_comparison', help='Output file prefix for plots')
     
     args = parser.parse_args()
+
+    if len(args.json_files) < 2:
+        parser.error("Provide at least two JSON files for comparison.")
+
+    if args.labels is not None and len(args.labels) != len(args.json_files):
+        parser.error("If provided, --labels must have exactly one label per JSON file.")
+
+    labels = args.labels if args.labels is not None else [f"Method {i + 1}" for i in range(len(args.json_files))]
     
     # Load results
-    print(f"Loading results from {args.json_file_1}...")
-    results1 = load_results(args.json_file_1)
-    print(f"  Loaded {len(results1)} results")
-    
-    print(f"Loading results from {args.json_file_2}...")
-    results2 = load_results(args.json_file_2)
-    print(f"  Loaded {len(results2)} results")
+    all_results = []
+    for json_file in args.json_files:
+        print(f"Loading results from {json_file}...")
+        results = load_results(json_file)
+        print(f"  Loaded {len(results)} results")
+        all_results.append(results)
     
     # Compute statistics
     print("\nComputing statistics...")
-    stats1 = compute_statistics(results1)
-    stats2 = compute_statistics(results2)
+    stats_list = [compute_statistics(results) for results in all_results]
     
     # Print summary
-    print_statistics(stats1, stats2, args.label1, args.label2)
+    print_statistics(stats_list, labels)
     
     # Create plots
     print("Creating plots...")
-    plot_comparison(stats1, stats2, args.label1, args.label2, args.output)
+    plot_comparison(stats_list, labels, args.output)
 
 
 if __name__ == '__main__':
