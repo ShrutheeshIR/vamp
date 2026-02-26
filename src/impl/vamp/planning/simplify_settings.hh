@@ -40,7 +40,7 @@ namespace vamp::planning
 
     struct SimplifySettings
     {
-        std::size_t max_iterations{5};
+        std::size_t max_iterations{10};
         std::size_t interpolate{0};
         std::vector<SimplifyRoutine> operations{{SHORTCUT, BSPLINE}};
 

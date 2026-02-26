@@ -21,9 +21,7 @@ namespace vamp::planning::constraint
         const BSplineSettings &settings,
         ProjMethod projection_method = ProjMethod::InnerLM,
         float projection_descent_rate = 1.0F,
-        int num_projection_iterations = 25,
-        float std_dev_scaling_factor = 0.1F,
-        bool insert_all_to_tree = false
+        int num_projection_iterations = 25
     ) -> bool
     {
         if (path.size() < 3)
@@ -49,13 +47,13 @@ namespace vamp::planning::constraint
                     // std::cout << "Attempting to bspline between " << index - 1 << " and " << index + 1 << std::endl;
 
                     if (
-                        project_constraint_motion<Robot, rake, resolution>(path[index - 1], midpoint, projected_vector, constraint, environment, projection_method, projection_descent_rate, num_projection_iterations, std_dev_scaling_factor, insert_all_to_tree) &&
+                        project_constraint_motion<Robot, rake, resolution>(path[index - 1], midpoint, projected_vector, constraint, environment, projection_method, projection_descent_rate, num_projection_iterations, 0.001F, false) &&
                         ((path[index - 1] - midpoint).squared_l2_norm() > (projected_vector.back() - path[index - 1]).squared_l2_norm())
                         )
                     {
                         // std::cout << "Attempting to bspline between checking to goal" << index - 1 << " and " << index + 1 << std::endl;
                         if (
-                            project_constraint_motion<Robot, rake, resolution>(midpoint, path[index + 1], projected_vector, constraint, environment, projection_method, projection_descent_rate, num_projection_iterations, std_dev_scaling_factor, insert_all_to_tree) &&
+                            project_constraint_motion<Robot, rake, resolution>(midpoint, path[index + 1], projected_vector, constraint, environment, projection_method, projection_descent_rate, num_projection_iterations, 0.001F, false) &&
                             ((path[index + 1] - midpoint).squared_l2_norm() > (projected_vector.back() - path[index + 1]).squared_l2_norm())
                             )
                         {
@@ -144,9 +142,7 @@ namespace vamp::planning::constraint
         const ShortcutSettings & /*settings*/,
         ProjMethod projection_method = ProjMethod::InnerLM,
         float projection_descent_rate = 1.0F,
-        int num_projection_iterations = 25,
-        float std_dev_scaling_factor = 0.1F,
-        bool insert_all_to_tree = false        
+        int num_projection_iterations = 25
     ) -> bool
     {
         if (path.size() < 3)
@@ -161,8 +157,8 @@ namespace vamp::planning::constraint
             for (auto j = path.size() - 1; j > i + 1; --j)
             {
                 // if (project_constraint_motion<Robot, rake, resolution>(path[i], path[j], projected_vector, constraint, environment) && ((projected_vector.back() - path[j]).squared_l2_norm() < 1e-6))
-                if (project_constraint_motion<Robot, rake, resolution>(path[i], path[j], projected_vector, constraint, environment, projection_method, projection_descent_rate, num_projection_iterations, std_dev_scaling_factor, insert_all_to_tree)){
-                    if((projected_vector.back() - path[j]).squared_l2_norm() < 1e-6)
+                if (project_constraint_motion<Robot, rake, resolution>(path[i], path[j], projected_vector, constraint, environment, projection_method, projection_descent_rate, num_projection_iterations, 0.0001F, false)){
+                    if((projected_vector.back() - path[j]).squared_l2_norm() < 1e-3)
                     {
                         path.erase(path.begin() + i + 1, path.begin() + j);
                         // std::cout << "Shortcutting path at " << i << " to " << j << std::endl;
@@ -245,32 +241,32 @@ namespace vamp::planning::constraint
 
         PlanningResult<Robot> result;
 
-        const auto bspline = [&result, &environment, settings, &constraint, projection_method, projection_descent_rate, num_projection_iterations, std_dev_scaling_factor, insert_all_to_tree]()
-        { return smooth_bspline<Robot, rake, resolution>(result.path, environment, constraint, settings.bspline, projection_method, projection_descent_rate, num_projection_iterations, std_dev_scaling_factor, insert_all_to_tree); };
+        const auto bspline = [&result, &environment, settings, &constraint, projection_method, projection_descent_rate, num_projection_iterations]()
+        { return smooth_bspline<Robot, rake, resolution>(result.path, environment, constraint, settings.bspline, projection_method, projection_descent_rate, num_projection_iterations); };
         // const auto reduce = [&result, &environment, settings, rng]()
         // {
         //     return reduce_path_vertices<Robot, rake, resolution>(
         //         result.path, environment, settings.reduce, rng);
         // };
-        const auto shortcut = [&result, &environment, settings, &constraint, projection_method, projection_descent_rate, num_projection_iterations, std_dev_scaling_factor, insert_all_to_tree]()
-        { return shortcut_path<Robot, rake, resolution>(result.path, environment, constraint, settings.shortcut, projection_method, projection_descent_rate, num_projection_iterations, std_dev_scaling_factor, insert_all_to_tree); };
+        const auto shortcut = [&result, &environment, settings, &constraint, projection_method, projection_descent_rate, num_projection_iterations]()
+        { return shortcut_path<Robot, rake, resolution>(result.path, environment, constraint, settings.shortcut, projection_method, projection_descent_rate, num_projection_iterations); };
         // const auto perturb = [&result, &environment, settings, rng]()
         // { return perturb_path<Robot, rake, resolution>(result.path, environment, settings.perturb, rng); };
 
         const std::map<SimplifyRoutine, std::function<bool()>> operations = {
             {BSPLINE, bspline},
             // {REDUCE, reduce},
-            {SHORTCUT, shortcut},
+            {SHORTCUT, shortcut}
             // {PERTURB, perturb},
         };
 
         std::vector <typename Robot::Configuration> projected_vector;
         // Check if straight line is valid
         if (path.size() == 2 or (path.size() > 2 and project_constraint_motion<Robot, rake, resolution>(
-                                                         path.front(), path.back(), projected_vector, constraint, environment, projection_method, projection_descent_rate, num_projection_iterations, std_dev_scaling_factor, insert_all_to_tree)))
+                                                         path.front(), path.back(), projected_vector, constraint, environment, projection_method, projection_descent_rate, num_projection_iterations, 0.001F, false)))
         {
             // if the last projected configuration is not the same as the original end configuration
-            if((projected_vector.back() - path.back()).squared_l2_norm() < 1e-6)
+            if((projected_vector.back() - path.back()).squared_l2_norm() < 1e-4)
             {
                 result.path.emplace_back(path.front());
                 for(auto i = 0U; i < projected_vector.size(); ++i)

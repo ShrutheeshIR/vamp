@@ -153,6 +153,10 @@ find_package(nlohmann_json REQUIRED)
   add_executable(vamp_crrtc_spheres scripts/cpp/vamp_crrtc_spheres.cc)
   target_link_libraries(vamp_crrtc_spheres PRIVATE vamp_cpp)
 
+add_executable(debug_simplify scripts/cpp/debug_simplify.cc)
+target_link_libraries(debug_simplify PRIVATE vamp_cpp)
+
+
   add_executable(problem_generator scripts/cpp/problem_generator.cc)
   target_link_libraries(problem_generator PRIVATE vamp_cpp)
 

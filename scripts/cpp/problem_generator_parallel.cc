@@ -262,7 +262,7 @@ std::vector<std::array<float, 6>> generate_cube_obstacles(
 			if(!any_successful_plan){
 				continue;
 			}
-			
+
 			obstacles.push_back({center[0], center[1], center[2], random_obstacle_half_length, random_obstacle_half_length, random_obstacle_half_length});
 			num_obstacles_added++;
 		}
@@ -337,9 +337,9 @@ auto generate_constraint_and_start_goal(){
 	// for the line constraint, first we want y line, i.e. x and z are fixed
 	// for the line we choose 0, 1,0,0,   0.3486, 0.647752, 0.2399
 	// from here, we generate n more lines, decreasing and increasing the z and the x by some amount
-	// for this line, we also modify the orientation to be 
+	// for this line, we also modify the orientation to be
 	// get eefk of (0.0,0.0,0.0,0.0,0.0,1.57,0.82)
-	
+
 	std::vector<Problem> problems_initializer;
 	std::array<std::array<float, 3>, 2> reference_positions = {{{0.3486, 0.647752, 0.2399}, {0.55, 0.4, 0.5}}};
 	std::array<float, 9> pos_offsets = {0.0, 0.05, -0.05, 0.1, -0.1, 0.15, -0.15, 0.2, -0.2};
@@ -350,7 +350,7 @@ auto generate_constraint_and_start_goal(){
 	std::array<std::array<std::array<float, 7>, 2>, 2> reference_configs_to_start_projecting = {{
 		{{
 		{1.01600, 0.68800, 0.08700, -1.28100, -0.06000, 1.95500, 1.89100},
-		{-1.18400, 0.68900, 0.15400, -1.27400, -0.10600, 1.95500, -0.24000} // this is for 0 1 0 0 
+		{-1.18400, 0.68900, 0.15400, -1.27400, -0.10600, 1.95500, -0.24000} // this is for 0 1 0 0
 		}},
 		{{
 		{-0.9463047, 0.53955036, 0.3271516, -1.353034, 1.1967324, 0.9882862, 2.0019703}, // this is for 0 0.7071 -0.0 0.7071
@@ -372,12 +372,12 @@ auto generate_constraint_and_start_goal(){
 				p.eef_transforms = eef_transforms;
 				p.eef_transforms_ref_frame_w_world = eef_transforms_ref_frame_w_world;
 				if(orientation_index == 0){
-					p.tsr_lower_bound = {-0.001, -10.001, -0.001, -0.001, -0.001, -0.001};
-					p.tsr_upper_bound = {0.001, 10.001, 0.001, 0.001, 0.001, 0.001};
+					p.tsr_lower_bound = {-10.001, -10.001, -0.001, -0.001, -0.001, -0.001};
+					p.tsr_upper_bound = {10.001, 10.001, 0.001, 0.001, 0.001, 0.001};
 				}
 				else{
-					p.tsr_lower_bound = {-0.001, -0.001, -10.001, -0.001, -0.001, -0.001};
-					p.tsr_upper_bound = {0.001, 0.001, 10.001, 0.001, 0.001, 0.001};
+					p.tsr_lower_bound = {-10.001, -0.001, -10.001, -0.001, -0.001, -0.001};
+					p.tsr_upper_bound = {10.001, 0.001, 10.001, 0.001, 0.001, 0.001};
 				}
 				p.problem_start = reference_configs_to_start_projecting[orientation_index][0];
 				p.problem_end = reference_configs_to_start_projecting[orientation_index][1];
@@ -398,8 +398,8 @@ auto generate_constraint_and_start_goal(){
 			Problem p;
 			p.eef_transforms = eef_transforms;
 			p.eef_transforms_ref_frame_w_world = eef_transforms_ref_frame_w_world;
-			p.tsr_lower_bound = {-0.001, -0.001, -10.001, -0.001, -0.001, -0.001};
-			p.tsr_upper_bound = {0.001, 0.001, 10.001, 0.001, 0.001, 0.001};
+			p.tsr_lower_bound = {-0.001, -10.001, -10.001, -0.001, -0.001, -0.001};
+			p.tsr_upper_bound = {0.001, 10.001, 10.001, 0.001, 0.001, 0.001};
 			p.problem_start = {1.2,-0.26,-0.75,-1.88,-1.24,1.26,-1.84};
 			p.problem_end = {1.26,1.8326,-0.32,-1.22,-0.21,1.51,-1.08};
 			problems_initializer.push_back(p);
@@ -414,7 +414,7 @@ auto generate_constraint_and_start_goal(){
 
 auto generate_prespecified_line_problems() {
 	size_t TOT_NUM_START_GOAL_PAIRS_PER_CONSTRAINT = 100;
-	const char *output_path = "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_prespecified_line_curobo_likes.json";
+	const char *output_path = "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_prespecified_plane_curobo_likes.json";
 	// std::ofstream file(output_path);
 
 
@@ -432,8 +432,8 @@ auto generate_prespecified_line_problems() {
 				file << json(problems).dump(4);
 			}
 			file.close();
-		} 
-			
+		}
+
 
 
 		// the start and goal are reference and we can generate variations around them by sampling around them in a gaussian manner and then project them
@@ -547,7 +547,7 @@ auto generate_prespecified_line_problems() {
 			file << json(problems).dump(4);
 		}
 		file.close();
-	} 
+	}
 	return -1;
 
 }

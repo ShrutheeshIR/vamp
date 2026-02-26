@@ -32,6 +32,7 @@ def load_problems_from_json(json_file_path):
     for problem_data in data:
         curobo_mask = [1 if abs(float(x)) < 0.1 else 0 for x in problem_data['tsr_lower_bound']]
         curobo_mask = [0, 0, 0] + curobo_mask[:3]
+        # curobo_mask = curobo_mask[3:] + curobo_mask[:3]
 
         task = MotionPlanningTask()
         task.problem_start = problem_data['problem_start']
@@ -59,7 +60,7 @@ def plan_task(mp_task: MotionPlanningTask, motion_gen: MotionGen, tensor_args: T
                 color=[0, 1.0, 0, 1.0],
             )
         )
-    
+
     world_model = WorldConfig(
         cuboid=obstacle_spheres,
     )
@@ -125,7 +126,7 @@ def plan_task(mp_task: MotionPlanningTask, motion_gen: MotionGen, tensor_args: T
             check_start_validity=True,
         )
     # motion_gen_config = MotionGenPlanConfig(
-    #     enable_graph=True, 
+    #     enable_graph=True,
     #     enable_opt=False,
     #     use_nn_ik_seed=False,
     #     need_graph_success=False,
@@ -172,12 +173,12 @@ def plan_task(mp_task: MotionPlanningTask, motion_gen: MotionGen, tensor_args: T
 def load_large_json_with_extra(filepath):
     with open(filepath, 'r') as f:
         data = f.read()
-    
+
     decoder = json.JSONDecoder()
     pos = 0
     results = []
     problems = []
-    
+
     while pos < len(data):
         # Skip whitespace
         if data[pos].isspace():
@@ -199,7 +200,7 @@ def load_large_json_with_extra(filepath):
             # task.tsr_lower_bound = [1 if abs(float(x)) > 0.1 else 0 for x in obj['tsr_lower_bound']]
             # task.tsr_upper_bound = [1 if abs(float(x)) > 0.1 else 0 for x in obj['tsr_upper_bound']]
             problems.append(obj)
-    
+
     # save this fixed json to the file
     # with open(filepath, 'w') as f:
     #     json.dump(problems, f, indent=4)
@@ -224,7 +225,8 @@ def load_large_json_with_extra(filepath):
 
 
 class SolvedResult:
-    def __init__(self, success, plan=None, graph_time=0, solve_time=0, trajopt_time=0, finetune_time=0, num_cuboid_obstacles=0, path_cost=0.0):
+    def __init__(self, problem_number, success, plan=None, graph_time=0, solve_time=0, trajopt_time=0, finetune_time=0, num_cuboid_obstacles=0, path_cost=0.0):
+        self.problem_number = problem_number
         self.success = success
         self.plan = plan
         self.total_solve_time = graph_time + solve_time + trajopt_time + finetune_time
@@ -236,6 +238,7 @@ def save_solved_results_to_plot_data(solved_results, save_path):
     plot_data = []
     for result in solved_results:
         plot_data.append({
+            "problem_number": result.problem_number,
             "success": result.success,
             "total_solve_time": result.total_solve_time * 1000.0,  # convert to milliseconds
             "num_cuboid_obstacles": result.num_cuboid_obstacles,
@@ -362,6 +365,7 @@ def main():
         ).item()
 
         solved_plans.append(SolvedResult(
+            problem_number=i,
             success=result.success.squeeze().cpu().numpy().item(),
             plan=cmd_plan.position[:, :7].cpu().numpy() if result.success else None,
             graph_time=result.graph_time,

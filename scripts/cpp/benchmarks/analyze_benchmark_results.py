@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Analyze benchmark results from N JSON files and create comparison plots.
-Plots: 
+Plots:
   1. num_obstacles vs success rate
   2. num_obstacles vs mean planning time
   3. num_obstacles vs median planning time
@@ -25,9 +25,9 @@ def load_results(json_file):
 def compute_statistics(results):
     """
     Compute statistics grouped by number of obstacles.
-    
+
     Returns:
-        dict: {num_obstacles: {'success_count': int, 
+        dict: {num_obstacles: {'success_count': int,
                                'total_count': int,
                                'success_rate': float,
                                'times_ms': [float],
@@ -40,24 +40,24 @@ def compute_statistics(results):
         'times_ms': [],
         'path_costs': []
     })
-    
+
     for result in results:
         num_obs = result['num_cuboid_obstacles']
         stats_by_obstacles[num_obs]['total_count'] += 1
-        
+
         if result['success']:
             stats_by_obstacles[num_obs]['success_count'] += 1
             stats_by_obstacles[num_obs]['times_ms'].append(result['total_solve_time'])
             stats_by_obstacles[num_obs]['path_costs'].append(result.get('path_cost', 0.0))
-    
+
     # Compute derived statistics
     for num_obs in stats_by_obstacles:
         stats = stats_by_obstacles[num_obs]
         total = stats['total_count']
         success = stats['success_count']
-        
+
         stats['success_rate'] = (success / total * 100.0) if total > 0 else 0.0
-        
+
         if stats['times_ms']:
             stats['mean_time_ms'] = np.mean(stats['times_ms'])
             stats['median_time_ms'] = np.median(stats['times_ms'])
@@ -69,20 +69,26 @@ def compute_statistics(results):
             stats['mean_path_cost'] = np.mean(stats['path_costs'])
         else:
             stats['mean_path_cost'] = 0.0
-    
+
     return dict(stats_by_obstacles)
 
 
-def plot_comparison(stats_list, labels, output_prefix="benchmark_comparison"):
-    """Create four comparison plots for N methods."""
+def plot_comparison(stats_list, labels, output_prefix="benchmark_comparison", stats_time_list=None):
+    """Create four comparison plots for N methods.
 
-    # Extract sorted obstacle counts from all methods
+    If stats_time_list is provided (list of stats dicts corresponding to stats_list),
+    the planning time and path cost plots will be generated using those filtered stats
+    (e.g., containing only problems where all planners succeeded). The success-rate
+    plot always uses stats_list (the full data).
+    """
+
+    # Extract sorted obstacle counts from all methods (union over the rate stats)
     all_obstacles = sorted(set().union(*(stats.keys() for stats in stats_list)))
-    
+
     # Create figure with 4 subplots
     fig, axes = plt.subplots(1, 4, figsize=(24, 5))
-    
-    # Plot 1: Success Rate vs Num Obstacles
+
+    # Plot 1: Success Rate vs Num Obstacles (always use full stats)
     ax = axes[0]
     for stats, label in zip(stats_list, labels):
         success_rate = [stats.get(obs, {}).get('success_rate', 0) for obs in all_obstacles]
@@ -93,24 +99,33 @@ def plot_comparison(stats_list, labels, output_prefix="benchmark_comparison"):
     ax.legend(fontsize=11)
     ax.grid(True, alpha=0.3)
     ax.set_ylim([70, 105])
-    
+
+    # Determine which stats to use for time/cost plots:
+    # If a filtered stats_time_list is provided, use it; otherwise fall back to stats_list.
+    use_stats_for_time = stats_time_list if stats_time_list is not None else stats_list
+
+    # Ensure the obstacle set for time/cost plots covers the union of keys in the chosen stats
+    time_obstacles = sorted(set().union(*(s.keys() for s in use_stats_for_time)))
+
     # Plot 2: Mean Planning Time vs Num Obstacles
     ax = axes[1]
-    for stats, label in zip(stats_list, labels):
-        mean_time = [stats.get(obs, {}).get('mean_time_ms', 0) for obs in all_obstacles]
-        ax.plot(all_obstacles, mean_time, '-', label=label, linewidth=2)
+    for i, (stats, label) in enumerate(zip(stats_list, labels)):
+        stats_for_time = use_stats_for_time[i]
+        mean_time = [stats_for_time.get(obs, {}).get('mean_time_ms', 0) for obs in time_obstacles]
+        ax.plot(time_obstacles, mean_time, '-', label=label, linewidth=2)
     ax.set_xlabel('Number of Obstacles', fontsize=12)
     ax.set_ylabel('Mean Planning Time (ms)', fontsize=12)
     ax.set_title('Mean Planning Time vs Number of Obstacles', fontsize=13, fontweight='bold')
     ax.legend(fontsize=11)
     ax.set_yscale('log')
     ax.grid(True, alpha=0.3)
-    
+
     # Plot 3: Median Planning Time vs Num Obstacles
     ax = axes[2]
-    for stats, label in zip(stats_list, labels):
-        median_time = [stats.get(obs, {}).get('median_time_ms', 0) for obs in all_obstacles]
-        ax.plot(all_obstacles, median_time, '-', label=label, linewidth=2)
+    for i, (stats, label) in enumerate(zip(stats_list, labels)):
+        stats_for_time = use_stats_for_time[i]
+        median_time = [stats_for_time.get(obs, {}).get('median_time_ms', 0) for obs in time_obstacles]
+        ax.plot(time_obstacles, median_time, '-', label=label, linewidth=2)
     ax.set_xlabel('Number of Obstacles', fontsize=12)
     ax.set_ylabel('Median Planning Time (ms)', fontsize=12)
     ax.set_title('Median Planning Time vs Number of Obstacles', fontsize=13, fontweight='bold')
@@ -120,22 +135,23 @@ def plot_comparison(stats_list, labels, output_prefix="benchmark_comparison"):
 
     # Plot 4: Mean Path Cost vs Num Obstacles
     ax = axes[3]
-    for stats, label in zip(stats_list, labels):
-        mean_path_cost = [stats.get(obs, {}).get('mean_path_cost', 0) for obs in all_obstacles]
-        ax.plot(all_obstacles, mean_path_cost, '-', label=label, linewidth=2)
+    for i, (stats, label) in enumerate(zip(stats_list, labels)):
+        stats_for_time = use_stats_for_time[i]
+        mean_path_cost = [stats_for_time.get(obs, {}).get('mean_path_cost', 0) for obs in time_obstacles]
+        ax.plot(time_obstacles, mean_path_cost, '-', label=label, linewidth=2)
     ax.set_xlabel('Number of Obstacles', fontsize=12)
     ax.set_ylabel('Mean Path Cost', fontsize=12)
     ax.set_title('Mean Path Cost vs Number of Obstacles', fontsize=13, fontweight='bold')
     ax.legend(fontsize=11)
     ax.grid(True, alpha=0.3)
-    
+
     plt.tight_layout()
-    
+
     # Save figure
     output_file = f"{output_prefix}.png"
     plt.savefig(output_file, dpi=300, bbox_inches='tight')
     print(f"Saved plot to: {output_file}")
-    
+
     plt.show()
 
 
@@ -175,7 +191,7 @@ def main():
     parser.add_argument('json_files', nargs='+', help='JSON results files to compare (2 or more)')
     parser.add_argument('--labels', nargs='*', default=None, help='Optional labels matching json_files order')
     parser.add_argument('--output', default='benchmark_comparison', help='Output file prefix for plots')
-    
+
     args = parser.parse_args()
 
     if len(args.json_files) < 2:
@@ -185,7 +201,7 @@ def main():
         parser.error("If provided, --labels must have exactly one label per JSON file.")
 
     labels = args.labels if args.labels is not None else [f"Method {i + 1}" for i in range(len(args.json_files))]
-    
+
     # Load results
     all_results = []
     for json_file in args.json_files:
@@ -193,17 +209,45 @@ def main():
         results = load_results(json_file)
         print(f"  Loaded {len(results)} results")
         all_results.append(results)
-    
+
     # Compute statistics
     print("\nComputing statistics...")
     stats_list = [compute_statistics(results) for results in all_results]
-    
+
+    # Determine problems where each planner succeeded, then find the intersection
+    success_sets = []
+    for results in all_results:
+        s = set()
+        for r in results:
+            # Some result entries may not have 'problem_number' key; guard against that
+            if r.get('success') and ('problem_number' in r):
+                s.add(r['problem_number'])
+        success_sets.append(s)
+
+    if success_sets:
+        common_success_problems = set.intersection(*success_sets)
+    else:
+        common_success_problems = set()
+
+    if common_success_problems:
+        print(f"Found {len(common_success_problems)} problems where all planners succeeded. "
+              "Timing and path length stats will be computed only for these problems.")
+        # Filter each method's results to only those problems that are in the common set
+        filtered_results = []
+        for results in all_results:
+            fr = [r for r in results if ('problem_number' in r) and (r['problem_number'] in common_success_problems)]
+            filtered_results.append(fr)
+        stats_time_list = [compute_statistics(fr) for fr in filtered_results]
+    else:
+        print("No problems found where all planners succeeded. Timing/path plots will use empty data.")
+        stats_time_list = None
+
     # Print summary
     print_statistics(stats_list, labels)
-    
-    # Create plots
+
+    # Create plots (pass filtered stats for timing/cost plots)
     print("Creating plots...")
-    plot_comparison(stats_list, labels, args.output)
+    plot_comparison(stats_list, labels, args.output, None)
 
 
 if __name__ == '__main__':

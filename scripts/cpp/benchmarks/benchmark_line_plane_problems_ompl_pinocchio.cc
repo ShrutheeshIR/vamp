@@ -85,14 +85,14 @@ class SE3Constraint : public ob::Constraint
     public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-    SE3Constraint(const std::string& urdf_path, 
+    SE3Constraint(const std::string& urdf_path,
                 const TSR &tsr)
         : ob::Constraint(get_model(urdf_path)->nq, 6, 1e-3),
         tsr_(tsr)
         {
             // 1. Get the shared model (loads only once)
             model_ptr_ = get_model(urdf_path);
-            
+
             // 2. Get the Frame ID
             eeFrame_ = model_ptr_->getFrameId("panda_grasptarget");
             // pinocchio::FrameIndex eeFrame = model.getFrameId("panda_grasptarget");
@@ -112,7 +112,7 @@ class SE3Constraint : public ob::Constraint
                 // T_err = T_ref^-1 * T_ee
                 const pinocchio::SE3 &T_ee = data.oMf[eeFrame_];
                 const pinocchio::SE3 T_err = T_ref_pin_.actInv(T_ee);
-                
+
                 // Log map gives the 6D error vector
                 Eigen::VectorXd error = pinocchio::log6(T_err).toVector();
 
@@ -175,7 +175,7 @@ class SE3Constraint : public ob::Constraint
                 // Eigen::MatrixXd H = J.transpose()*J + lambda*Eigen::MatrixXd::Identity(model_.nv, model_.nv);
                 // Eigen::VectorXd delta = H.ldlt().solve(-J.transpose()*f);
                 x = pinocchio::integrate(*model_ptr_, x, -delta * 0.25);
-                // x += delta;  
+                // x += delta;
 
                 if(delta.norm() < dist_tol) {
                     return true;
@@ -202,7 +202,7 @@ class SE3Constraint : public ob::Constraint
 
 
     private:
-        // std::shared_ptr<const pinocchio::Model> model_ptr_; 
+        // std::shared_ptr<const pinocchio::Model> model_ptr_;
         static std::shared_ptr<pinocchio::Model> get_model(const std::string& path) {
             static std::shared_ptr<pinocchio::Model> shared_model;
             if (!shared_model) {
@@ -441,27 +441,29 @@ void load_problems_from_json(std::vector<Problem> &problems, const std::string &
     }
 }
 
+// Equivalent of curobo's SolvedResult class
 struct SolvedResult {
+    size_t problem_number;
 	bool success;
 	std::vector<Configuration> plan;
 	double solve_time;  // Single time in nanoseconds (instead of multiple independent times)
 	std::size_t num_cuboid_obstacles;
     float path_cost;
 
-	SolvedResult(bool success_ = false, std::vector<Configuration> plan_ = {}, 
-                 double solve_time_ = 0.0, std::size_t num_cuboid_obstacles_ = 0, float path_cost_ = 0.0F)
-		: success(success_), plan(plan_), solve_time(solve_time_), 
-          num_cuboid_obstacles(num_cuboid_obstacles_), path_cost(path_cost_) {}
+	SolvedResult(size_t problem_number_ = 0, bool success_ = false, std::vector<Configuration> plan_ = {},
+	             double solve_time_ = 0.0, std::size_t num_cuboid_obstacles_ = 0, float path_cost_ = 0.0f)
+		: problem_number(problem_number_), success(success_), plan(plan_), solve_time(solve_time_),
+		  num_cuboid_obstacles(num_cuboid_obstacles_), path_cost(path_cost_){}
 
 	// Convert to JSON for saving
 	json to_json() const {
 		json j;
+		j["problem_number"] = problem_number;
 		j["success"] = success;
 		j["solve_time_ns"] = solve_time;
 		j["total_solve_time"] = solve_time / 1000000.0;
 		j["num_cuboid_obstacles"] = num_cuboid_obstacles;
-        j["path_cost"] = path_cost;
-		
+		j["path_cost"] = path_cost;
 		// Serialize trajectory
 		std::vector<std::vector<float>> plan_data;
 		for (const auto &config : plan) {
@@ -474,27 +476,27 @@ struct SolvedResult {
 		}
 		j["plan"] = plan_data;
 		j["plan_length"] = plan.size();
-		
+
 		return j;
 	}
 
 	// Save results to JSON file
 	static void save_solved_results(const std::vector<SolvedResult> &results, const std::string &save_path) {
 		json plot_data = json::array();
-		
+
 		for (const auto &result : results) {
 			plot_data.push_back(result.to_json());
 		}
-		
+
 		std::ofstream output_file(save_path);
 		if (!output_file.is_open()) {
 			std::cerr << "Failed to open output file: " << save_path << std::endl;
 			return;
 		}
-		
+
 		output_file << plot_data.dump(4) << std::endl;
 		output_file.close();
-		
+
 		std::cout << "Results saved to: " << save_path << std::endl;
 	}
 
@@ -506,15 +508,22 @@ struct SolvedResult {
 };
 
 
-auto run_rrtc(const Problem &problem) {
+auto run_rrtc(const Problem &problem, const size_t problem_idx) {
 
         std::array<float, 6 * Robot::n_eef> tsr_lower_bound = problem.tsr_lower_bound;
         std::array<float, 6 * Robot::n_eef> tsr_upper_bound = problem.tsr_upper_bound;
+        // set the last 3 of tsr_lower_bound to -inf and the last 3 of tsr_upper_bound to inf to ignore orientation constraints
+        for (size_t i = 3; i < 6; i++) {
+            tsr_lower_bound[i] = -1000.0f; // Use a large negative value instead of -inf to avoid potential issues with optimization
+            tsr_upper_bound[i] = 1000.0f;  // Use a large positive value instead of inf
+        }
+
+
         std::array<std::array<float, 7>, Robot::n_eef> eef_transforms;
         eef_transforms[0] = problem.eef_transforms;
         std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world;
         eef_transforms_ref_frame_w_world[0] = problem.eef_transforms_ref_frame_w_world;
-    
+
 
         // 1. Extract the pointer to the data
         const float* data = eef_transforms[0].data();
@@ -530,8 +539,8 @@ auto run_rrtc(const Problem &problem) {
 
         // 3. Create the Translation vector (x, y, z)
         Eigen::Vector3d t(
-            static_cast<double>(data[4]), 
-            static_cast<double>(data[5]), 
+            static_cast<double>(data[4]),
+            static_cast<double>(data[5]),
             static_cast<double>(data[6])
         );
 
@@ -653,7 +662,7 @@ auto run_rrtc(const Problem &problem) {
         ob::PlannerStatus stat = planner->ob::Planner::solve(planning_time);
         auto nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
 
-        
+
         std::vector <Configuration> plan;
         float path_cost = 0.0F;
         if(stat == ob::PlannerStatus::EXACT_SOLUTION){
@@ -686,6 +695,7 @@ auto run_rrtc(const Problem &problem) {
         }
 
         SolvedResult solved(
+            problem_idx,
             stat == ob::PlannerStatus::EXACT_SOLUTION,                                   // success
             plan,                   // plan (trajectories)
             static_cast<double>(nanoseconds), // solve_time
@@ -727,17 +737,15 @@ auto main(int argc, char **) -> int
 
     std::vector<SolvedResult> solved_results;
     ompl::RNG::setSeed(42);   // fixed seed
+
+    ompl::msg::setLogLevel(ompl::msg::LOG_NONE);
     for(const auto &problem: problems){
         std::cout << "Planning problem " << total_num_problems + 1 << " / " << problems.size() << std::endl;
         total_num_problems++;
-        if(total_num_problems > 2500){
-            std::cout << "Reached limit of 100 problems, stopping." << std::endl;
-            break;
-        }
 
         // auto [result, nanoseconds] = run_rrtc(const_cast<Problem&>(problem));
 
-        auto solved = run_rrtc(const_cast<Problem&>(problem));
+        auto solved = run_rrtc(const_cast<Problem&>(problem), total_num_problems-1);
 
         if (solved.success)
         {
@@ -753,7 +761,7 @@ auto main(int argc, char **) -> int
     std::cout << "Total problems: " << total_num_problems << std::endl
                 << "Successful problems: " << successful_problems << std::endl
                 << "Success rate: " << (static_cast<float>(successful_problems) / total_num_problems) * 100.0f << "%" << std::endl;
-    
+
     // if(successful_problems > 0){
     //     std::size_t total_nanoseconds = 0;
     //     std::size_t total_iterations = 0;
@@ -769,9 +777,9 @@ auto main(int argc, char **) -> int
     //     std::cout << "Median time (ms) for successful problems: " << (nanoseconds_per_problem[successful_problems / 2]) / 1000000.0 << std::endl;
     //     std::cout << "Median iterations for successful problems: " << iterations_per_problem[successful_problems / 2] << std::endl;
     // }
-    
+
     // Save all results to JSON
-    SolvedResult::save_solved_results(solved_results, "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_plane_pinocchio_results.json");
+    SolvedResult::save_solved_results(solved_results, "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_plane_pinocchio_no_ori_results.json");
 
 
 }
