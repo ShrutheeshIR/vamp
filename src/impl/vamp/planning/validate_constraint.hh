@@ -157,7 +157,7 @@ namespace vamp::planning
             start_block[i] = start.broadcast(i);
         }
 
-        std::size_t n = std::max(std::ceil(distance / static_cast<float>(rake) * resolution), 1.F);
+        std::size_t n = static_cast<std::size_t>(std::max(std::ceil(distance / static_cast<float>(rake) * resolution), 1.F));
 
         // std::cout << "Proj method " << projection_method << std::endl;
 
@@ -222,7 +222,7 @@ namespace vamp::planning
                          Robot::template fkcc<rake>(environment, initial_projected_block);
 
         typename Robot::ConfigurationArray last_projected;
-        size_t start_add = insert_all_to_tree ? 0 : rake - 1;
+        std::size_t start_add = insert_all_to_tree ? 0 : rake - 1;
         for (auto i = start_add; i < rake; i++)
         {
             for (auto j = 0U; j < Robot::dimension; j++)
@@ -244,9 +244,9 @@ namespace vamp::planning
             return valid;
         }
 
-        n = std::max(std::ceil(max_inter_dist * resolution), 1.F);
+        std::size_t n_steps = static_cast<std::size_t>(std::max(std::ceil(max_inter_dist * resolution), 1.F));
 
-        for (auto i = 1U; i < n; ++i)
+        for (auto i = 1U; i < n_steps; ++i)
         {
 
             initial_projected_block = initial_projected_block - shifted_block / n;
