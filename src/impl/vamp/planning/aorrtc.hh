@@ -69,6 +69,12 @@ namespace vamp::planning
             auto temp_node = NNNode{0, cost, c};
             nn->nearestR(temp_node, NNNode::distance(temp_node, root), near_list);
 
+            // Explicitly handle case where no neighbors are within r distance.
+            if (near_list.empty())
+            {
+                return {root, c.distance(root.array)};
+            }
+
             const auto *new_nearest_node = &near_list[0];
             float new_nearest_distance = c.distance(new_nearest_node->array);
 
@@ -401,6 +407,9 @@ namespace vamp::planning
             {
                 result = simplify<Robot, rake, resolution>(result.path, environment, settings.simplify, rng);
             }
+
+            result.nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
+            result.iterations = iters;
 
             // Exit early if trivial, unsolved, or not optimizing
             if (not settings.optimize or result.path.empty() or result.path.size() == 2)

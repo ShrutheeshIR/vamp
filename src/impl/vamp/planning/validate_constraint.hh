@@ -18,6 +18,36 @@ namespace vamp::planning
     static int unable_to_project_inside_counter = 0;
     static int collision_inside_counter = 0;
 
+
+    // Generate stddev samples: 0, -0.25, +0.25, -0.5, +0.5, -0.75, +0.75, -1.0
+    template <std::size_t I>
+    inline constexpr auto stddev_sample() -> float
+    {
+        if constexpr (I == 0)
+        {
+            return 0.0F;
+        }
+        else
+        {
+            const auto step = (I + 1) / 2;  // 1, 1, 2, 2, 3, 3, 4 for I = 1, 2, 3, 4, 5, 6, 7
+            const auto magnitude = static_cast<float>(step) * 0.25F;
+            return (I % 2 == 1) ? -magnitude : magnitude;  // odd indices negative, even positive
+        }
+    }
+
+    template <std::size_t n, std::size_t... I>
+    inline constexpr auto generate_stddev_samples(std::index_sequence<I...>) -> std::array<float, n>
+    {
+        return {stddev_sample<I>()...};
+    }
+
+    template <std::size_t n>
+    struct StdDevSamples
+    {
+        inline static constexpr auto samples = generate_stddev_samples<n>(std::make_index_sequence<n>());
+    };
+
+
     template <std::size_t rake, std::size_t dimension>
     inline constexpr auto inter_lane_distance_block(const vamp::FloatVector<rake, dimension> &block,
                                                     const vamp::FloatVector<dimension> &start) -> vamp::FloatVector<rake, dimension>
@@ -56,6 +86,7 @@ namespace vamp::planning
         ProjMethod projection_method = ProjMethod::InnerLM,
         float projection_descent_rate = 1.0F,
         int num_projection_iterations = 25,
+        float std_dev_scaling_factor = 0.1F,
         bool insert_all_to_tree = false) -> bool
     {
         projected_vector.clear();
@@ -67,14 +98,66 @@ namespace vamp::planning
         typename Robot::template ConfigurationBlock<rake> projected_block;
         typename Robot::template ConfigurationBlock<rake> initial_projected_block;
 
+        const auto stddev_multipliers = FloatVector<rake>(StdDevSamples<rake>::samples);
+
         // HACK: broadcast() implicitly assumes that the rake is exactly VectorWidth
         for (auto i = 0U; i < Robot::dimension; ++i)
         {
-            block[i] = start.broadcast(i) + (vector.broadcast(i) * percents);
+            // block[i] = (start + vector).broadcast(i);
+            block[i] = (start).broadcast(i) + (vector.broadcast(i) * (1.0F + stddev_multipliers * std_dev_scaling_factor));  // 0.1F is a scaling factor for std_dev
             start_block[i] = start.broadcast(i);
         }
 
-        std::size_t n = std::max(std::ceil(distance / static_cast<float>(rake) * resolution), 1.F);
+        int end_config_projection_index = constraint.projectAnyConfiguration(block, initial_projected_block, projection_method, distance, projection_descent_rate, num_projection_iterations, false);
+        if (end_config_projection_index == -1)
+        {
+            // std::cout << "Unable to project " << std::endl;
+            unable_to_project_counter++;
+            return false;
+        }
+
+        // check if projected end config is too far from start config. If so, return false immediately without checking inter-rake distances
+        float projected_distance = 0.F;
+        typename Robot::ConfigurationArray end_config_projected_array;
+        for (auto i = 0U; i < Robot::dimension; ++i)
+        {
+            float diff = initial_projected_block[{i, end_config_projection_index}] - start_block[{i, end_config_projection_index}];
+            projected_distance = projected_distance + diff * diff;
+            if (projected_distance > 4 * (distance) * (distance))
+            {
+                invalid_distance_counter_outside++;
+                return false;
+            }
+            end_config_projected_array[i] = initial_projected_block[{i, end_config_projection_index}];
+            // rewrite initial_projected_block to be the projected end config
+            initial_projected_block[i] = initial_projected_block[i].broadcast(end_config_projection_index);
+        }
+        typename Robot::Configuration end_config_projected(end_config_projected_array);
+
+        // now check if the projected end config is valid. If not, return false immediately without checking inter-rake distances
+        bool end_projected_valid = (environment.eef_attachments.size()) ?
+                         Robot::template fkcc_attach<rake>(environment, initial_projected_block) :
+                         Robot::template fkcc<rake>(environment, initial_projected_block);
+        if (not end_projected_valid)
+        {
+            collision_counter++;
+            return false;
+        }
+
+        
+        auto adjusted_vector = end_config_projected - start;
+        // First project just the final config
+        distance = std::sqrt(projected_distance);
+
+
+        // HACK: broadcast() implicitly assumes that the rake is exactly VectorWidth
+        for (auto i = 0U; i < Robot::dimension; ++i)
+        {
+            block[i] = start.broadcast(i) + (adjusted_vector.broadcast(i) * percents);
+            start_block[i] = start.broadcast(i);
+        }
+
+        std::size_t n = static_cast<std::size_t>(std::max(std::ceil(distance / static_cast<float>(rake) * resolution), 1.F));
 
         // std::cout << "Proj method " << projection_method << std::endl;
 
@@ -139,7 +222,7 @@ namespace vamp::planning
                          Robot::template fkcc<rake>(environment, initial_projected_block);
 
         typename Robot::ConfigurationArray last_projected;
-        size_t start_add = insert_all_to_tree ? 0 : rake - 1;
+        std::size_t start_add = insert_all_to_tree ? 0 : rake - 1;
         for (auto i = start_add; i < rake; i++)
         {
             for (auto j = 0U; j < Robot::dimension; j++)
@@ -161,9 +244,9 @@ namespace vamp::planning
             return valid;
         }
 
-        n = std::max(std::ceil(max_inter_dist * resolution), 1.F);
+        std::size_t n_steps = static_cast<std::size_t>(std::max(std::ceil(max_inter_dist * resolution), 1.F));
 
-        for (auto i = 1U; i < n; ++i)
+        for (auto i = 1U; i < n_steps; ++i)
         {
 
             initial_projected_block = initial_projected_block - shifted_block / n;

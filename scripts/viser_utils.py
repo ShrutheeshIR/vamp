@@ -28,7 +28,6 @@ def add_spheres(
 ):
     """
     Add spheres to the env/
-    Sphere positions are (N,3) and sphere radii are (N)
     """
     sphere_handles = [None] * len(sphere_positions)
     if len(colors) == 0:

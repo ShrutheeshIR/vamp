@@ -92,3 +92,18 @@ The script supports the following arguments:
 - `index`: the problem index to evaluate against.
 - `dataset`: which describes the specific dataset of problems that should be loaded and inspected. See [Datasets](../resources/README.md#supported-planners) for more information.
 - `problem`: which takes in either a single problem name (e.g., `table_pick`) or a list (e.g., `table_pick,table_under_pick`) to evaluate against a specific set of problems.
+
+# Viz Tools
+
+We show examples of using viser and meshcat with python for visualization.
+
+For viser simply `pip install viser` works
+
+For meshcat, it's a little more involved, since it uses pinocchio as the robot lib
+
+```
+pip install pin
+pip install meshcat
+```
+
+Open a terminal and run `meshcat-server`

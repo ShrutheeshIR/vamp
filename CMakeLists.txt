@@ -150,8 +150,8 @@ find_package(nlohmann_json REQUIRED)
 #   add_executable(vamp_crrtc_example scripts/cpp/vamp_crrtc_example.cc)
 #   target_link_libraries(vamp_crrtc_example PRIVATE vamp_cpp nlohmann_json::nlohmann_json)
 
-#   add_executable(vamp_crrtc_spheres scripts/cpp/vamp_crrtc_spheres.cc)
-#   target_link_libraries(vamp_crrtc_spheres PRIVATE vamp_cpp)
+  # add_executable(vamp_crrtc_spheres scripts/cpp/vamp_crrtc_spheres.cc)
+  # target_link_libraries(vamp_crrtc_spheres PRIVATE vamp_cpp)
 
 # add_executable(vamp_crrtc_transport_mug scripts/cpp/vamp_crrtc_transport_mug.cc)
 # target_link_libraries(vamp_crrtc_transport_mug PRIVATE vamp_cpp)
@@ -174,8 +174,8 @@ find_package(nlohmann_json REQUIRED)
 # add_executable(vamp_bimanual_example_iiwa scripts/cpp/vamp_bimanual_example_iiwa.cc)
 # target_link_libraries(vamp_bimanual_example_iiwa PRIVATE vamp_cpp)
 
-#   add_executable(vamp_com_constraint_example scripts/cpp/vamp_com_constraint_example.cc)
-#   target_link_libraries(vamp_com_constraint_example PRIVATE vamp_cpp)
+  add_executable(vamp_com_constraint_example scripts/cpp/vamp_com_constraint_example.cc)
+  target_link_libraries(vamp_com_constraint_example PRIVATE vamp_cpp)
 
   # Disable strict warnings for demos to maintain compatibility
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -204,6 +204,13 @@ if(VAMP_BUILD_OMPL_DEMO)
   target_link_libraries(vamp_constrained_ompl_integration PRIVATE ompl::ompl vamp_cpp)
   add_executable(constrained_ompl_statespace_integration scripts/cpp/constrained_ompl_statespace_integration.cc)
   target_link_libraries(constrained_ompl_statespace_integration PRIVATE ompl::ompl vamp_cpp)
+  add_executable(ompl_regular_integration scripts/cpp/ompl_regular_integration.cc)
+  target_link_libraries(ompl_regular_integration PRIVATE ompl::ompl vamp_cpp)
+
+  find_package(pinocchio REQUIRED)
+  find_package(Eigen3 REQUIRED)
+  add_executable(ompl_integration_pinocchio scripts/cpp/ompl_integration_pinocchio.cc)
+  target_link_libraries(ompl_integration_pinocchio PRIVATE ompl::ompl vamp_cpp pinocchio::pinocchio Eigen3::Eigen)
 
 
   # Disable strict warnings for demos to maintain compatibility

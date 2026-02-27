@@ -24,8 +24,10 @@ void vamp::binding::init_settings(nanobind::module_ &pymodule)
         .def_rw("max_iterations", &vp::RRTCSettings::max_iterations)
         .def_rw("max_samples", &vp::RRTCSettings::max_samples)
         .def_rw("start_tree_first", &vp::RRTCSettings::start_tree_first)
+        // add crrtc settings
         .def_rw("projection_method", &vp::RRTCSettings::projection_method)
         .def_rw("descend_rate", &vp::RRTCSettings::descend_rate)
+        .def_rw("std_dev_scaling_factor", &vp::RRTCSettings::std_dev_scaling_factor)
         .def_rw("num_projection_iterations", &vp::RRTCSettings::num_projection_iterations)
         .def_rw("insert_all_to_tree", &vp::RRTCSettings::insert_all_to_tree);
 

@@ -62,20 +62,33 @@ namespace vamp::planning
 
             auto start_time = std::chrono::steady_clock::now();
 
-            // for (const auto &goal : goals)
-            // {
-            //     if (project_constraint_motion<Robot, rake, resolution>(start, goal, projected_vector, constraint, environment))
-            //     {
-            //         result.path.emplace_back(start);
-            //         result.path.emplace_back(goal);
-            //         result.nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
-            //         result.iterations = 0;
-            //         result.size.emplace_back(1);
-            //         result.size.emplace_back(1);
+            for (const auto &goal : goals)
+            {
 
-            //         return result;
-            //     }
-            // }
+                if (project_constraint_motion<Robot, rake, resolution>(
+                        start, goal,
+                        projected_vector,
+                        constraint,
+                        environment,
+                        static_cast<ProjMethod>(settings.projection_method),
+                        settings.descend_rate,
+                        settings.num_projection_iterations,
+                        settings.insert_all_to_tree
+                    ))
+                {
+                    if((projected_vector.back() - goal).l2_norm() < 0.001F){
+
+                        result.path.emplace_back(start);
+                        result.path.emplace_back(goal);
+                        result.nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
+                        result.iterations = 0;
+                        result.size.emplace_back(1);
+                        result.size.emplace_back(1);
+
+                        return result;
+                    }
+                }
+            }
 
             // trees
             bool tree_a_is_start = not settings.start_tree_first;
@@ -155,17 +168,20 @@ namespace vamp::planning
                         static_cast<ProjMethod>(settings.projection_method),
                         settings.descend_rate,
                         settings.num_projection_iterations,
+                        settings.std_dev_scaling_factor,
                         settings.insert_all_to_tree
                     ))
 
                 {
 
-                    float *new_configuration_index;
+                    float *new_configuration_index = nullptr;  // Initialize to prevent use of uninitialized variable
                     Configuration new_configuration;
                     auto parent_index = nearest_node.index;
 
                     for(auto proj_vector : projected_vector)
                     {
+                        if (free_index >= settings.max_samples) break;  // Prevent buffer overflow
+                        
                         new_configuration_index = buffer_index(free_index);
                         new_configuration = proj_vector;
                         new_configuration.to_array(new_configuration_index);
@@ -185,7 +201,8 @@ namespace vamp::planning
 
                     }
 
-
+                    if (new_configuration_index == nullptr) continue;  // Skip if no configurations were added
+                    
                     auto prior = new_configuration;
                     auto prior_index = new_configuration_index;
                     const auto other_nearest =
@@ -195,7 +212,7 @@ namespace vamp::planning
                         continue;
                     }
                     const auto &[other_nearest_node, other_nearest_distance] = *other_nearest;
-                    const std::size_t n_extensions = std::ceil(other_nearest_distance / settings.range);
+                    const std::size_t n_extensions = static_cast<std::size_t>(std::ceil(other_nearest_distance / settings.range));
                     auto max_connect_attempts = 2 * n_extensions;
 
                     auto counter = 0U;
@@ -232,7 +249,9 @@ namespace vamp::planning
                             static_cast<ProjMethod>(settings.projection_method),
                             settings.descend_rate,
                             settings.num_projection_iterations,
+                            settings.std_dev_scaling_factor,
                             settings.insert_all_to_tree
+                            // settings.insert_all_to_tree
                             )
                         )
                         {
@@ -242,11 +261,13 @@ namespace vamp::planning
                             break;
 
 
-                        float *next_index;
+                        float *next_index = nullptr;  // Initialize to prevent use of uninitialized variable
                         Configuration next;
 
                         for(auto proj_vector : projected_vector)
                         {
+                            if (free_index >= settings.max_samples) break;  // Prevent buffer overflow
+                            
                             next_index = buffer_index(free_index);
                             next = proj_vector;
                             next.to_array(next_index);
@@ -255,6 +276,8 @@ namespace vamp::planning
                             radii[free_index] = std::numeric_limits<float>::max();
                             free_index++;
                         }
+
+                        if (next_index == nullptr) continue;  // Skip if no configurations were added
 
                         bool other_reached = (other_nearest_configuration - next).squared_l2_norm() < 0.01;
                         if (other_reached)  // connected
