@@ -74,7 +74,7 @@ def init_viz():
 
     # Set up visualizer
     _viz = MeshcatVisualizer(_model, coll_model, vis_model)
-    _viz.initViewer(zmq_url="tcp://127.0.0.1:6001")
+    _viz.initViewer(zmq_url="tcp://127.0.0.1:6000")
     _viz.loadViewerModel()
     
     fig, _axs = plt.subplots(2, 3, sharex=True, sharey='row', figsize=(12, 8))
