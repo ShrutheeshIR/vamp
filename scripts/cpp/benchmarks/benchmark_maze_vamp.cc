@@ -250,10 +250,11 @@ int main() {
         rrtc_settings.max_iterations = 200000;
         rrtc_settings.dynamic_domain = 0;
         rrtc_settings.projection_method = vamp::planning::ProjMethod::OuterLM;
-        rrtc_settings.descend_rate = 0.75;
+        rrtc_settings.descend_rate = 1.0;
         rrtc_settings.radius = 1.0;
         rrtc_settings.num_projection_iterations = 10;
         rrtc_settings.insert_all_to_tree = 1;
+        rrtc_settings.std_dev_scaling_factor = 0.01F;
         // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
         vamp::planning::invalid_distance_counter_outside = 0;
         vamp::planning::invalid_distance_counter_inside = 0;
