@@ -120,12 +120,52 @@ def plot_comparison(stats_list, labels, output_prefix="benchmark_comparison", st
     ax.set_yscale('log')
     ax.grid(True, alpha=0.3)
 
-    # Plot 3: Median Planning Time vs Num Obstacles
+    # Plot 3: Median Planning Time vs Num Obstacles (with quartile shading)
     ax = axes[2]
+
+    # First pass: compute quartiles for each method and draw fills.
+    # We draw all fills first so that median lines can be drawn on top to avoid being overwritten.
+    median_data = []
     for i, (stats, label) in enumerate(zip(stats_list, labels)):
         stats_for_time = use_stats_for_time[i]
-        median_time = [stats_for_time.get(obs, {}).get('median_time_ms', 0) for obs in time_obstacles]
-        ax.plot(time_obstacles, median_time, '-', label=label, linewidth=2)
+
+        q1_vals = []
+        median_vals = []
+        q3_vals = []
+        for obs in time_obstacles:
+            times = np.array(stats_for_time.get(obs, {}).get('times_ms', []))
+            if times.size > 0:
+                q1_vals.append(np.percentile(times, 10))
+                median_vals.append(np.percentile(times, 50))
+                q3_vals.append(np.percentile(times, 90))
+            else:
+                q1_vals.append(np.nan)
+                median_vals.append(np.nan)
+                q3_vals.append(np.nan)
+
+        q1_arr = np.array(q1_vals)
+        med_arr = np.array(median_vals)
+        q3_arr = np.array(q3_vals)
+
+        # Determine color for this method (use a plotted line color cycle if possible)
+        # We'll draw the fill now (no label) and plot the median line later so it stays on top.
+        color = None
+        # peek at default cycle color for consistency; fall back to None to let matplotlib choose
+        try:
+            color = plt.rcParams['axes.prop_cycle'].by_key()['color'][i]
+        except Exception:
+            color = None
+
+        ax.fill_between(time_obstacles, q1_arr, q3_arr,
+                        where=~np.isnan(q1_arr) & ~np.isnan(q3_arr),
+                        color=color, alpha=0.20, interpolate=True, zorder=1)
+
+        median_data.append((med_arr, label, color))
+
+    # Second pass: draw median lines on top of all fills so they are never overwritten.
+    for i, (med_arr, label, color) in enumerate(median_data):
+        ax.plot(time_obstacles, med_arr, '-', label=label, color=color, linewidth=3, zorder=10 + i)
+
     ax.set_xlabel('Number of Obstacles', fontsize=12)
     ax.set_ylabel('Median Planning Time (ms)', fontsize=12)
     ax.set_title('Median Planning Time vs Number of Obstacles', fontsize=13, fontweight='bold')
@@ -133,15 +173,50 @@ def plot_comparison(stats_list, labels, output_prefix="benchmark_comparison", st
     ax.set_yscale('log')
     ax.grid(True, alpha=0.3)
 
-    # Plot 4: Mean Path Cost vs Num Obstacles
+    # Plot 4: Path Cost vs Num Obstacles (plot median with quartile shading similar to timing)
     ax = axes[3]
+
+    # First pass: compute quartiles/medians for path costs and draw fills.
+    path_median_data = []
     for i, (stats, label) in enumerate(zip(stats_list, labels)):
         stats_for_time = use_stats_for_time[i]
-        mean_path_cost = [stats_for_time.get(obs, {}).get('mean_path_cost', 0) for obs in time_obstacles]
-        ax.plot(time_obstacles, mean_path_cost, '-', label=label, linewidth=2)
+
+        p1_vals = []
+        pmed_vals = []
+        p3_vals = []
+        for obs in time_obstacles:
+            costs = np.array(stats_for_time.get(obs, {}).get('path_costs', []))
+            if costs.size > 0:
+                p1_vals.append(np.percentile(costs, 25))
+                pmed_vals.append(np.percentile(costs, 50))
+                p3_vals.append(np.percentile(costs, 75))
+            else:
+                p1_vals.append(np.nan)
+                pmed_vals.append(np.nan)
+                p3_vals.append(np.nan)
+
+        p1_arr = np.array(p1_vals)
+        pmed_arr = np.array(pmed_vals)
+        p3_arr = np.array(p3_vals)
+
+        try:
+            color = plt.rcParams['axes.prop_cycle'].by_key()['color'][i]
+        except Exception:
+            color = None
+
+        ax.fill_between(time_obstacles, p1_arr, p3_arr,
+                        where=~np.isnan(p1_arr) & ~np.isnan(p3_arr),
+                        color=color, alpha=0.20, interpolate=True, zorder=1)
+
+        path_median_data.append((pmed_arr, label, color))
+
+    # Second pass: draw median path cost lines on top of fills
+    for i, (pmed_arr, label, color) in enumerate(path_median_data):
+        ax.plot(time_obstacles, pmed_arr, '-', label=label, color=color, linewidth=2, zorder=10 + i)
+
     ax.set_xlabel('Number of Obstacles', fontsize=12)
-    ax.set_ylabel('Mean Path Cost', fontsize=12)
-    ax.set_title('Mean Path Cost vs Number of Obstacles', fontsize=13, fontweight='bold')
+    ax.set_ylabel('Median Path Cost', fontsize=12)
+    ax.set_title('Median Path Cost vs Number of Obstacles', fontsize=13, fontweight='bold')
     ax.legend(fontsize=11)
     ax.grid(True, alpha=0.3)
 

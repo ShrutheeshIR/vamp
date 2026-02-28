@@ -31,8 +31,8 @@ def load_problems_from_json(json_file_path):
     problems = []
     for problem_data in data:
         curobo_mask = [1 if abs(float(x)) < 0.1 else 0 for x in problem_data['tsr_lower_bound']]
-        curobo_mask = [0, 0, 0] + curobo_mask[:3]
-        # curobo_mask = curobo_mask[3:] + curobo_mask[:3]
+        # curobo_mask = [0, 0, 0] + curobo_mask[:3]
+        curobo_mask = curobo_mask[3:] + curobo_mask[:3]
 
         task = MotionPlanningTask()
         task.problem_start = problem_data['problem_start']
@@ -144,7 +144,7 @@ def plan_task(mp_task: MotionPlanningTask, motion_gen: MotionGen, tensor_args: T
 
     # print(ik_start, ik_goal)
     projected_pose = ik_goal.compute_local_pose(ik_start)
-    # print("Projected pose: ", projected_pose)
+    print("Projected pose: ", projected_pose)
 
 
     # ik_goal = Pose(
@@ -318,7 +318,7 @@ def main():
     #         print(waypoints[-1])
     #         np.savetxt("/src/dummy_plan.txt", waypoints, fmt="%.5f", delimiter=",")
 
-    tasks = load_problems_from_json("scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_prespecified_line_curobo_likes.json")
+    tasks = load_problems_from_json("scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_plane_curated.json")
     # print(tasks[0])
     print(f"Loaded {len(tasks)} tasks from json file.")
 
@@ -343,6 +343,15 @@ def main():
             cmd_plan = motion_gen.get_full_js(cmd_plan)
             waypoints = cmd_plan.position[:, :7].cpu().numpy()
             # np.savetxt("/src/dummy_plan.txt", waypoints, fmt="%.5f", delimiter=",")
+            path_length = torch.sum(
+                torch.linalg.norm(
+                    (
+                        torch.roll(result.optimized_plan.position, -1, dims=-2)
+                        - result.optimized_plan.position
+                    )[..., :-1, :],
+                    dim=-1,
+                )
+            ).item()
 
             # time.sleep(5.0)
         else:
@@ -353,16 +362,9 @@ def main():
             # np.savetxt("/src/dummy_plan.txt", waypoints, fmt="%.5f", delimiter=",")
             # time.sleep(5.0)
             # continue
+            path_length = 0.0
+            continue
 
-        path_length = torch.sum(
-            torch.linalg.norm(
-                (
-                    torch.roll(result.optimized_plan.position, -1, dims=-2)
-                    - result.optimized_plan.position
-                )[..., :-1, :],
-                dim=-1,
-            )
-        ).item()
 
         solved_plans.append(SolvedResult(
             problem_number=i,
@@ -378,7 +380,7 @@ def main():
 
         num_of_tasks += 1
     print(f"Success rate: {num_of_success}/{num_of_tasks}, Average time of success case: {total_time_of_success_case/num_of_success if num_of_success > 0 else 0:.2f} seconds")
-    save_solved_results_to_plot_data(solved_plans, "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_plane_curobo_no_ori_results.json")
+    save_solved_results_to_plot_data(solved_plans, "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_plane_curobo_plane_results.json")
 
 if __name__ == "__main__":
     main()

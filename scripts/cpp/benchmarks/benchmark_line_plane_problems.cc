@@ -181,7 +181,7 @@ int main() {
 
 
     // load the json file of problems from the specified path
-    std::string problem_json_path = "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_prespecified_line_curobo_likes.json";
+    std::string problem_json_path = "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_plane_curated.json";
     load_problems_from_json(problems, problem_json_path);
 
     vamp::planning::RRTCSettings rrtc_settings;
@@ -206,10 +206,10 @@ int main() {
         std::array<float, 6 * Robot::n_eef> tsr_upper_bound = problem.tsr_upper_bound;
 
         // set the last 3 of tsr_lower_bound to -inf and the last 3 of tsr_upper_bound to inf to ignore orientation constraints
-        for (size_t i = 3; i < 6; i++) {
-            tsr_lower_bound[i] = -1000.0f; // Use a large negative value instead of -inf to avoid potential issues with optimization
-            tsr_upper_bound[i] = 1000.0f;  // Use a large positive value instead of inf
-        }
+        // for (size_t i = 3; i < 6; i++) {
+        //     tsr_lower_bound[i] = -1000.0f; // Use a large negative value instead of -inf to avoid potential issues with optimization
+        //     tsr_upper_bound[i] = 1000.0f;  // Use a large positive value instead of inf
+        // }
 
         // std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = problem.eef_transforms;
         // std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = problem.eef_transforms_ref_frame_w_world;
@@ -237,10 +237,10 @@ int main() {
         rrtc_settings.range = 1.0f;
         rrtc_settings.max_iterations = 200000;
         rrtc_settings.dynamic_domain = 0;
-        rrtc_settings.projection_method = vamp::planning::ProjMethod::InnerLM;
+        rrtc_settings.projection_method = vamp::planning::ProjMethod::OuterLM;
         rrtc_settings.descend_rate = 1.0;
         rrtc_settings.radius = 1.0;
-        rrtc_settings.num_projection_iterations = 50;
+        rrtc_settings.num_projection_iterations = 15;
         rrtc_settings.insert_all_to_tree = 1;
         rrtc_settings.std_dev_scaling_factor = 0.1F;
         // std::cout << "\n\n-----------------Starting to cbirrt------------ " << std::endl;
@@ -380,7 +380,7 @@ int main() {
     }
 
     // Save all results to JSON
-    SolvedResult::save_solved_results(all_solved_results, "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_plane_vamp_no_ori_results.json");
+    SolvedResult::save_solved_results(all_solved_results, "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_plane_vamp_plane_results.json");
 
     return 0;
 }

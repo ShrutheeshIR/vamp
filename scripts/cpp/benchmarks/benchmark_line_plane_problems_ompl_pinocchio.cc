@@ -513,10 +513,10 @@ auto run_rrtc(const Problem &problem, const size_t problem_idx) {
         std::array<float, 6 * Robot::n_eef> tsr_lower_bound = problem.tsr_lower_bound;
         std::array<float, 6 * Robot::n_eef> tsr_upper_bound = problem.tsr_upper_bound;
         // set the last 3 of tsr_lower_bound to -inf and the last 3 of tsr_upper_bound to inf to ignore orientation constraints
-        for (size_t i = 3; i < 6; i++) {
-            tsr_lower_bound[i] = -1000.0f; // Use a large negative value instead of -inf to avoid potential issues with optimization
-            tsr_upper_bound[i] = 1000.0f;  // Use a large positive value instead of inf
-        }
+        // for (size_t i = 3; i < 6; i++) {
+        //     tsr_lower_bound[i] = -1000.0f; // Use a large negative value instead of -inf to avoid potential issues with optimization
+        //     tsr_upper_bound[i] = 1000.0f;  // Use a large positive value instead of inf
+        // }
 
 
         std::array<std::array<float, 7>, Robot::n_eef> eef_transforms;
@@ -732,7 +732,7 @@ auto main(int argc, char **) -> int
     size_t successful_problems = 0;
     std::vector<std::size_t> nanoseconds_per_problem;
     std::vector<std::size_t> iterations_per_problem;
-    std::string problem_json_path = "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_prespecified_line_curobo_likes.json";
+    std::string problem_json_path = "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_plane_curated.json";
     load_problems_from_json(problems, problem_json_path);
 
     std::vector<SolvedResult> solved_results;
@@ -779,7 +779,7 @@ auto main(int argc, char **) -> int
     // }
 
     // Save all results to JSON
-    SolvedResult::save_solved_results(solved_results, "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_plane_pinocchio_no_ori_results.json");
+    SolvedResult::save_solved_results(solved_results, "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_plane_pinocchio_plane_results.json");
 
 
 }
