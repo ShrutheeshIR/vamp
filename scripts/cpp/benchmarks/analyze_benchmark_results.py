@@ -98,7 +98,7 @@ def plot_comparison(stats_list, labels, output_prefix="benchmark_comparison", st
     ax.set_title('Success Rate vs Number of Obstacles', fontsize=13, fontweight='bold')
     ax.legend(fontsize=11)
     ax.grid(True, alpha=0.3)
-    ax.set_ylim([70, 105])
+    ax.set_ylim([40, 105])
 
     # Determine which stats to use for time/cost plots:
     # If a filtered stats_time_list is provided, use it; otherwise fall back to stats_list.
@@ -322,7 +322,7 @@ def main():
 
     # Create plots (pass filtered stats for timing/cost plots)
     print("Creating plots...")
-    plot_comparison(stats_list, labels, args.output, None)
+    plot_comparison(stats_list, labels, args.output, stats_time_list)
 
 
 if __name__ == '__main__':

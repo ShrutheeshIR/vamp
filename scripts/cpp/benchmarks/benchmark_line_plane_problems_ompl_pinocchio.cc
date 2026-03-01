@@ -732,7 +732,7 @@ auto main(int argc, char **) -> int
     size_t successful_problems = 0;
     std::vector<std::size_t> nanoseconds_per_problem;
     std::vector<std::size_t> iterations_per_problem;
-    std::string problem_json_path = "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_plane_curated.json";
+    std::string problem_json_path = "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_prespecified_plane_curobo_likes_curated.json";
     load_problems_from_json(problems, problem_json_path);
 
     std::vector<SolvedResult> solved_results;
@@ -779,7 +779,7 @@ auto main(int argc, char **) -> int
     // }
 
     // Save all results to JSON
-    SolvedResult::save_solved_results(solved_results, "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_plane_pinocchio_plane_results.json");
+    SolvedResult::save_solved_results(solved_results, "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_prespecified_plane_ompl_likes_curated_results.json");
 
 
 }

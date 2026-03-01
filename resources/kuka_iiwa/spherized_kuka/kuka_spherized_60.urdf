@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot name="lbr_iiwa" xmlns:xacro="http://www.ros.org/wiki/xacro" path="../assets/kuka_iiwa/model.urdf">
+	<material name="Grey">
+		<color rgba="0.2 0.2 0.2 1.0"></color>
+	</material>
+	<material name="Orange">
+		<color rgba="1.0 0.423529411765 0.0392156862745 1.0"></color>
+	</material>
+	<material name="Blue">
+		<color rgba="0.5 0.7 1.0 1.0"></color>
+	</material>
+	<link name="lbr_iiwa_link_0">
+		<inertial>
+			<origin rpy="0 0 0" xyz="-0.1 0 0.07"></origin>
+			<mass value="0.0"></mass>
+			<inertia ixx="0.05" ixy="0" ixz="0" iyy="0.06" iyz="0" izz="0.03"></inertia>
+		</inertial>
+		<visual>
+			<origin rpy="0 0 0" xyz="0 0 0"></origin>
+			<geometry>
+				<mesh filename="meshes/link_0.obj"></mesh>
+			</geometry>
+			<material name="Grey"></material>
+		</visual>
+		<collision>
+			<geometry>
+				<sphere radius="0.155981"></sphere>
+			</geometry>
+			<origin xyz="-0.014598788424491882 -2.5513307809829713e-05 0.0793846806511879" rpy="0 0 0"></origin>
+		</collision>
+	</link>
+	<link name="lbr_iiwa_link_1">
+		<inertial>
+			<origin rpy="0 0 0" xyz="0 -0.03 0.12"></origin>
+			<mass value="4"></mass>
+			<inertia ixx="0.1" ixy="0" ixz="0" iyy="0.09" iyz="0" izz="0.02"></inertia>
+		</inertial>
+		<visual>
+			<origin rpy="0 0 0" xyz="0 0 0"></origin>
+			<geometry>
+				<mesh filename="meshes/link_1.obj"></mesh>
+			</geometry>
+			<material name="Blue"></material>
+		</visual>
+		<collision>
+			<geometry>
+				<sphere radius="0.1194"></sphere>
+			</geometry>
+			<origin xyz="-0.0010496909577533539 -0.05627592682490527 0.1964503328225747" rpy="0 0 0"></origin>
+		</collision>
+		<collision>
+			<geometry>
+				<sphere radius="0.115322"></sphere>
+			</geometry>
+			<origin xyz="0.0012663090422466463 -0.011134926824905272 0.045536332822574715" rpy="0 0 0"></origin>
+		</collision>
+	</link>
+	<link name="lbr_iiwa_link_2">
+		<inertial>
+			<origin rpy="0 0 0" xyz="0.0003 0.059 0.042"></origin>
+			<mass value="4"></mass>
+			<inertia ixx="0.05" ixy="0" ixz="0" iyy="0.018" iyz="0" izz="0.044"></inertia>
+		</inertial>
+		<visual>
+			<origin rpy="0 0 0" xyz="0 0 0"></origin>
+			<geometry>
+				<mesh filename="meshes/link_2.obj"></mesh>
+			</geometry>
+			<material name="Blue"></material>
+		</visual>
+		<collision>
+			<geometry>
+				<sphere radius="0.112224"></sphere>
+			</geometry>
+			<origin xyz="0.0017370250677382474 -0.0034878244732893665 0.06056497765242034" rpy="0 0 0"></origin>
+		</collision>
+		<collision>
+			<geometry>
+				<sphere radius="0.09038"></sphere>
+			</geometry>
+			<origin xyz="0.0006510250677382475 0.16131217552671062 0.002271977652420338" rpy="0 0 0"></origin>
+		</collision>
+		<collision>
+			<geometry>
+				<sphere radius="0.098652"></sphere>
+			</geometry>
+			<origin xyz="0.0029600250677382475 0.09347417552671063 0.04823497765242034" rpy="0 0 0"></origin>
+		</collision>
+	</link>
+	<link name="lbr_iiwa_link_3">
+		<inertial>
+			<origin rpy="0 0 0" xyz="0 0.03 0.13"></origin>
+			<mass value="3"></mass>
+			<inertia ixx="0.08" ixy="0" ixz="0" iyy="0.075" iyz="0" izz="0.01"></inertia>
+		</inertial>
+		<visual>
+			<origin rpy="0 0 0" xyz="0 0 0"></origin>
+			<geometry>
+				<mesh filename="meshes/link_3.obj"></mesh>
+			</geometry>
+			<material name="Orange"></material>
+		</visual>
+		<collision>
+			<geometry>
+				<sphere radius="0.09755"></sphere>
+			</geometry>
+			<origin xyz="-0.0015634539491110296 0.009106107802409698 0.051605976838095965" rpy="0 0 0"></origin>
+		</collision>
+		<collision>
+			<geometry>
+				<sphere radius="0.090814"></sphere>
+			</geometry>
+			<origin xyz="0.0017655460508889706 0.0547891078024097 0.16283497683809597" rpy="0 0 0"></origin>
+		</collision>
+		<collision>
+			<geometry>
+				<sphere radius="0.092495"></sphere>
+			</geometry>
+			<origin xyz="0.0006025460508889706 0.054600107802409696 0.21980597683809597" rpy="0 0 0"></origin>
+		</collision>
+	</link>
+	<link name="lbr_iiwa_link_4">
+		<inertial>
+			<origin rpy="0 0 0" xyz="0 0.067 0.034"></origin>
+			<mass value="2.7"></mass>
+			<inertia ixx="0.03" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.029"></inertia>
+		</inertial>
+		<visual>
+			<origin rpy="0 0 0" xyz="0 0 0"></origin>
+			<geometry>
+				<mesh filename="meshes/link_4.obj"></mesh>
+			</geometry>
+			<material name="Blue"></material>
+		</visual>
+		<collision>
+			<geometry>
+				<sphere radius="0.104798"></sphere>
+			</geometry>
+			<origin xyz="0.0008118495096166728 0.014690699284639994 0.05241784417846333" rpy="0 0 0"></origin>
+		</collision>
+		<collision>
+			<geometry>
+				<sphere radius="0.097987"></sphere>
+			</geometry>
+			<origin xyz="0.0004648495096166728 0.13692369928464 0.009668844178463337" rpy="0 0 0"></origin>
+		</collision>
+	</link>
+	<link name="lbr_iiwa_link_5">
+		<inertial>
+			<origin rpy="0 0 0" xyz="0.0001 0.021 0.076"></origin>
+			<mass value="1.7"></mass>
+			<inertia ixx="0.02" ixy="0" ixz="0" iyy="0.018" iyz="0" izz="0.005"></inertia>
+		</inertial>
+		<visual>
+			<origin rpy="0 0 0" xyz="0 0 0"></origin>
+			<geometry>
+				<mesh filename="meshes/link_5.obj"></mesh>
+			</geometry>
+			<material name="Blue"></material>
+		</visual>
+		<collision>
+			<geometry>
+				<sphere radius="0.085981"></sphere>
+			</geometry>
+			<origin xyz="0.00015975634197720843 0.0011073432163356614 0.04418911879139019" rpy="0 0 0"></origin>
+		</collision>
+		<collision>
+			<geometry>
+				<sphere radius="0.060675"></sphere>
+			</geometry>
+			<origin xyz="-0.0031392436580227915 0.052501343216335664 0.09619011879139018" rpy="0 0 0"></origin>
+		</collision>
+		<collision>
+			<geometry>
+				<sphere radius="0.052546"></sphere>
+			</geometry>
+			<origin xyz="0.004786756341977208 0.07881434321633567 0.15922411879139017" rpy="0 0 0"></origin>
+		</collision>
+		<collision>
+			<geometry>
+				<sphere radius="0.048026"></sphere>
+			</geometry>
+			<origin xyz="0.01905175634197721 0.07827734321633566 0.22150311879139017" rpy="0 0 0"></origin>
+		</collision>
+		<collision>
+			<geometry>
+				<sphere radius="0.041093"></sphere>
+			</geometry>
+			<origin xyz="-0.024783243658022792 0.07781234321633566 0.2059471187913902" rpy="0 0 0"></origin>
+		</collision>
+		<collision>
+			<geometry>
+				<sphere radius="0.041597"></sphere>
+			</geometry>
+			<origin xyz="-0.012994243658022792 0.07338634321633566 0.24448711879139018" rpy="0 0 0"></origin>
+		</collision>
+	</link>
+	<link name="lbr_iiwa_link_6">
+		<inertial>
+			<origin rpy="0 0 0" xyz="0 0.0006 0.0004"></origin>
+			<mass value="1.8"></mass>
+			<inertia ixx="0.005" ixy="0" ixz="0" iyy="0.0036" iyz="0" izz="0.0047"></inertia>
+		</inertial>
+		<visual>
+			<origin rpy="0 0 0" xyz="0 0 0"></origin>
+			<geometry>
+				<mesh filename="meshes/link_6.obj"></mesh>
+			</geometry>
+			<material name="Orange"></material>
+		</visual>
+		<collision>
+			<geometry>
+				<sphere radius="0.100939"></sphere>
+			</geometry>
+			<origin xyz="-0.00028918437792461646 0.0015336297364406757 0.00040166029355713636" rpy="0 0 0"></origin>
+		</collision>
+	</link>
+	<link name="lbr_iiwa_link_7">
+		<inertial>
+			<origin rpy="0 0 0" xyz="0 0 0.02"></origin>
+			<mass value="0.3"></mass>
+			<inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"></inertia>
+		</inertial>
+		<visual>
+			<origin rpy="0 0 0" xyz="0 0 0"></origin>
+			<geometry>
+				<mesh filename="meshes/link_7.obj"></mesh>
+			</geometry>
+			<material name="Grey"></material>
+		</visual>
+		<collision>
+			<geometry>
+				<sphere radius="0.05847"></sphere>
+			</geometry>
+			<origin xyz="8.480718724095392e-05 3.7965676986759884e-05 0.01644040528700658" rpy="0 0 0"></origin>
+		</collision>
+	</link>
+	<joint name="lbr_iiwa_joint_1" type="revolute">
+		<parent link="lbr_iiwa_link_0"></parent>
+		<child link="lbr_iiwa_link_1"></child>
+		<origin rpy="0 0 0" xyz="0 0 0.1575"></origin>
+		<axis xyz="0 0 1"></axis>
+		<limit effort="300" lower="-2.96705972839" upper="2.96705972839" velocity="10"></limit>
+		<dynamics damping="0.5"></dynamics>
+	</joint>
+	<joint name="lbr_iiwa_joint_2" type="revolute">
+		<parent link="lbr_iiwa_link_1"></parent>
+		<child link="lbr_iiwa_link_2"></child>
+		<origin rpy="1.57079632679   0 3.14159265359" xyz="0 0 0.2025"></origin>
+		<axis xyz="0 0 1"></axis>
+		<limit effort="300" lower="-2.09439510239" upper="2.09439510239" velocity="10"></limit>
+		<dynamics damping="0.5"></dynamics>
+	</joint>
+	<joint name="lbr_iiwa_joint_3" type="revolute">
+		<parent link="lbr_iiwa_link_2"></parent>
+		<child link="lbr_iiwa_link_3"></child>
+		<origin rpy="1.57079632679 0 3.14159265359" xyz="0 0.2045 0"></origin>
+		<axis xyz="0 0 1"></axis>
+		<limit effort="300" lower="-2.96705972839" upper="2.96705972839" velocity="10"></limit>
+		<dynamics damping="0.5"></dynamics>
+	</joint>
+	<joint name="lbr_iiwa_joint_4" type="revolute">
+		<parent link="lbr_iiwa_link_3"></parent>
+		<child link="lbr_iiwa_link_4"></child>
+		<origin rpy="1.57079632679 0 0" xyz="0 0 0.2155"></origin>
+		<axis xyz="0 0 1"></axis>
+		<limit effort="300" lower="-2.09439510239" upper="2.09439510239" velocity="10"></limit>
+		<dynamics damping="0.5"></dynamics>
+	</joint>
+	<joint name="lbr_iiwa_joint_5" type="revolute">
+		<parent link="lbr_iiwa_link_4"></parent>
+		<child link="lbr_iiwa_link_5"></child>
+		<origin rpy="-1.57079632679 3.14159265359 0" xyz="0 0.1845 0"></origin>
+		<axis xyz="0 0 1"></axis>
+		<limit effort="300" lower="-2.96705972839" upper="2.96705972839" velocity="10"></limit>
+		<dynamics damping="0.5"></dynamics>
+	</joint>
+	<joint name="lbr_iiwa_joint_6" type="revolute">
+		<parent link="lbr_iiwa_link_5"></parent>
+		<child link="lbr_iiwa_link_6"></child>
+		<origin rpy="1.57079632679 0 0" xyz="0 0 0.2155"></origin>
+		<axis xyz="0 0 1"></axis>
+		<limit effort="300" lower="-2.09439510239" upper="2.09439510239" velocity="10"></limit>
+		<dynamics damping="0.5"></dynamics>
+	</joint>
+	<joint name="lbr_iiwa_joint_7" type="revolute">
+		<parent link="lbr_iiwa_link_6"></parent>
+		<child link="lbr_iiwa_link_7"></child>
+		<origin rpy="-1.57079632679 3.14159265359 0" xyz="0 0.081 0"></origin>
+		<axis xyz="0 0 1"></axis>
+		<limit effort="300" lower="-3.05432619099" upper="3.05432619099" velocity="10"></limit>
+		<dynamics damping="0.5"></dynamics>
+	</joint>
+</robot>

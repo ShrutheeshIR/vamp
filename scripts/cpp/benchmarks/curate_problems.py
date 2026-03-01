@@ -179,7 +179,7 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("input", help="Input JSON file containing problems (list or {'problems': [...]})")
     ap.add_argument("output", help="Output JSON file for curated problems")
     ap.add_argument("--seed", type=int, default=None, help="Random seed for reproducible sampling")
-    ap.add_argument("--bins", type=int, default=8, help="Number of bins (default 10)")
+    ap.add_argument("--bins", type=int, default=10, help="Number of bins (default 10)")
     ap.add_argument("--bin-size", type=int, default=10, help="Bin size in obstacle counts (default 10)")
     ap.add_argument("--per-bin", type=int, default=100, help="Number of problems to sample per bin (default 100)")
     ap.add_argument("--require-full", action="store_true", help="Require each bin to have at least per-bin distinct problems (fail otherwise)")

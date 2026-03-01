@@ -181,7 +181,7 @@ int main() {
 
 
     // load the json file of problems from the specified path
-    std::string problem_json_path = "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_plane_curated.json";
+    std::string problem_json_path = "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_prespecified_plane_curobo_likes_curated.json";
     load_problems_from_json(problems, problem_json_path);
 
     vamp::planning::RRTCSettings rrtc_settings;
@@ -380,7 +380,7 @@ int main() {
     }
 
     // Save all results to JSON
-    SolvedResult::save_solved_results(all_solved_results, "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_plane_vamp_plane_results.json");
+    SolvedResult::save_solved_results(all_solved_results, "scripts/cpp/benchmarks/line_plane_benchmark_problems/tsr_panda_problems_curobo_cuboid_prespecified_plane_vamp_likes_curated_results.json");
 
     return 0;
 }

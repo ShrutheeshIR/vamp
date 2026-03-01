@@ -372,12 +372,12 @@ auto generate_constraint_and_start_goal(){
 				p.eef_transforms = eef_transforms;
 				p.eef_transforms_ref_frame_w_world = eef_transforms_ref_frame_w_world;
 				if(orientation_index == 0){
-					p.tsr_lower_bound = {-10.001, -10.001, -0.001, -0.001, -0.001, -0.001};
-					p.tsr_upper_bound = {10.001, 10.001, 0.001, 0.001, 0.001, 0.001};
+					p.tsr_lower_bound = {-10.001, -10.001, -0.0001, -0.0001, -0.0001, -0.0001};
+					p.tsr_upper_bound = {10.001, 10.001, 0.0001, 0.0001, 0.0001, 0.0001};
 				}
 				else{
-					p.tsr_lower_bound = {-10.001, -0.001, -10.001, -0.001, -0.001, -0.001};
-					p.tsr_upper_bound = {10.001, 0.001, 10.001, 0.001, 0.001, 0.001};
+					p.tsr_lower_bound = {-10.001, -0.0001, -10.001, -0.0001, -0.0001, -0.0001};
+					p.tsr_upper_bound = {10.001, 0.0001, 10.001, 0.0001, 0.0001, 0.0001};
 				}
 				p.problem_start = reference_configs_to_start_projecting[orientation_index][0];
 				p.problem_end = reference_configs_to_start_projecting[orientation_index][1];
@@ -398,8 +398,8 @@ auto generate_constraint_and_start_goal(){
 			Problem p;
 			p.eef_transforms = eef_transforms;
 			p.eef_transforms_ref_frame_w_world = eef_transforms_ref_frame_w_world;
-			p.tsr_lower_bound = {-0.001, -10.001, -10.001, -0.001, -0.001, -0.001};
-			p.tsr_upper_bound = {0.001, 10.001, 10.001, 0.001, 0.001, 0.001};
+			p.tsr_lower_bound = {-0.0001, -10.001, -10.001, -0.0001, -0.0001, -0.0001};
+			p.tsr_upper_bound = {0.0001, 10.001, 10.001, 0.0001, 0.0001,  0.0001};
 			p.problem_start = {1.2,-0.26,-0.75,-1.88,-1.24,1.26,-1.84};
 			p.problem_end = {1.26,1.8326,-0.32,-1.22,-0.21,1.51,-1.08};
 			problems_initializer.push_back(p);

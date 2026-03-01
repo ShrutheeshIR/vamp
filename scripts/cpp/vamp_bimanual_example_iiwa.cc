@@ -63,12 +63,12 @@ auto main(int, char **) -> int
 
     vamp::planning::RRTCSettings rrtc_settings;
 
-    float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
+    float ranges[] = {1.0, 1.5};
     // float ranges[] = {1.0};
     // float ranges[] = {0.5, 0.75};
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
-    // bool dd[] = {false};
-    bool dd[] = {false, true};
+    bool dd[] = {true};
+    // bool dd[] = {false, true};
     vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM};
     // vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM};
 
@@ -81,12 +81,12 @@ auto main(int, char **) -> int
     // Eigen::Quaternionf goal_quat(goal_rel.linear());
     // std::cout << goal_quat.coeffs().transpose() << " " << goal_rel.translation().transpose() << std::endl;
 
-    float descend_rates[] = {0.5, 0.75, 1.0};
+    float descend_rates[] = {1.0};
     // float descend_rates[] = {1.0};
     // float descend_rates[] = {1.0};
-    int num_projection_iterations[] = {5, 10, 25, 50, 100};
-    bool insert_all_to_tree[] = {false, true};
-    float std_dev_scaling_factors[] = {0.01F, 0.1F, 0.2F};
+    int num_projection_iterations[] = {10, 25};
+    bool insert_all_to_tree[] = {false};
+    float std_dev_scaling_factors[] = {0.1F, 0.2F, 0.3F};
     std::vector<Attempt> succ_attempts;
     for(const auto range: ranges){
         for(const auto dyndom: dd){
@@ -213,7 +213,7 @@ auto main(int, char **) -> int
         std::cerr << "Error reading goal configuration from line: " << line_goal << std::endl;
         return 1;
     }
-    std::cout << "Planning between " << Robot::Configuration(start) << " and " << Robot::Configuration(goal) << std::endl;
+    // std::cout << "Planning between " << Robot::Configuration(start) << " and " << Robot::Configuration(goal) << std::endl;
 
 
     // std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
@@ -257,8 +257,8 @@ auto main(int, char **) -> int
         // auto simplify_result = vamp::planning::constraint::simplify_with_constraints<Robot, rake, Robot::resolution, decltype(bimanual_task_constraint)>(
         //     result.path, env_v, task_constraint, simplify_settings, rng);
         // std::cout << "Simplify took " << result.nanoseconds / 1e6 << " ms" << std::endl;
-
-        for (const auto &config : result.path)
+        simplify_result.path.interpolate_to_resolution(Robot::resolution);
+        for (const auto &config : simplify_result.path)
         {
             const auto &array = config.to_array();
             Robot::ConfigurationArray soln;
