@@ -505,15 +505,16 @@ int main()
     size_t successful_problems = 0;
     std::vector<std::size_t> nanoseconds_per_problem;
     std::vector<std::size_t> iterations_per_problem;
-    // std::string problem_json_path = "/src/tsr_panda_maze_problems.json";
-    // load_problems_from_json(problems, problem_json_path);
+    std::string problem_json_path = "scripts/cpp/benchmarks/maze_problems/tsr_panda_marker_maze_problems.json";
+    load_problems_from_json(problems, problem_json_path);
 
-    problems.push_back({
-        .problem_start = {-1.45830, 1.61440, 1.66240, -1.58050, -1.61370, 1.47890, -2.23790},
-        .problem_end = {0.99900, 0.41790, 0.21120, -2.00290, -0.12750, 2.40840, -1.06870},
-        .start_eef_pos = {0.6, 0.3, 0.04},
-        .goal_eef_pos = {0.6, 0.3, 0.04}
-    });
+
+    // problems.push_back({
+    //     .problem_start = {-1.45830, 1.61440, 1.66240, -1.58050, -1.61370, 1.47890, -2.23790},
+    //     .problem_end = {0.99900, 0.41790, 0.21120, -2.00290, -0.12750, 2.40840, -1.06870},
+    //     .start_eef_pos = {0.6, 0.3, 0.04},
+    //     .goal_eef_pos = {0.6, 0.3, 0.04}
+    // });
     for(const auto &problem: problems){
         std::cout << "Planning problem " << total_num_problems + 1 << " / " << problems.size() << std::endl;
         total_num_problems++;
@@ -547,11 +548,11 @@ int main()
 
 
         std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-            -10.01, -0.001, -10.01, -10.01, -10.01, -0.01
+            -10.01, -0.005, -10.01, -0.01, -10.01, -0.01
         };
 
         std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
-            10.01, 0.001, 10.01, 10.01, 10.01, 0.01
+            10.01, 0.005, 10.01, 0.01, 10.01, 0.01
         };
         std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 0,0.71,0.71,   0.6, 0.3, 0.04}};
         std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};

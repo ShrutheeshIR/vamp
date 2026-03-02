@@ -654,7 +654,7 @@ auto run_rrtc(const Problem &problem) {
         auto planner = std::make_shared<og::RRTConnect>(csi);
 
         planner->setProblemDefinition(pdef);
-        planner->setRange(0.4);
+        planner->setRange(0.25);
         planner->setup();
 
 
@@ -723,7 +723,7 @@ auto main(int argc, char **) -> int
     size_t successful_problems = 0;
     std::vector<std::size_t> nanoseconds_per_problem;
     std::vector<std::size_t> iterations_per_problem;
-    std::string problem_json_path = "/src/tsr_panda_maze_problems.json";
+    // std::string problem_json_path = "/src/tsr_panda_maze_problems.json";
     // load_problems_from_json(problems, problem_json_path);
 
     // problems.push_back({
@@ -794,13 +794,32 @@ auto main(int argc, char **) -> int
         std::cout << "Constraint function output after projection: " << out.transpose() << std::endl;
     }
 
-    problems.push_back({
-        .problem_start = {-1.45830, 1.61440, 1.66240, -1.58050, -1.61370, 1.47890, -2.23790},
-        .problem_end = {0.99900, 0.41790, 0.21120, -2.00290, -0.12750, 2.40840, -1.06870},
-        .start_eef_pos = {0.6, 0.3, 0.04},
-        .goal_eef_pos = {0.6, 0.3, 0.04}
-    });
+    // problems.push_back({
+    //     .problem_start = {0.7404149770736694,
+    //         0.8922489881515503,
+    //         -1.1401450634002686,
+    //         -1.8482552766799927,
+    //         0.9408859014511108,
+    //         2.0794081687927246,
+    //         2.967099905014038},
+    //     .problem_end = {0.3952203392982483,
+    //         0.7529666423797607,
+    //         0.2910528779029846,
+    //         -1.4438855648040771,
+    //         -0.22621382772922516,
+    //         2.1491057872772217,
+    //         0.721520721912384},
+    //     .start_eef_pos = {0.6155468821525574,
+    //         -0.14754705131053925,
+    //         0.03999999910593033},
+    //     .goal_eef_pos = {0.5836458206176758,
+    //         0.4169207215309143,
+    //         0.03999999910593033}
+    // });
 
+
+    std::string problem_json_path = "scripts/cpp/benchmarks/maze_problems/tsr_panda_marker_maze_problems.json";
+    load_problems_from_json(problems, problem_json_path);
 
 
 
