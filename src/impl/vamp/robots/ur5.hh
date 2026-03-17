@@ -10,7 +10,7 @@ namespace vamp::robots
 {
     struct UR5
     {
-        static constexpr char *name = "ur5";
+        static constexpr const char *name = "ur5";
         static constexpr std::size_t dimension = 6;
         static constexpr std::size_t n_spheres = 40;
         static constexpr float min_radius = 0.014999999664723873;

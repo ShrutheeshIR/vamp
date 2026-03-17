@@ -14,10 +14,10 @@ namespace vamp::robots
 
     struct Sphere
     {
-        static constexpr auto name = "sphere";
-        static constexpr auto dimension = 3;
-        static constexpr auto n_spheres = 1;
-        static constexpr auto resolution = 32;
+        static constexpr const char *name = "sphere";
+        static constexpr std::size_t dimension = 3;
+        static constexpr std::size_t n_spheres = 1;
+        static constexpr std::size_t resolution = 32;
 
         static constexpr float &min_radius = radius;
         static constexpr float &max_radius = radius;

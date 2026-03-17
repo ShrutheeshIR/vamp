@@ -10,7 +10,7 @@ namespace vamp::robots
 {
     struct Baxter
     {
-        static constexpr char *name = "baxter";
+        static constexpr const char *name = "baxter";
         static constexpr std::size_t dimension = 14;
         static constexpr std::size_t n_spheres = 75;
         static constexpr float min_radius = 0.012000000104308128;

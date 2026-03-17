@@ -10,7 +10,7 @@ namespace vamp::robots
 {
     struct Fetch
     {
-        static constexpr char *name = "fetch";
+        static constexpr const char *name = "fetch";
         static constexpr std::size_t dimension = 8;
         static constexpr std::size_t n_spheres = 111;
         static constexpr float min_radius = 0.012000000104308128;
