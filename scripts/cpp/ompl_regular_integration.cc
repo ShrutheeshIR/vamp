@@ -48,7 +48,6 @@ using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 using ConfigurationBlock = typename Robot::template ConfigurationBlock<rake>;
 using AttachmentInput = vamp::collision::Attachment<float>;
 
-
 // Maximum planning time
 static constexpr float planning_time = 100.0;
 static constexpr int maxIterations = 100000;
@@ -56,41 +55,50 @@ static constexpr int maxIterations = 100000;
 // Maximum simplification time
 static constexpr float simplification_time = 1.0;
 
-
-static bool load_cuboids_from_json(EnvironmentInput &environment, const std::string &path) {
+static bool load_cuboids_from_json(EnvironmentInput &environment, const std::string &path)
+{
     std::ifstream ifs(path);
-    if (!ifs.is_open()) {
+    if (!ifs.is_open())
+    {
         std::cerr << "Failed to open JSON file: " << path << std::endl;
         return false;
     }
 
     nlohmann::json j;
-    try {
+    try
+    {
         ifs >> j;
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         std::cerr << "Failed to parse JSON file: " << path << " error: " << e.what() << std::endl;
         return false;
     }
 
-    if (!j.is_array()) {
+    if (!j.is_array())
+    {
         std::cerr << "Expected top-level JSON array in: " << path << std::endl;
         return false;
     }
 
-    for (const auto &obj : j) {
-        if (!obj.is_object()) {
+    for (const auto &obj : j)
+    {
+        if (!obj.is_object())
+        {
             std::cerr << "Skipping non-object element in array" << std::endl;
             continue;
         }
 
         // required fields
-        if (!obj.contains("x") || !obj.contains("y") || !obj.contains("z") ||
-            !obj.contains("dx") || !obj.contains("dy") || !obj.contains("dz")) {
+        if (!obj.contains("x") || !obj.contains("y") || !obj.contains("z") || !obj.contains("dx") ||
+            !obj.contains("dy") || !obj.contains("dz"))
+        {
             std::cerr << "Skipping object missing required fields (x,y,z,dx,dy,dz)" << std::endl;
             continue;
         }
 
-        try {
+        try
+        {
             float x = obj.at("x").get<float>();
             float y = obj.at("y").get<float>();
             float z = obj.at("z").get<float>();
@@ -99,16 +107,28 @@ static bool load_cuboids_from_json(EnvironmentInput &environment, const std::str
             float dz = obj.at("dz").get<float>();
 
             float roll = 0.0f, pitch = 0.0f, yaw = 0.0f;
-            if (obj.contains("roll")) roll = obj.at("roll").get<float>();
-            if (obj.contains("pitch")) pitch = obj.at("pitch").get<float>();
-            if (obj.contains("yaw")) yaw = obj.at("yaw").get<float>();
+            if (obj.contains("roll"))
+            {
+                roll = obj.at("roll").get<float>();
+            }
+            if (obj.contains("pitch"))
+            {
+                pitch = obj.at("pitch").get<float>();
+            }
+            if (obj.contains("yaw"))
+            {
+                yaw = obj.at("yaw").get<float>();
+            }
 
-            std::array<float,3> posf = {x, y, z};
-            std::array<float,3> rotf = {roll, pitch, yaw};
-            std::array<float,3> sizef = {dx / 2, dy / 2, dz / 2};
-            // std::cout << "Creating cuboid at position: " << posf[0] << ", " << posf[1] << ", " << posf[2] << " with size: " << sizef[0] << ", " << sizef[1] << ", " << sizef[2] << std::endl;
+            std::array<float, 3> posf = {x, y, z};
+            std::array<float, 3> rotf = {roll, pitch, yaw};
+            std::array<float, 3> sizef = {dx / 2, dy / 2, dz / 2};
+            // std::cout << "Creating cuboid at position: " << posf[0] << ", " << posf[1] << ", " << posf[2]
+            // << " with size: " << sizef[0] << ", " << sizef[1] << ", " << sizef[2] << std::endl;
             environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array(posf, rotf, sizef));
-        } catch (const std::exception &e) {
+        }
+        catch (const std::exception &e)
+        {
             std::cerr << "Error reading object fields: " << e.what() << " -- skipping object" << std::endl;
             continue;
         }
@@ -117,11 +137,8 @@ static bool load_cuboids_from_json(EnvironmentInput &environment, const std::str
     return true;
 }
 
-
 // Helper function to convert projected state into a double veector
-std::vector<double> extractStateReals(
-    const ob::State *state,
-    const ob::ProjectedStateSpace *space)
+std::vector<double> extractStateReals(const ob::State *state, const ob::ProjectedStateSpace *space)
 {
     // Cast the top-level state space to ProjectedStateSpace
 
@@ -133,7 +150,7 @@ std::vector<double> extractStateReals(
     return values;
 }
 
-//outputs into state. takes a double vector and turns it into state for ProjectedStateSpace
+// outputs into state. takes a double vector and turns it into state for ProjectedStateSpace
 void fillStateFromReals(
     const std::vector<double> &values,
     ob::State *state,
@@ -142,16 +159,20 @@ void fillStateFromReals(
     std::size_t dim = space->getDimension();
 
     if (values.size() != dim)
+    {
         throw std::runtime_error("Input size does not match ProjectedStateSpace dimension");
+    }
 
     space->copyFromReals(state, values);
 }
 
-//Helper function to turn double vector into vamp vector
+// Helper function to turn double vector into vamp vector
 inline static auto double_vector_to_vamp(const std::vector<double> &values) -> Configuration
 {
     if (values.size() != dimension)
+    {
         throw std::runtime_error("Input vector size does not match robot dimension");
+    }
 
     // Create an aligned buffer for the VAMP configuration
     alignas(Configuration::S::Alignment)
@@ -177,7 +198,6 @@ inline static std::vector<double> vamp_to_double_vector(const Configuration &c)
 
     for (size_t i = 0; i < dimension; ++i)
     {
-
         values[i] = static_cast<double>(temp_array[i]);
     }
 
@@ -216,26 +236,28 @@ inline static auto vamp_to_ompl(const Configuration &c, ob::State *state)
     }
 }
 
-
-
 class CustomConstraint : public ob::Constraint
 {
 public:
-    mutable vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>> constraints;
+    mutable vamp::planning::
+        ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+            constraints;
     mutable size_t num_failed_projections = 0;
 
 public:
-    CustomConstraint(vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>& x)
-        : ob::Constraint(Robot::dimension, Robot::dimension - 6, 0.0001),
-        constraints(x)
+    CustomConstraint(
+        vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+            &x)
+      : ob::Constraint(Robot::dimension, Robot::dimension - 6, 0.0001), constraints(x)
     {
     }
 
-
-    ConfigurationBlock turn_configuration_into_configuration_block(const Robot::Configuration &c) const{
+    ConfigurationBlock turn_configuration_into_configuration_block(const Robot::Configuration &c) const
+    {
         typename Robot::template ConfigurationBlock<rake> block;
 
-        for (auto i = 0U; i < Robot::dimension; ++i) {
+        for (auto i = 0U; i < Robot::dimension; ++i)
+        {
             block[i] = c.broadcast(i) + 0.0;
         }
         return block;
@@ -245,7 +267,8 @@ public:
     {
         // need to convert x to a configuration block
         std::array<float, Robot::dimension> float_config_from_x;
-        for (auto i = 0U; i < Robot::dimension; ++i) {
+        for (auto i = 0U; i < Robot::dimension; ++i)
+        {
             // cast x[i] to float
             float_config_from_x[i] = static_cast<float>(x[i]);
         }
@@ -256,10 +279,11 @@ public:
         out[0] = distance[{0, 0}];
     }
 
-    bool project (Eigen::Ref< Eigen::VectorXd > x) const override
+    bool project(Eigen::Ref<Eigen::VectorXd> x) const override
     {
         std::array<float, Robot::dimension> float_config_from_x;
-        for (auto i = 0U; i < Robot::dimension; ++i) {
+        for (auto i = 0U; i < Robot::dimension; ++i)
+        {
             // cast x[i] to float
             float_config_from_x[i] = static_cast<float>(x[i]);
         }
@@ -269,16 +293,18 @@ public:
         // std::cout << "Projecting configuration block...";
         // return true;
 
-        bool result = constraints.projectConfiguration(config_block, last_projected_block, vamp::planning::ProjMethod::InnerLM, 5.0, 1.0, 25, false);
-        if (result){
-            for (auto i = 0U; i < Robot::dimension; ++i) {
+        bool result = constraints.projectConfiguration(
+            config_block, last_projected_block, vamp::planning::ProjMethod::InnerLM, 5.0, 1.0, 25, false);
+        if (result)
+        {
+            for (auto i = 0U; i < Robot::dimension; ++i)
+            {
                 x[i] = static_cast<double>(last_projected_block[{i, rake - 1}]);
                 // std::cout << x[i] << " ";
             }
         }
         // std::cout << "Projection result " << result << std::endl;
         return result;
-
     }
 
     void jacobian(const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::MatrixXd> out) const override
@@ -286,7 +312,7 @@ public:
         Eigen::Matrix<double, 1, 7> mat = Eigen::Matrix<double, 1, 7>::Zero();
 
         // Set the top-left 6x6 block to identity
-        mat.block<1,1>(0,0) = Eigen::Matrix<double, 1, 1>::Identity();
+        mat.block<1, 1>(0, 0) = Eigen::Matrix<double, 1, 1>::Identity();
         out = mat.normalized();
 
         // std::array<float, Robot::dimension> float_config_from_x;
@@ -294,14 +320,15 @@ public:
         //     // cast x[i] to float
         //     float_config_from_x[i] = static_cast<float>(x[i]);
         // }
-        // auto config_block = turn_configuration_into_configuration_block(Configuration(float_config_from_x));
-        // ConfigurationBlock last_projected_block;
+        // auto config_block =
+        // turn_configuration_into_configuration_block(Configuration(float_config_from_x)); ConfigurationBlock
+        // last_projected_block;
         // // bool result = true;
         // // std::cout << "Projecting configuration block...";
         // // return true;
 
-        // bool result = constraints.projectConfiguration(config_block, last_projected_block, vamp::planning::ProjMethod::InnerLM, 5.0, 1.0, 25, false);
-        // if (result){
+        // bool result = constraints.projectConfiguration(config_block, last_projected_block,
+        // vamp::planning::ProjMethod::InnerLM, 5.0, 1.0, 25, false); if (result){
         //     for (auto i = 0U; i < Robot::dimension; ++i) {
         //         x[i] = static_cast<double>(last_projected_block[{i, rake - 1}]);
         //         // std::cout << x[i] << " ";
@@ -309,14 +336,14 @@ public:
         // }
         // // std::cout << "Projection result " << result << std::endl;
         // return result;
-
     }
 
-
-    double distance(const Eigen::Ref<const Eigen::VectorXd> &x) const override {
+    double distance(const Eigen::Ref<const Eigen::VectorXd> &x) const override
+    {
         // need to convert x to a configuration block
         std::array<float, Robot::dimension> float_config_from_x;
-        for (auto i = 0U; i < Robot::dimension; ++i) {
+        for (auto i = 0U; i < Robot::dimension; ++i)
+        {
             // cast x[i] to float
             float_config_from_x[i] = static_cast<float>(x[i]);
         }
@@ -327,14 +354,12 @@ public:
         return static_cast<double>(distance[{0, 0}]);
     }
 
-
     bool isSatisfied(const Eigen::Ref<const Eigen::VectorXd> &x) const override
     {
         bool result = distance(x) < 0.0001;
         // std::cout << "our custom implementation of isSatisfied is called " << result << std::endl;
         return result;
     }
-
 };
 
 bool obstacle(const ob::State *state)
@@ -346,7 +371,8 @@ bool obstacle(const ob::State *state)
 
     // Alternatively, we could access the underlying real vector state with the
     // following incantation:
-    //   auto x = state->as<ob::ConstrainedStateSpace::StateType>()->getState()->as<ob::RealVectorStateSpace::StateType>();
+    //   auto x =
+    //   state->as<ob::ConstrainedStateSpace::StateType>()->getState()->as<ob::RealVectorStateSpace::StateType>();
     // Note the use of "getState()" on the constrained state. This accesss the
     // underlying state that was allocated by the ambient state space.
 
@@ -362,15 +388,22 @@ bool obstacle(const ob::State *state)
     return true;
 }
 
-
 struct VAMPStateValidator : public ob::StateValidityChecker
 {
-    VAMPStateValidator(ob::SpaceInformation *si, const EnvironmentVector &env_v, vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>&task_constraint)
+    VAMPStateValidator(
+        ob::SpaceInformation *si,
+        const EnvironmentVector &env_v,
+        vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+            &task_constraint)
       : ob::StateValidityChecker(si), env_v(env_v), task_constraint(task_constraint)
     {
     }
 
-    VAMPStateValidator(const ob::SpaceInformationPtr &si, const EnvironmentVector &env_v, vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>&task_constraint)
+    VAMPStateValidator(
+        const ob::SpaceInformationPtr &si,
+        const EnvironmentVector &env_v,
+        vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+            &task_constraint)
       : ob::StateValidityChecker(si), env_v(env_v), task_constraint(task_constraint)
     {
     }
@@ -383,51 +416,66 @@ struct VAMPStateValidator : public ob::StateValidityChecker
         const Eigen::Map<Eigen::VectorXd> &x = *state->as<ob::ConstrainedStateSpace::StateType>();
 
         std::array<float, Robot::dimension> float_config_from_x;
-        for (auto i = 0U; i < Robot::dimension; ++i) {
+        for (auto i = 0U; i < Robot::dimension; ++i)
+        {
             // cast x[i] to float
             float_config_from_x[i] = static_cast<float>(x[i]);
         }
         Configuration robot_config(float_config_from_x);
 
-        std::vector <typename Robot::Configuration> projected_vector;
-        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(robot_config, robot_config, projected_vector, task_constraint, env_v, vamp::planning::ProjMethod::InnerLM, 1.0, 20, false);
+        std::vector<typename Robot::Configuration> projected_vector;
+        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(
+            robot_config,
+            robot_config,
+            projected_vector,
+            task_constraint,
+            env_v,
+            vamp::planning::ProjMethod::InnerLM,
+            1.0,
+            20,
+            false);
         // std::cout << "Projection result: " << projection_result << std::endl;
         return projection_result;
 
         // std::vector<double> newReals = vamp_to_double_vector(projected_vector.back());
         // space->copyFromReals(state, values);
 
-
         // return vamp::planning::validate_motion<Robot, rake, 1>(configuration, configuration, env_v);
     }
 
-
-
     const EnvironmentVector &env_v;
-    vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>&task_constraint;
+    vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+        &task_constraint;
 };
 
 struct VAMPMotionValidator : public ob::MotionValidator
 {
-    VAMPMotionValidator(ob::SpaceInformation *si, const EnvironmentVector &env_v, vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>&task_constraint)
+    VAMPMotionValidator(
+        ob::SpaceInformation *si,
+        const EnvironmentVector &env_v,
+        vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+            &task_constraint)
       : ob::MotionValidator(si), env_v(env_v), task_constraint(task_constraint)
     {
     }
 
-    VAMPMotionValidator(const ob::SpaceInformationPtr &si, const EnvironmentVector &env_v, vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>&task_constraint)
+    VAMPMotionValidator(
+        const ob::SpaceInformationPtr &si,
+        const EnvironmentVector &env_v,
+        vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+            &task_constraint)
       : ob::MotionValidator(si), env_v(env_v), task_constraint(task_constraint)
     {
     }
 
     auto checkMotion(const ob::State *s1, const ob::State *s2) const -> bool override
     {
-
         std::array<float, Robot::dimension> float_config_from_x1, float_config_from_x2;
         const Eigen::Map<Eigen::VectorXd> &x1 = *s1->as<ob::ConstrainedStateSpace::StateType>();
         const Eigen::Map<Eigen::VectorXd> &x2 = *s2->as<ob::ConstrainedStateSpace::StateType>();
 
-
-        for (auto i = 0U; i < Robot::dimension; ++i) {
+        for (auto i = 0U; i < Robot::dimension; ++i)
+        {
             // cast x[i] to float
             float_config_from_x1[i] = static_cast<float>(x1[i]);
             float_config_from_x2[i] = static_cast<float>(x2[i]);
@@ -435,22 +483,30 @@ struct VAMPMotionValidator : public ob::MotionValidator
         Configuration robot_config_1(float_config_from_x1);
         Configuration robot_config_2(float_config_from_x2);
 
-        std::vector <typename Robot::Configuration> projected_vector;
-        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(robot_config_1, robot_config_2, projected_vector, task_constraint, env_v, vamp::planning::ProjMethod::InnerLM, 1.0, 20, false);
+        std::vector<typename Robot::Configuration> projected_vector;
+        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(
+            robot_config_1,
+            robot_config_2,
+            projected_vector,
+            task_constraint,
+            env_v,
+            vamp::planning::ProjMethod::InnerLM,
+            1.0,
+            20,
+            false);
         return projection_result;
     }
 
-    auto checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const
-        -> bool override
+    auto
+    checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const -> bool override
     {
         throw ompl::Exception("Not implemented!");
     }
 
     const EnvironmentVector &env_v;
-    vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>&task_constraint;
+    vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+        &task_constraint;
 };
-
-
 
 // Constraints must inherit from the constraint base class. By default, a
 // numerical approximation to the Jacobian of the constraint function is computed
@@ -502,7 +558,6 @@ int main()
     Robot::scale_configuration(zero_v);
     Robot::scale_configuration(one_v);
 
-
     ob::RealVectorBounds bounds(dimension);
     for (auto i = 0U; i < dimension; ++i)
     {
@@ -512,29 +567,17 @@ int main()
 
     rvss->setBounds(bounds);
 
+    std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {-0.01, -10.01, -0.01, -0.01, -0.01, -0.01};
 
-    std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-        -0.01, -10.01, -0.01, -0.01, -0.01, -0.01
-    };
-
-    std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
-        0.01, 10.01, 0.01, 0.01, 0.01, 0.01
-    };
-    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 1,0,0,   0.3486, 0.647752, 0.2399}};
+    std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {0.01, 10.01, 0.01, 0.01, 0.01, 0.01};
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 1, 0, 0, 0.3486, 0.647752, 0.2399}};
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
 
     vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
-        eef_transforms_ref_frame_w_world,
-        eef_transforms,
-        tsr_lower_bound,
-        tsr_upper_bound
-    );
+        eef_transforms_ref_frame_w_world, eef_transforms, tsr_lower_bound, tsr_upper_bound);
 
-    vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>> task_constraint(
-        tsr_constraint
-    );
-
-
+    vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+        task_constraint(tsr_constraint);
 
     // Create a shared pointer to our constraint.
     // auto constraint = std::make_shared<SphereConstraint>();
@@ -607,13 +650,13 @@ int main()
     start->as<ob::ConstrainedStateSpace::StateType>()->copy(sv);
     goal->as<ob::ConstrainedStateSpace::StateType>()->copy(gv);
 
-    // If we were using an Atlas or TangentBundleStateSpace, we would also have to anchor these states to charts:
+    // If we were using an Atlas or TangentBundleStateSpace, we would also have to anchor these states to
+    // charts:
     //   css->anchorChart(start.get());
     //   css->anchorChart(goal.get());
     // Which gives a starting point for the atlas to grow.
     // css->setBackoff(0.05);
     // css->setAtlasBoundary(0.1);
-
 
     auto pdef = std::make_shared<ob::ProblemDefinition>(csi);
     pdef->setStartAndGoalStates(start, goal);
@@ -624,13 +667,11 @@ int main()
     pdef->setOptimizationObjective(obj);
     obj->setCostThreshold(obj->infiniteCost());
 
-
     auto planner = std::make_shared<og::RRTConnect>(csi);
 
     planner->setProblemDefinition(pdef);
     planner->setRange(1.0);
     planner->setup();
-
 
     // auto pp = std::make_shared<og::RRTConnect>(csi);
     // ss->setPlanner(pp);
@@ -639,7 +680,6 @@ int main()
     auto start_time = std::chrono::steady_clock::now();
     ob::PlannerStatus stat = planner->ob::Planner::solve(planning_time);
     auto nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
-
 
     if (stat)
     {
@@ -651,7 +691,6 @@ int main()
         auto initial_cost = path_geometric.cost(obj);
 
         og::PathSimplifier simplifier(csi, pdef->getGoal(), obj);
-
 
         std::ofstream outfile("/src/trajectory.txt");
         outfile << std::fixed << std::setprecision(10);
@@ -665,7 +704,9 @@ int main()
             for (std::size_t j = 0; j < dimension; ++j)
             {
                 if (j > 0)
+                {
                     outfile << ",";
+                }
                 outfile << result[j];
             }
             outfile << "\n";
@@ -686,7 +727,6 @@ int main()
 
         path_geometric.print(std::cout);
 
-
         // // Path simplification also works when using a constrained state space!
         // ss->simplifySolution(5.);
 
@@ -703,7 +743,7 @@ int main()
         // }
     }
     else
+    {
         OMPL_WARN("No solution found!");
-
-
+    }
 }

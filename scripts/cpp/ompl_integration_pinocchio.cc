@@ -41,11 +41,10 @@
 #include <pinocchio/spatial/se3.hpp>
 #include <pinocchio/spatial/log.hpp>
 
- #include "pinocchio/spatial/explog.hpp"
- #include "pinocchio/algorithm/joint-configuration.hpp"
+#include "pinocchio/spatial/explog.hpp"
+#include "pinocchio/algorithm/joint-configuration.hpp"
 
 using namespace pinocchio;
-
 
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
@@ -58,155 +57,154 @@ using EnvironmentInput = vamp::collision::Environment<float>;
 using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 using ConfigurationBlock = typename Robot::template ConfigurationBlock<rake>;
 
-
 // Maximum planning time
 static constexpr float planning_time = 50.0;
 static constexpr int maxIterations = 1000000;
 // Maximum simplification time
 static constexpr float simplification_time = 1.0;
 
-
-
 namespace ob = ompl::base;
 
 struct TSR
 {
-    Eigen::Isometry3d T_ref;               // reference pose
-    Eigen::Matrix<double,6,1> lower;       // lower bounds in task-space log coordinates
-    Eigen::Matrix<double,6,1> upper;       // upper bounds
+    Eigen::Isometry3d T_ref;            // reference pose
+    Eigen::Matrix<double, 6, 1> lower;  // lower bounds in task-space log coordinates
+    Eigen::Matrix<double, 6, 1> upper;  // upper bounds
 };
-
 
 class SE3Constraint : public ob::Constraint
 {
-    public:
-        SE3Constraint(const pinocchio::Model &model,
-                        pinocchio::FrameIndex eeFrame,
-                        const TSR &tsr)
-                : ob::Constraint(model.nq, 6, dist_tol), // nq is config dim, 6 is constraint dim
-                model_(model),
-                data_(model_),
-                eeFrame_(eeFrame),
-                tsr_(tsr)
-            {
-                // Convert Eigen::Isometry3d to pinocchio::SE3
-                T_ref_pin_ = pinocchio::SE3(tsr.T_ref.rotation(), tsr.T_ref.translation());
-                std::cout << "Created model " << std::endl;
-            }
-        void function(const Eigen::Ref<const Eigen::VectorXd> &q,
-                        Eigen::Ref<Eigen::VectorXd> out) const override
-            {
-                // Use a local data object if multi-threading, or lock this section
-                pinocchio::forwardKinematics(model_, data_, q);
-                pinocchio::updateFramePlacements(model_, data_);
+public:
+    SE3Constraint(const pinocchio::Model &model, pinocchio::FrameIndex eeFrame, const TSR &tsr)
+      : ob::Constraint(model.nq, 6, dist_tol)
+      ,  // nq is config dim, 6 is constraint dim
+      model_(model)
+      , data_(model_)
+      , eeFrame_(eeFrame)
+      , tsr_(tsr)
+    {
+        // Convert Eigen::Isometry3d to pinocchio::SE3
+        T_ref_pin_ = pinocchio::SE3(tsr.T_ref.rotation(), tsr.T_ref.translation());
+        std::cout << "Created model " << std::endl;
+    }
 
-                // Compute error in local-world aligned or local frame
-                // T_err = T_ref^-1 * T_ee
-                const pinocchio::SE3 &T_ee = data_.oMf[eeFrame_];
-                const pinocchio::SE3 T_err = T_ref_pin_.actInv(T_ee);
-                
-                // Log map gives the 6D error vector
-                Eigen::VectorXd error = pinocchio::log6(T_err).toVector();
+    void function(const Eigen::Ref<const Eigen::VectorXd> &q, Eigen::Ref<Eigen::VectorXd> out) const override
+    {
+        // Use a local data object if multi-threading, or lock this section
+        pinocchio::forwardKinematics(model_, data_, q);
+        pinocchio::updateFramePlacements(model_, data_);
 
-                // Apply TSR bounds: (val - upper).max(0) + (val - lower).min(0)
-                for(int i=0; i<6; ++i) {
-                    if (error[i] > tsr_.upper[i]) out[i] = error[i] - tsr_.upper[i];
-                    else if (error[i] < tsr_.lower[i]) out[i] = error[i] - tsr_.lower[i];
-                    else out[i] = 0.0;
+        // Compute error in local-world aligned or local frame
+        // T_err = T_ref^-1 * T_ee
+        const pinocchio::SE3 &T_ee = data_.oMf[eeFrame_];
+        const pinocchio::SE3 T_err = T_ref_pin_.actInv(T_ee);
 
-                }
-                // std::cout << out.transpose() << " " << q.transpose() << std::endl;
-            }
+        // Log map gives the 6D error vector
+        Eigen::VectorXd error = pinocchio::log6(T_err).toVector();
 
-        void jacobian(const Eigen::Ref<const Eigen::VectorXd> &q,
-                    Eigen::Ref<Eigen::MatrixXd> out) const override
+        // Apply TSR bounds: (val - upper).max(0) + (val - lower).min(0)
+        for (int i = 0; i < 6; ++i)
         {
-
-
-            pinocchio::forwardKinematics(model_, data_, q);
-            pinocchio::computeJointJacobians(model_, data_, q);
-            pinocchio::updateFramePlacements(model_, data_);
-
-            pinocchio::Data::Matrix6x J(6, model_.nv);
-            // Get Jacobian in the LOCAL frame of the end effector
-            pinocchio::getFrameJacobian(model_, data_, eeFrame_, pinocchio::LOCAL, J);
-            const pinocchio::SE3 &T_ee = data_.oMf[eeFrame_];
-            const pinocchio::SE3 T_err = T_ref_pin_.actInv(T_ee);
-
-            pinocchio::Data::Matrix6 Jlog;
-            pinocchio::Jlog6(T_err, Jlog);
-            out = -Jlog * J;
-
-        }
-
-        // Optional LM projection
-        bool project (Eigen::Ref< Eigen::VectorXd > x) const override
-        {
-            Eigen::VectorXd f(6);
-            Eigen::MatrixXd J(6, model_.nv);
-
-            for(int i=0;i<max_iters_;++i)
+            if (error[i] > tsr_.upper[i])
             {
-                // std::cout << i << std::endl;
-                function(x, f);
-                if(f.norm() < dist_tol) {
-                    // std::cout << "Project succeeded : " << x.transpose() << std::endl;
-                    return true;
-                }
-
-                jacobian(x, J);
-
-
-                Eigen::VectorXd delta(model_.nv);
-                pinocchio::Data::Matrix6 JJt;
-                JJt.noalias() = J * J.transpose();
-                JJt.diagonal().array() += lambda_;
-                delta.noalias() = -J.transpose() * JJt.ldlt().solve(f);
-
-                // Eigen::MatrixXd H = J.transpose()*J + lambda*Eigen::MatrixXd::Identity(model_.nv, model_.nv);
-                // Eigen::VectorXd delta = H.ldlt().solve(-J.transpose()*f);
-                x = pinocchio::integrate(model_, x, -delta * 0.25);
-                // x += delta;
-
-                if(delta.norm() < dist_tol) {
-                    return true;
-                }
-
+                out[i] = error[i] - tsr_.upper[i];
             }
-            // std::cout << "Projection failed " << std::endl;
-            return false; // did not converge
+            else if (error[i] < tsr_.lower[i])
+            {
+                out[i] = error[i] - tsr_.lower[i];
+            }
+            else
+            {
+                out[i] = 0.0;
+            }
         }
+        // std::cout << out.transpose() << " " << q.transpose() << std::endl;
+    }
 
-        double distance(const Eigen::Ref<const Eigen::VectorXd> &x) const override {
-            // need to convert x to a configuration block
+    void jacobian(const Eigen::Ref<const Eigen::VectorXd> &q, Eigen::Ref<Eigen::MatrixXd> out) const override
+    {
+        pinocchio::forwardKinematics(model_, data_, q);
+        pinocchio::computeJointJacobians(model_, data_, q);
+        pinocchio::updateFramePlacements(model_, data_);
 
-            Eigen::VectorXd out;
-            function(x, out);
-            auto dist =  out.squaredNorm();
-            std::cout << dist << std::endl;
-            return dist;
-        }
-        bool isSatisfied(const Eigen::Ref<const Eigen::VectorXd> &x) const override
+        pinocchio::Data::Matrix6x J(6, model_.nv);
+        // Get Jacobian in the LOCAL frame of the end effector
+        pinocchio::getFrameJacobian(model_, data_, eeFrame_, pinocchio::LOCAL, J);
+        const pinocchio::SE3 &T_ee = data_.oMf[eeFrame_];
+        const pinocchio::SE3 T_err = T_ref_pin_.actInv(T_ee);
+
+        pinocchio::Data::Matrix6 Jlog;
+        pinocchio::Jlog6(T_err, Jlog);
+        out = -Jlog * J;
+    }
+
+    // Optional LM projection
+    bool project(Eigen::Ref<Eigen::VectorXd> x) const override
+    {
+        Eigen::VectorXd f(6);
+        Eigen::MatrixXd J(6, model_.nv);
+
+        for (int i = 0; i < max_iters_; ++i)
         {
-            bool result = distance(x) < 0.0001;
-            std::cout << "our custom implementation of isSatisfied is called " << result << std::endl;
-            return result;
+            // std::cout << i << std::endl;
+            function(x, f);
+            if (f.norm() < dist_tol)
+            {
+                // std::cout << "Project succeeded : " << x.transpose() << std::endl;
+                return true;
+            }
+
+            jacobian(x, J);
+
+            Eigen::VectorXd delta(model_.nv);
+            pinocchio::Data::Matrix6 JJt;
+            JJt.noalias() = J * J.transpose();
+            JJt.diagonal().array() += lambda_;
+            delta.noalias() = -J.transpose() * JJt.ldlt().solve(f);
+
+            // Eigen::MatrixXd H = J.transpose()*J + lambda*Eigen::MatrixXd::Identity(model_.nv, model_.nv);
+            // Eigen::VectorXd delta = H.ldlt().solve(-J.transpose()*f);
+            x = pinocchio::integrate(model_, x, -delta * 0.25);
+            // x += delta;
+
+            if (delta.norm() < dist_tol)
+            {
+                return true;
+            }
         }
+        // std::cout << "Projection failed " << std::endl;
+        return false;  // did not converge
+    }
 
+    double distance(const Eigen::Ref<const Eigen::VectorXd> &x) const override
+    {
+        // need to convert x to a configuration block
 
-    private:
-        pinocchio::Model model_;
-        mutable pinocchio::Data data_;
-        pinocchio::FrameIndex eeFrame_;
-        pinocchio::SE3 T_ref_pin_;
-        TSR tsr_;
+        Eigen::VectorXd out;
+        function(x, out);
+        auto dist = out.squaredNorm();
+        std::cout << dist << std::endl;
+        return dist;
+    }
 
-        size_t max_iters_ = 50;
-        double dist_tol = 1e-3;
-        double lambda_ = 1e-3;
+    bool isSatisfied(const Eigen::Ref<const Eigen::VectorXd> &x) const override
+    {
+        bool result = distance(x) < 0.0001;
+        std::cout << "our custom implementation of isSatisfied is called " << result << std::endl;
+        return result;
+    }
+
+private:
+    pinocchio::Model model_;
+    mutable pinocchio::Data data_;
+    pinocchio::FrameIndex eeFrame_;
+    pinocchio::SE3 T_ref_pin_;
+    TSR tsr_;
+
+    size_t max_iters_ = 50;
+    double dist_tol = 1e-3;
+    double lambda_ = 1e-3;
 };
-
-
 
 struct VAMPStateValidator : public ob::StateValidityChecker
 {
@@ -228,7 +226,8 @@ struct VAMPStateValidator : public ob::StateValidityChecker
         const Eigen::Map<Eigen::VectorXd> &x = *state->as<ob::ConstrainedStateSpace::StateType>();
 
         std::array<float, Robot::dimension> float_config_from_x;
-        for (auto i = 0U; i < Robot::dimension; ++i) {
+        for (auto i = 0U; i < Robot::dimension; ++i)
+        {
             // cast x[i] to float
             float_config_from_x[i] = static_cast<float>(x[i]);
         }
@@ -237,16 +236,14 @@ struct VAMPStateValidator : public ob::StateValidityChecker
         // std::cout << "Running is valid " << val_res << std::endl;
         return val_res;
     }
-    const EnvironmentVector &env_v;
-    // vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>&task_constraint;
 
+    const EnvironmentVector &env_v;
+    // vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot,
+    // rake>>&task_constraint;
 };
 
-
 // Helper function to convert projected state into a double veector
-std::vector<double> extractStateReals(
-    const ob::State *state,
-    const ob::ProjectedStateSpace *space)
+std::vector<double> extractStateReals(const ob::State *state, const ob::ProjectedStateSpace *space)
 {
     // Cast the top-level state space to ProjectedStateSpace
 
@@ -258,12 +255,13 @@ std::vector<double> extractStateReals(
     return values;
 }
 
-
-//Helper function to turn double vector into vamp vector
+// Helper function to turn double vector into vamp vector
 inline static auto double_vector_to_vamp(const std::vector<double> &values) -> Configuration
 {
     if (values.size() != dimension)
+    {
         throw std::runtime_error("Input vector size does not match robot dimension");
+    }
 
     // Create an aligned buffer for the VAMP configuration
     alignas(Configuration::S::Alignment)
@@ -280,11 +278,11 @@ inline static auto double_vector_to_vamp(const std::vector<double> &values) -> C
     return Configuration(aligned_buffer.data());
 }
 
-
 struct OMPLMotionValidator : public ob::MotionValidator
 {
     const EnvironmentVector &env_v;
     inline static size_t project_constrained_motion_failed_counter = 0;
+
     OMPLMotionValidator(ob::SpaceInformation *si, const EnvironmentVector &env_v)
       : ob::MotionValidator(si), env_v(env_v)
     {
@@ -298,7 +296,7 @@ struct OMPLMotionValidator : public ob::MotionValidator
     auto checkMotion(const ob::State *s1, const ob::State *s2) const -> bool override
     {
         // std::cout << "Calling geodesic checkMotion\n";
-        auto *css = dynamic_cast<ob::ProjectedStateSpace*>(si_->getStateSpace().get());
+        auto *css = dynamic_cast<ob::ProjectedStateSpace *>(si_->getStateSpace().get());
         // if (!css)
         //     throw ompl::Exception("Expected ProjectedStateSpace");
 
@@ -315,14 +313,16 @@ struct OMPLMotionValidator : public ob::MotionValidator
         // }
 
         auto discrete_geodesic = css->discreteGeodesic(s1, s2, false);
-        if (!discrete_geodesic) {
+        if (!discrete_geodesic)
+        {
             // std::cout << "discrete_geodesic is not satisfied within checkMotion!\n";
             // css->printState(s1, std::cout);
             // css->printState(s2, std::cout);
 
             project_constrained_motion_failed_counter++;
         }
-        else {
+        else
+        {
             ;
             // std::cout << "discrete_geodesic is satisfied within checkMotion!\n";
             // css->printState(s1, std::cout);
@@ -330,18 +330,15 @@ struct OMPLMotionValidator : public ob::MotionValidator
         }
         // std::cout << project_constrained_motion_failed_counter << std::endl;
         return discrete_geodesic;
-
-
     }
 
-    auto checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const
-        -> bool override
+    auto
+    checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const -> bool override
     {
-        //Intentionally not implemented
+        // Intentionally not implemented
         throw ompl::Exception("Not implemented!");
     }
 };
-
 
 // class SE3TSRValidityChecker : public ob::StateValidityChecker
 // {
@@ -465,39 +462,34 @@ inline static auto vamp_to_ompl(const Configuration &c, ob::State *state)
 
 auto main(int argc, char **) -> int
 {
-
     // const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
     // const auto in_hand_pose = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
-    // vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(in_hand_pose, target_pose, std::make_pair(lower_bound, upper_bound));
+    // vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(in_hand_pose, target_pose,
+    // std::make_pair(lower_bound, upper_bound));
 
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
-    //used for constraint
-    const std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-        -0.01, -10.01, -0.01, -0.01, -0.01, -0.01};
-    const std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
-        0.01, 10.01, 0.01, 0.01, 0.01, 0.01};
+    // used for constraint
+    const std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {-0.01, -10.01, -0.01, -0.01, -0.01, -0.01};
+    const std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {0.01, 10.01, 0.01, 0.01, 0.01, 0.01};
 
-    const std::array<std::array<float, Robot::dimension>, Robot::n_eef> eef_transforms = {{0, 1,0,0,   0.3486, 0.647752, 0.2399}};
-
+    const std::array<std::array<float, Robot::dimension>, Robot::n_eef> eef_transforms = {
+        {0, 1, 0, 0, 0.3486, 0.647752, 0.2399}};
 
     // 1. Extract the pointer to the data
-    const float* data = eef_transforms[0].data();
+    const float *data = eef_transforms[0].data();
 
     // 2. Create the Quaternion (w, x, y, z)
     // Note: We cast to double because Isometry3d expects doubles
     Eigen::Quaterniond q(
-        static_cast<double>(data[0]), // w
-        static_cast<double>(data[1]), // x
-        static_cast<double>(data[2]), // y
-        static_cast<double>(data[3])  // z
+        static_cast<double>(data[0]),  // w
+        static_cast<double>(data[1]),  // x
+        static_cast<double>(data[2]),  // y
+        static_cast<double>(data[3])   // z
     );
 
     // 3. Create the Translation vector (x, y, z)
     Eigen::Vector3d t(
-        static_cast<double>(data[4]), 
-        static_cast<double>(data[5]), 
-        static_cast<double>(data[6])
-    );
+        static_cast<double>(data[4]), static_cast<double>(data[5]), static_cast<double>(data[6]));
 
     // 4. Combine into an Isometry3d
     Eigen::Isometry3d T_ref = Eigen::Isometry3d::Identity();
@@ -531,7 +523,6 @@ auto main(int argc, char **) -> int
     Robot::scale_configuration(zero_v);
     Robot::scale_configuration(one_v);
 
-
     ob::RealVectorBounds bounds(dimension);
     for (auto i = 0U; i < dimension; ++i)
     {
@@ -541,13 +532,12 @@ auto main(int argc, char **) -> int
 
     rvss->setBounds(bounds);
 
-
     // Create a shared pointer to our constraint.
     // auto constraint = std::make_shared<SphereConstraint>();
     // auto constraint = std::make_shared<CustomConstraint>(task_constraint);
 
     // Combine the ambient space and the constraint into a constrained state space.
-    auto constraint = std::make_shared<SE3Constraint>(model, eeFrame , tsr);
+    auto constraint = std::make_shared<SE3Constraint>(model, eeFrame, tsr);
 
     auto css = std::make_shared<ob::ProjectedStateSpace>(rvss, constraint);
 
@@ -615,13 +605,13 @@ auto main(int argc, char **) -> int
     start->as<ob::ConstrainedStateSpace::StateType>()->copy(sv);
     goal->as<ob::ConstrainedStateSpace::StateType>()->copy(gv);
 
-    // If we were using an Atlas or TangentBundleStateSpace, we would also have to anchor these states to charts:
+    // If we were using an Atlas or TangentBundleStateSpace, we would also have to anchor these states to
+    // charts:
     //   css->anchorChart(start.get());
     //   css->anchorChart(goal.get());
     // Which gives a starting point for the atlas to grow.
     // css->setBackoff(0.05);
     // css->setAtlasBoundary(0.1);
-
 
     auto pdef = std::make_shared<ob::ProblemDefinition>(csi);
     pdef->setStartAndGoalStates(start, goal);
@@ -632,13 +622,11 @@ auto main(int argc, char **) -> int
     pdef->setOptimizationObjective(obj);
     obj->setCostThreshold(obj->infiniteCost());
 
-
     auto planner = std::make_shared<og::RRTConnect>(csi);
 
     planner->setProblemDefinition(pdef);
     planner->setRange(1.0);
     planner->setup();
-
 
     // auto pp = std::make_shared<og::RRTConnect>(csi);
     // ss->setPlanner(pp);
@@ -647,7 +635,6 @@ auto main(int argc, char **) -> int
     auto start_time = std::chrono::steady_clock::now();
     ob::PlannerStatus stat = planner->ob::Planner::solve(planning_time);
     auto nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
-
 
     if (stat)
     {
@@ -659,7 +646,6 @@ auto main(int argc, char **) -> int
         auto initial_cost = path_geometric.cost(obj);
 
         og::PathSimplifier simplifier(csi, pdef->getGoal(), obj);
-
 
         std::ofstream outfile("/src/trajectory.txt");
         outfile << std::fixed << std::setprecision(10);
@@ -673,7 +659,9 @@ auto main(int argc, char **) -> int
             for (std::size_t j = 0; j < dimension; ++j)
             {
                 if (j > 0)
+                {
                     outfile << ",";
+                }
                 outfile << result[j];
             }
             outfile << "\n";
@@ -694,7 +682,6 @@ auto main(int argc, char **) -> int
 
         path_geometric.print(std::cout);
 
-
         // // Path simplification also works when using a constrained state space!
         // ss->simplifySolution(5.);
 
@@ -711,6 +698,7 @@ auto main(int argc, char **) -> int
         // }
     }
     else
+    {
         OMPL_WARN("No solution found!");
-
+    }
 }

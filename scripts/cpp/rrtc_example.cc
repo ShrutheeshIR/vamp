@@ -18,8 +18,12 @@ using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 using RRTC = vamp::planning::RRTC<Robot, rake, Robot::resolution>;
 
 // Start and goal configurations
-static constexpr Robot::ConfigurationArray start = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.68,0.0,0.0,0.0,0.0,0.0,0.0,-0.845,0.0,0.0,0.0,0.0,0.0};
-static constexpr Robot::ConfigurationArray goal = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-0.006,0.0,0.0,0.0,1.275,-0.415,0.444,-0.568,0.68,0.0,0.0,0.0,-0.234,0.754,-1.214,-0.492,0.315,0.04,1.082,0.227,-0.694};
+static constexpr Robot::ConfigurationArray start = {0.0, 0.0, 0.0, 0.0,    0.0, 0.0, 0.0,  0.0, 0.0, 0.0,
+                                                    0.0, 0.0, 0.0, 0.0,    0.0, 0.0, 0.68, 0.0, 0.0, 0.0,
+                                                    0.0, 0.0, 0.0, -0.845, 0.0, 0.0, 0.0,  0.0, 0.0};
+static constexpr Robot::ConfigurationArray goal = {
+    0.0,    0.0,  0.0, 0.0, 0.0, 0.0,    0.0,   0.0,    -0.006, 0.0,   0.0,  0.0,   1.275, -0.415, 0.444,
+    -0.568, 0.68, 0.0, 0.0, 0.0, -0.234, 0.754, -1.214, -0.492, 0.315, 0.04, 1.082, 0.227, -0.694};
 
 // Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
 static const std::vector<std::array<float, 3>> problem = {

@@ -1,4 +1,5 @@
-vamp/src/impl/vamp/planning/task_space_constraint_better_code.cc
+vamp / src / impl / vamp / planning /
+    task_space_constraint_better_code.cc
 ```
 ```
 // Optimized task space constraint utilities and refactored projection using SIMD helpers
@@ -30,18 +31,18 @@ vamp/src/impl/vamp/planning/task_space_constraint_better_code.cc
 
 #include <vamp/vector.hh>
 #include <vamp/vector/math.hh>
-#include <vamp/planning/task_space_constraint.hh> // for ProjMethod enum
+#include <vamp/planning/task_space_constraint.hh>  // for ProjMethod enum
 
-namespace vamp::planning
+    namespace vamp::planning
 {
     // Small numeric helpers with sane defaults
     struct Numeric
     {
         static constexpr float default_damping = 1e-2f;
-        static constexpr float min_step_norm    = 1e-6f;
-        static constexpr float accept_improve   = 0.99f; // require at least 1% improvement
-        static constexpr float backtrack_ratio  = 0.5f;  // backtracking multiplier
-        static constexpr float min_backtrack    = 1e-4f; // lower bound on backtracking
+        static constexpr float min_step_norm = 1e-6f;
+        static constexpr float accept_improve = 0.99f;  // require at least 1% improvement
+        static constexpr float backtrack_ratio = 0.5f;  // backtracking multiplier
+        static constexpr float min_backtrack = 1e-4f;   // lower bound on backtracking
         static constexpr std::size_t max_linesearch_iters = 16;
     };
 
@@ -56,7 +57,7 @@ namespace vamp::planning
         for (std::size_t i = 0; i < Robot::dimension; ++i)
         {
             // Broadcast the scalar "start[i]" into a 1×rake vector, and compute inter-lane-distance
-            const auto start_vec = start.broadcast(i); // shape-safe
+            const auto start_vec = start.broadcast(i);  // shape-safe
             out[i] = out[i].inter_lane_distance(start_vec);
         }
         return out;
@@ -86,7 +87,7 @@ namespace vamp::planning
     inline constexpr auto jacobian_transpose_step(
         const vamp::FloatVector<rake, m_rows * Robot::dimension> &J,
         const vamp::FloatVector<rake, m_rows> &err,
-        const typename Robot::template ConfigurationBlock<rake> &weights // typically ones
+        const typename Robot::template ConfigurationBlock<rake> &weights  // typically ones
         ) -> typename Robot::template ConfigurationBlock<rake>
     {
         typename Robot::template ConfigurationBlock<rake> dq;
@@ -109,8 +110,8 @@ namespace vamp::planning
     // Scales the step according to a damping factor, while preserving direction.
     template <typename Robot, std::size_t rake>
     inline constexpr auto damp_step(
-        const typename Robot::template ConfigurationBlock<rake> &dq,
-        const float lambda) -> typename Robot::template ConfigurationBlock<rake>
+        const typename Robot::template ConfigurationBlock<rake> &dq, const float lambda) ->
+        typename Robot::template ConfigurationBlock<rake>
     {
         typename Robot::template ConfigurationBlock<rake> out;
         const float scale = 1.0f / (1.0f + lambda);
@@ -131,7 +132,8 @@ namespace vamp::planning
         const EvaluateFn &evaluate,
         const float current_dist,
         const float ratio = Numeric::backtrack_ratio,
-        const float min_scale = Numeric::min_backtrack) -> std::pair<typename Robot::template ConfigurationBlock<rake>, float>
+        const float min_scale =
+            Numeric::min_backtrack) -> std::pair<typename Robot::template ConfigurationBlock<rake>, float>
     {
         typename Robot::template ConfigurationBlock<rake> best_q = q;
         float best_dist = current_dist;
@@ -169,10 +171,13 @@ namespace vamp::planning
     // - integrate_configuration(q) should update any internal kinematic caches for the Robot
     // - evaluate_distance(q) returns a scalar constraint violation
     // - The method adapts to InnerLM, OuterLM, GradDesc via "method" argument.
-    template <typename Robot, std::size_t rake, std::size_t m_rows,
-              typename ComputeErrorJacobianFn,
-              typename IntegrateConfigurationFn,
-              typename EvaluateDistanceFn>
+    template <
+        typename Robot,
+        std::size_t rake,
+        std::size_t m_rows,
+        typename ComputeErrorJacobianFn,
+        typename IntegrateConfigurationFn,
+        typename EvaluateDistanceFn>
     inline auto project_configuration(
         typename Robot::template ConfigurationBlock<rake> q,
         const typename Robot::template ConfigurationBlock<rake> &q_start,
@@ -181,11 +186,15 @@ namespace vamp::planning
         const EvaluateDistanceFn &evaluate_distance,
         const ProjMethod method,
         const std::size_t max_iters = 64,
-        const float damping = Numeric::default_damping) -> std::pair<typename Robot::template ConfigurationBlock<rake>, bool>
+        const float damping =
+            Numeric::default_damping) -> std::pair<typename Robot::template ConfigurationBlock<rake>, bool>
     {
         // Precompute a constant weight vector of ones
         typename Robot::template ConfigurationBlock<rake> ones;
-        for (std::size_t i = 0; i < Robot::dimension; ++i) { ones[i] = vamp::FloatVector<rake, 1>(1.0f); }
+        for (std::size_t i = 0; i < Robot::dimension; ++i)
+        {
+            ones[i] = vamp::FloatVector<rake, 1>(1.0f);
+        }
 
         bool success = false;
         float prev_dist = evaluate_distance(q);
@@ -221,8 +230,8 @@ namespace vamp::planning
             const float current_dist = prev_dist;
 
             // Gradient descent: take a step and then backtrack for improvement
-            auto [q_candidate, new_dist] = backtracking_linesearch<Robot, rake>(
-                q, dir, evaluate_distance, current_dist);
+            auto [q_candidate, new_dist] =
+                backtracking_linesearch<Robot, rake>(q, dir, evaluate_distance, current_dist);
 
             // Accept if improved
             if (new_dist < current_dist)
@@ -257,10 +266,13 @@ namespace vamp::planning
 
     // Convenience helpers that wrap the orchestrator for each method type,
     // letting existing constraints opt-in gradually without changing their internal logic.
-    template <typename Robot, std::size_t rake, std::size_t m_rows,
-              typename ComputeErrorJacobianFn,
-              typename IntegrateConfigurationFn,
-              typename EvaluateDistanceFn>
+    template <
+        typename Robot,
+        std::size_t rake,
+        std::size_t m_rows,
+        typename ComputeErrorJacobianFn,
+        typename IntegrateConfigurationFn,
+        typename EvaluateDistanceFn>
     inline auto project_inner_lm(
         const typename Robot::template ConfigurationBlock<rake> &q_init,
         const typename Robot::template ConfigurationBlock<rake> &q_start,
@@ -268,17 +280,27 @@ namespace vamp::planning
         const IntegrateConfigurationFn &integrate_configuration,
         const EvaluateDistanceFn &evaluate_distance,
         const std::size_t max_iters = 64,
-        const float damping = Numeric::default_damping) -> std::pair<typename Robot::template ConfigurationBlock<rake>, bool>
+        const float damping =
+            Numeric::default_damping) -> std::pair<typename Robot::template ConfigurationBlock<rake>, bool>
     {
         return project_configuration<Robot, rake, m_rows>(
-            q_init, q_start, compute_error_and_jacobian, integrate_configuration, evaluate_distance,
-            ProjMethod::InnerLM, max_iters, damping);
+            q_init,
+            q_start,
+            compute_error_and_jacobian,
+            integrate_configuration,
+            evaluate_distance,
+            ProjMethod::InnerLM,
+            max_iters,
+            damping);
     }
 
-    template <typename Robot, std::size_t rake, std::size_t m_rows,
-              typename ComputeErrorJacobianFn,
-              typename IntegrateConfigurationFn,
-              typename EvaluateDistanceFn>
+    template <
+        typename Robot,
+        std::size_t rake,
+        std::size_t m_rows,
+        typename ComputeErrorJacobianFn,
+        typename IntegrateConfigurationFn,
+        typename EvaluateDistanceFn>
     inline auto project_outer_lm(
         const typename Robot::template ConfigurationBlock<rake> &q_init,
         const typename Robot::template ConfigurationBlock<rake> &q_start,
@@ -286,28 +308,45 @@ namespace vamp::planning
         const IntegrateConfigurationFn &integrate_configuration,
         const EvaluateDistanceFn &evaluate_distance,
         const std::size_t max_iters = 64,
-        const float damping = Numeric::default_damping) -> std::pair<typename Robot::template ConfigurationBlock<rake>, bool>
+        const float damping =
+            Numeric::default_damping) -> std::pair<typename Robot::template ConfigurationBlock<rake>, bool>
     {
         return project_configuration<Robot, rake, m_rows>(
-            q_init, q_start, compute_error_and_jacobian, integrate_configuration, evaluate_distance,
-            ProjMethod::OuterLM, max_iters, damping);
+            q_init,
+            q_start,
+            compute_error_and_jacobian,
+            integrate_configuration,
+            evaluate_distance,
+            ProjMethod::OuterLM,
+            max_iters,
+            damping);
     }
 
-    template <typename Robot, std::size_t rake, std::size_t m_rows,
-              typename ComputeErrorJacobianFn,
-              typename IntegrateConfigurationFn,
-              typename EvaluateDistanceFn>
+    template <
+        typename Robot,
+        std::size_t rake,
+        std::size_t m_rows,
+        typename ComputeErrorJacobianFn,
+        typename IntegrateConfigurationFn,
+        typename EvaluateDistanceFn>
     inline auto project_grad_desc(
         const typename Robot::template ConfigurationBlock<rake> &q_init,
         const typename Robot::template ConfigurationBlock<rake> &q_start,
         const ComputeErrorJacobianFn &compute_error_and_jacobian,
         const IntegrateConfigurationFn &integrate_configuration,
         const EvaluateDistanceFn &evaluate_distance,
-        const std::size_t max_iters = 64) -> std::pair<typename Robot::template ConfigurationBlock<rake>, bool>
+        const std::size_t max_iters =
+            64) -> std::pair<typename Robot::template ConfigurationBlock<rake>, bool>
     {
         return project_configuration<Robot, rake, m_rows>(
-            q_init, q_start, compute_error_and_jacobian, integrate_configuration, evaluate_distance,
-            ProjMethod::GradDesc, max_iters, /*damping*/ 0.0f);
+            q_init,
+            q_start,
+            compute_error_and_jacobian,
+            integrate_configuration,
+            evaluate_distance,
+            ProjMethod::GradDesc,
+            max_iters,
+            /*damping*/ 0.0f);
     }
-} // namespace vamp::planning
+}  // namespace vamp::planning
 // NOLINTEND(*-magic-numbers)

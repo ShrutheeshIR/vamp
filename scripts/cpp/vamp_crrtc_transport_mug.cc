@@ -22,13 +22,11 @@ using EnvironmentInput = vamp::collision::Environment<float>;
 using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 using CRRTC = vamp::planning::CRRTC<Robot, rake, Robot::resolution>;
 
-
 static constexpr Robot::ConfigurationArray start = {-1.053, -1.39, 1.878, -1.434, -0.531, 2.386, 2.761};
 static constexpr Robot::ConfigurationArray goal = {-2.132, 1.558, 1.406, -1.452, 0.228, 2.444, -1.034};
 
-
-
-// static constexpr Robot::ConfigurationArray goal = {-0.839708,  0.496555, -0.630832, -0.573204,  0.232247,  1.8259,   -0.467584};
+// static constexpr Robot::ConfigurationArray goal = {-0.839708,  0.496555, -0.630832, -0.573204,
+// 0.232247,  1.8259,   -0.467584};
 
 // Spheres for the cage problem - (x, y, z) center coordinates with fixed, common radius defined below
 static const std::vector<std::array<float, 3>> problem = {
@@ -54,35 +52,37 @@ static const std::vector<std::array<float, 3>> problem = {
 // Radius for obstacle spheres
 static constexpr float radius = 0.15;
 
-
 auto main(int, char **) -> int
 {
-
-
     vamp::planning::RRTCSettings rrtc_settings;
-    vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};
-
+    vamp::planning::ProjMethod projection_method[] = {
+        vamp::planning::ProjMethod::InnerLM,
+        vamp::planning::ProjMethod::OuterLM,
+        vamp::planning::ProjMethod::GradDesc};
 
     EnvironmentInput environment;
     std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/shelf_panda.txt");
-    if (!infile.is_open()) {
+    if (!infile.is_open())
+    {
         std::cerr << "Failed to open file!" << std::endl;
         return 1;
     }
 
     std::string line;
-    while (std::getline(infile, line)) {
+    while (std::getline(infile, line))
+    {
         std::istringstream iss(line);
         char delim;
         float x, y, z, dx, dy, dz;
 
-        if (!(iss >> x >> delim >> y >> delim >> z >> delim >> dx >> delim >> dy >> delim >> dz)) {
+        if (!(iss >> x >> delim >> y >> delim >> z >> delim >> dx >> delim >> dy >> delim >> dz))
+        {
             std::cerr << "Error reading line: " << line << std::endl;
             continue;
-        }
-        ;
+        };
         // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ", " << dz << std::endl;
-        environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array({x, y, z}, {0.0, 0.0, 0.0}, {dx/2, dy/2, dz/2}));
+        environment.cuboids.emplace_back(
+            vamp::collision::factory::cuboid::array({x, y, z}, {0.0, 0.0, 0.0}, {dx / 2, dy / 2, dz / 2}));
     }
     infile.close();
 
@@ -91,41 +91,33 @@ auto main(int, char **) -> int
     // Create RNG for planning
     auto rng = std::make_shared<vamp::rng::Halton<Robot>>();
 
-
     // Create an attachment and add it
-    Eigen::Transform<float, 3, Eigen::Isometry> attachment_transform(Eigen::Translation<float, 3>(0.0f, 0.0f, 0.05f));
+    Eigen::Transform<float, 3, Eigen::Isometry> attachment_transform(
+        Eigen::Translation<float, 3>(0.0f, 0.0f, 0.05f));
     vamp::collision::Attachment sphere_attachment(attachment_transform);
     sphere_attachment.spheres.emplace_back(vamp::collision::factory::sphere::array({0.0, 0.0, 0.0}, 0.03));
     sphere_attachment.spheres.emplace_back(vamp::collision::factory::sphere::array({0.0, 0.0, 0.03}, 0.03));
 
     // env_v.attach(sphere_attachment);
 
-    std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-        -10.01, -10.01, -0.01, -0.01, -0.01, -0.01
-    };
+    std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {-10.01, -10.01, -0.01, -0.01, -0.01, -0.01};
 
-    std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
-        10.01, 10.01, 0.01, 0.01, 0.01, 0.01
-    };
+    std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {10.01, 10.01, 0.01, 0.01, 0.01, 0.01};
 
-    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 0.707107, 0, 0.707107, 0.354, 0.7, 0.243}};
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {
+        {0, 0.707107, 0, 0.707107, 0.354, 0.7, 0.243}};
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
 
     vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
-        eef_transforms_ref_frame_w_world,
-        eef_transforms,
-        tsr_lower_bound,
-        tsr_upper_bound
-    );
+        eef_transforms_ref_frame_w_world, eef_transforms, tsr_lower_bound, tsr_upper_bound);
 
     // std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
     // Eigen::Matrix<float, 4, 4> T;
-    // T << 0,0,1,   0.354,   0,-1,0,      0.700,   1,0,0,    0.243,          0,           0,           0,           1;
+    // T << 0,0,1,   0.354,   0,-1,0,      0.700,   1,0,0,    0.243,          0,           0,           0, 1;
     // eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
     // std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms_ref_frame_w_world;
     // T << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
     // eef_transforms_ref_frame_w_world[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-
 
     // vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
     //     eef_transforms_ref_frame_w_world,
@@ -133,31 +125,24 @@ auto main(int, char **) -> int
     //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
     // );
 
-
     vamp::planning::ComposableConstraints<Robot, rake, decltype(tsr_constraint)> task_constraint(
-        tsr_constraint
-    );
-
-
+        tsr_constraint);
 
     rrtc_settings.range = 1.0;
     rrtc_settings.dynamic_domain = false;
     rrtc_settings.projection_method = vamp::planning::ProjMethod::InnerLM;
     rrtc_settings.descend_rate = 1.0;
 
+    auto result = vamp::planning::CRRTC<Robot, rake, Robot::resolution, decltype(tsr_constraint)>::solve(
+        Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
 
-
-    auto result =
-        vamp::planning::CRRTC<Robot, rake, Robot::resolution, decltype(tsr_constraint)>::solve(Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
-
-    if(result.path.size() > 0)
+    if (result.path.size() > 0)
     {
-
         // Simplify path with default settings
         vamp::planning::SimplifySettings simplify_settings;
-        auto simplify_result = vamp::planning::constraint::simplify_with_constraints<Robot, rake, Robot::resolution, decltype(tsr_constraint)>(
-            result.path, env_v, task_constraint, simplify_settings, rng);
-
+        auto simplify_result = vamp::planning::constraint::
+            simplify_with_constraints<Robot, rake, Robot::resolution, decltype(tsr_constraint)>(
+                result.path, env_v, task_constraint, simplify_settings, rng);
 
         std::cout << "\nPrinting Result!! " << result.path.size() << std::endl;
         // Output configurations of simplified path
@@ -173,7 +158,10 @@ auto main(int, char **) -> int
                 // std::cout << array[i] << ", ";
                 soln[i] = array[i];
 
-                if (!first) outfile << ",";
+                if (!first)
+                {
+                    outfile << ",";
+                }
                 outfile << array[i];
                 first = false;
             }
@@ -184,9 +172,9 @@ auto main(int, char **) -> int
             outfile << "\n";
         }
         outfile.close();
-
     }
-    else {
+    else
+    {
         std::cout << "Failed to plan " << std::endl;
     }
 

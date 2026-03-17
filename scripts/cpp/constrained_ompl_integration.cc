@@ -43,7 +43,6 @@ using EnvironmentInput = vamp::collision::Environment<float>;
 using EnvironmentVector = vamp::collision::Environment<vamp::FloatVector<rake>>;
 using ConfigurationBlock = typename Robot::template ConfigurationBlock<rake>;
 
-
 // Maximum planning time
 static constexpr float planning_time = 30.0;
 static constexpr int maxIterations = 100000;
@@ -51,11 +50,8 @@ static constexpr int maxIterations = 100000;
 // Maximum simplification time
 static constexpr float simplification_time = 1.0;
 
-
 // Helper function to convert projected state into a double veector
-std::vector<double> extractStateReals(
-    const ob::State *state,
-    const ob::ProjectedStateSpace *space)
+std::vector<double> extractStateReals(const ob::State *state, const ob::ProjectedStateSpace *space)
 {
     // Cast the top-level state space to ProjectedStateSpace
 
@@ -67,7 +63,7 @@ std::vector<double> extractStateReals(
     return values;
 }
 
-//outputs into state. takes a double vector and turns it into state for projectedstatespace
+// outputs into state. takes a double vector and turns it into state for projectedstatespace
 void fillStateFromReals(
     const std::vector<double> &values,
     ob::State *state,
@@ -76,16 +72,20 @@ void fillStateFromReals(
     std::size_t dim = space->getDimension();
 
     if (values.size() != dim)
+    {
         throw std::runtime_error("Input size does not match ProjectedStateSpace dimension");
+    }
 
     space->copyFromReals(state, values);
 }
 
-//Helper function to turn double vector into vamp vector
+// Helper function to turn double vector into vamp vector
 inline static auto double_vector_to_vamp(const std::vector<double> &values) -> Configuration
 {
     if (values.size() != dimension)
+    {
         throw std::runtime_error("Input vector size does not match robot dimension");
+    }
 
     // Create an aligned buffer for the VAMP configuration
     alignas(Configuration::S::Alignment)
@@ -111,7 +111,6 @@ inline static std::vector<double> vamp_to_double_vector(const Configuration &c)
 
     for (size_t i = 0; i < dimension; ++i)
     {
-
         values[i] = static_cast<double>(temp_array[i]);
     }
 
@@ -153,33 +152,39 @@ inline static auto vamp_to_ompl(const Configuration &c, ob::State *state)
 class CustomConstraint : public ob::Constraint
 {
 public:
-    mutable vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>> constraints;
+    mutable vamp::planning::
+        ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+            constraints;
     mutable size_t num_failed_projections = 0;
 
 private:
     std::weak_ptr<ob::ProjectedStateSpace> ps_space_;
+
 public:
-    CustomConstraint(vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>& x)
-        : ob::Constraint(Robot::dimension, Robot::dimension - 6),
-        constraints(x)
+    CustomConstraint(
+        vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+            &x)
+      : ob::Constraint(Robot::dimension, Robot::dimension - 6), constraints(x)
     {
     }
 
-
     // Member fields
-    void setProjectedStateSpace(const std::shared_ptr<ob::ProjectedStateSpace>& space)
+    void setProjectedStateSpace(const std::shared_ptr<ob::ProjectedStateSpace> &space)
     {
         ps_space_ = space;
     }
+
     std::shared_ptr<ob::ProjectedStateSpace> getProjectedStateSpace() const
     {
-        return ps_space_.lock();   // Returns nullptr if expired
+        return ps_space_.lock();  // Returns nullptr if expired
     }
 
-    ConfigurationBlock turn_configuration_into_configuration_block(const Robot::Configuration &c) const{
+    ConfigurationBlock turn_configuration_into_configuration_block(const Robot::Configuration &c) const
+    {
         typename Robot::template ConfigurationBlock<rake> block;
 
-        for (auto i = 0U; i < Robot::dimension; ++i) {
+        for (auto i = 0U; i < Robot::dimension; ++i)
+        {
             block[i] = c.broadcast(i) + 0.0;
         }
         return block;
@@ -194,16 +199,17 @@ public:
     {
         std::shared_ptr<ob::ProjectedStateSpace> pss_ptr = getProjectedStateSpace();
         auto pss = pss_ptr.get();
-        if (!pss) {
+        if (!pss)
+        {
             throw std::runtime_error("ProjectedStateSpace member field weak pointer no longer exists!");
         }
-        //std::cout << "At the very begnning of project, the state is: \n";
-        //pss->printState(state, std::cout);
+        // std::cout << "At the very begnning of project, the state is: \n";
+        // pss->printState(state, std::cout);
         Configuration c = double_vector_to_vamp(extractStateReals(state, pss));
-        //raise(SIGTRAP);
+        // raise(SIGTRAP);
 
         bool result = project(c);
-        //TODO: after c has been modified, convert the Configuration c into a double vector.
+        // TODO: after c has been modified, convert the Configuration c into a double vector.
         std::vector<double> newReals = vamp_to_double_vector(c);
         // std::cout << "After converting vamp to double vector, we get: ";
         // for (double d : newReals) {
@@ -211,16 +217,17 @@ public:
         // }
         // std::cout << "From " << c ;
         fillStateFromReals(newReals, state, pss);
-        //std::cout << "At the end, we get: \n";
-        // pss->printState(state, std::cout);
-        // std::cout << result << "\n";
+        // std::cout << "At the end, we get: \n";
+        //  pss->printState(state, std::cout);
+        //  std::cout << result << "\n";
         //
-        if (!result) {
+        if (!result)
+        {
             num_failed_projections++;
         }
         return result;
-
     }
+
     double distance(const ob::State *state) const override
     {
         auto configuration = ompl_to_vamp(state);
@@ -235,15 +242,16 @@ public:
 
     bool project(Configuration &configuration) const
     {
-        //std::cout << "Project: COnfiguration is " << configuration << "\n";
+        // std::cout << "Project: COnfiguration is " << configuration << "\n";
         ConfigurationBlock block = turn_configuration_into_configuration_block(configuration);
         ConfigurationBlock last_projected_block;
         // std::cout << "After converted to configuration block, it is " << block << "\n";
-        bool result = constraints.projectConfiguration(block, last_projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0, 15, false);
-        //std::cout << "After pojection, the configuration block is " << block << "\n";
-        //std::cout << "Result of projection is " << result << "\n";
+        bool result = constraints.projectConfiguration(
+            block, last_projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0, 15, false);
+        // std::cout << "After pojection, the configuration block is " << block << "\n";
+        // std::cout << "Result of projection is " << result << "\n";
         typename Robot::ConfigurationArray last_projected;
-        for (auto i = rake-1; i < rake; i++)
+        for (auto i = rake - 1; i < rake; i++)
         {
             for (auto j = 0U; j < Robot::dimension; j++)
             {
@@ -253,15 +261,16 @@ public:
         configuration = Robot::Configuration(last_projected);
         // std::cout << "After Project: COnfiguration is " << configuration << result << "\n";
         return result;
-
     }
+
     double distance(const Configuration &configuration) const
     {
-        ConfigurationBlock block =  turn_configuration_into_configuration_block(configuration);
+        ConfigurationBlock block = turn_configuration_into_configuration_block(configuration);
         // std::cout << "block is" << block << "\n";
         auto simd_float_vector = constraints.distanceToConstraint(block);
         // std::cout << "distanceToConstraint returned " << simd_float_vector << "\n";
-        //std::cout << "is the start position on the manifold?? Answer: " << simd_float_vector.test_all_less_equal(0.0001F) << "\n";
+        // std::cout << "is the start position on the manifold?? Answer: " <<
+        // simd_float_vector.test_all_less_equal(0.0001F) << "\n";
         double dist = simd_float_vector[{0, 0}];
         // std::cout << "dist is" << dist << "\n";
         return dist;
@@ -272,20 +281,20 @@ public:
         // std::cout << "our custom implementation of isSatisfied is called! CONFIGURATION version\n";
         return distance(configuration) < 0.0001;
     }
+
     // Fully dont know what is going on, need to ask shru
-    void function(const Eigen::Ref<const Eigen::VectorXd> &x,
-              Eigen::Ref<Eigen::VectorXd> out) const override
+    void function(const Eigen::Ref<const Eigen::VectorXd> &x, Eigen::Ref<Eigen::VectorXd> out) const override
     {
         std::cout << "THIS IS REALLY BAD!!! FUNCTION GOT CALLED!";
         return;
     }
-
 };
 
 // State validator using VAMP
 struct VAMPStateValidator : public ob::StateValidityChecker
 {
     const EnvironmentVector &env_v;
+
     VAMPStateValidator(ob::SpaceInformation *si, const EnvironmentVector &env_v)
       : ob::StateValidityChecker(si), env_v(env_v)
     {
@@ -300,25 +309,30 @@ struct VAMPStateValidator : public ob::StateValidityChecker
     {
         std::cout << "Called state validator " << "\n";
         // Convert OMPL to VAMP vector and validate
-       auto *pss = dynamic_cast<ob::ProjectedStateSpace*>(si_->getStateSpace().get());
+        auto *pss = dynamic_cast<ob::ProjectedStateSpace *>(si_->getStateSpace().get());
         if (!pss)
+        {
             throw ompl::Exception("Expected ProjectedStateSpace");
+        }
 
         // Step 2. Get the OMPL Constraint object
         auto constraint_base = pss->getConstraint();
 
         // Step 3. Downcast it to CustomConstraint
-        auto *custom_constraint = dynamic_cast<CustomConstraint*>(constraint_base.get());
+        auto *custom_constraint = dynamic_cast<CustomConstraint *>(constraint_base.get());
         if (!custom_constraint)
+        {
             throw ompl::Exception("Expected CustomConstraint");
+        }
 
         Configuration c = double_vector_to_vamp(extractStateReals(state, pss));
-        //auto *projState = state->as<ob::ProjectedStateSpace::StateType>();
-        //const ob::State *ambient = projState->getAmbientState();
-        //si_->getStateSpace()->printState(ambient, std::cout);
+        // auto *projState = state->as<ob::ProjectedStateSpace::StateType>();
+        // const ob::State *ambient = projState->getAmbientState();
+        // si_->getStateSpace()->printState(ambient, std::cout);
         auto result = custom_constraint->isSatisfied(c);
         // std::cout << "At the end of isValid for stateValdiator, is valid returns " << result << "\n";
-        if (!result) {
+        if (!result)
+        {
             std::cout << "Constraint not satisfied\n";
             return result;
         }
@@ -332,13 +346,13 @@ struct VAMPStateValidator : public ob::StateValidityChecker
         std::cout << "fkcc_out: " << fkcc_out << "\n";
         return fkcc_out;
     }
-
 };
 
 struct VAMPMotionValidator : public ob::MotionValidator
 {
     const EnvironmentVector &env_v;
     inline static size_t project_constrained_motion_failed_counter = 0;
+
     VAMPMotionValidator(ob::SpaceInformation *si, const EnvironmentVector &env_v)
       : ob::MotionValidator(si), env_v(env_v)
     {
@@ -353,26 +367,32 @@ struct VAMPMotionValidator : public ob::MotionValidator
     {
         // std::cout << "checkMotion called with states:\n";
         // Convert OMPL states to VAMP vectors and check motion between states
-        auto *pss = dynamic_cast<ob::ProjectedStateSpace*>(si_->getStateSpace().get());
+        auto *pss = dynamic_cast<ob::ProjectedStateSpace *>(si_->getStateSpace().get());
         if (!pss)
+        {
             throw ompl::Exception("Expected ProjectedStateSpace");
+        }
 
         // Step 2. Get the OMPL Constraint object
         auto constraint_base = pss->getConstraint();
 
         // Step 3. Downcast it to your CustomConstraint
-        auto *custom_constraint = dynamic_cast<CustomConstraint*>(constraint_base.get());
+        auto *custom_constraint = dynamic_cast<CustomConstraint *>(constraint_base.get());
         if (!custom_constraint)
+        {
             throw ompl::Exception("Expected CustomConstraint");
+        }
 
         // Step 4. Convert state into VAMP configuration
-        //std::cout << "Check motion called with these following states:\n";
-        //State(s1, std::cout);
-        //pss->printState(s2, std::cout);
-        Configuration configuration1 = double_vector_to_vamp(extractStateReals(s1, pss));;
-        Configuration configuration2 = double_vector_to_vamp(extractStateReals(s2, pss));;
-        //std::cout << "configuration 1 for checkMotion is " << configuration1 << "\n";
-        //std::cout << "configuration 2 for checkMotion is " << configuration2 << "\n";
+        // std::cout << "Check motion called with these following states:\n";
+        // State(s1, std::cout);
+        // pss->printState(s2, std::cout);
+        Configuration configuration1 = double_vector_to_vamp(extractStateReals(s1, pss));
+        ;
+        Configuration configuration2 = double_vector_to_vamp(extractStateReals(s2, pss));
+        ;
+        // std::cout << "configuration 1 for checkMotion is " << configuration1 << "\n";
+        // std::cout << "configuration 2 for checkMotion is " << configuration2 << "\n";
         std::vector<Configuration> projected_vector_dummy;
 
         // Step 5. Call VAMP’s constrained validator
@@ -384,21 +404,21 @@ struct VAMPMotionValidator : public ob::MotionValidator
             env_v,
             vamp::planning::ProjMethod::OuterLM,
             1.0,
-            20
-        );
+            20);
 
-        if (!result) {
+        if (!result)
+        {
             project_constrained_motion_failed_counter++;
         }
 
         // std::cout << "The result of project_constraint_motion is " << result << "\n";
         return result;
-        //return vamp::planning::validate_motion<Robot, rake, Robot::resolution>(
-            //ompl_to_vamp(s1), ompl_to_vamp(s2), env_v);
+        // return vamp::planning::validate_motion<Robot, rake, Robot::resolution>(
+        // ompl_to_vamp(s1), ompl_to_vamp(s2), env_v);
     }
 
-    auto checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const
-        -> bool override
+    auto
+    checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const -> bool override
     {
         throw ompl::Exception("Not implemented!");
     }
@@ -408,6 +428,7 @@ struct OMPLMotionValidator : public ob::MotionValidator
 {
     const EnvironmentVector &env_v;
     inline static size_t project_constrained_motion_failed_counter = 0;
+
     OMPLMotionValidator(ob::SpaceInformation *si, const EnvironmentVector &env_v)
       : ob::MotionValidator(si), env_v(env_v)
     {
@@ -421,45 +442,50 @@ struct OMPLMotionValidator : public ob::MotionValidator
     auto checkMotion(const ob::State *s1, const ob::State *s2) const -> bool override
     {
         std::cout << "Calling geodesic checkMotion\n";
-        auto *css = dynamic_cast<ob::ProjectedStateSpace*>(si_->getStateSpace().get());
+        auto *css = dynamic_cast<ob::ProjectedStateSpace *>(si_->getStateSpace().get());
         if (!css)
+        {
             throw ompl::Exception("Expected ProjectedStateSpace");
+        }
 
         auto constraint_base = css->getConstraint();
 
-        auto *custom_constraint = dynamic_cast<CustomConstraint*>(constraint_base.get());
+        auto *custom_constraint = dynamic_cast<CustomConstraint *>(constraint_base.get());
         if (!custom_constraint)
+        {
             throw ompl::Exception("Expected CustomConstraint");
+        }
 
         Configuration configuration2 = double_vector_to_vamp(extractStateReals(s2, css));
-        if (!(custom_constraint->isSatisfied(configuration2))) {
+        if (!(custom_constraint->isSatisfied(configuration2)))
+        {
             std::cout << "configuration2 is not satisfied within checkMotion!\n";
             return false;
         }
 
         auto discrete_geodesic = css->discreteGeodesic(s1, s2, false);
-        if (!discrete_geodesic) {
+        if (!discrete_geodesic)
+        {
             std::cout << "discrete_geodesic is not satisfied within checkMotion!\n";
             css->printState(s1, std::cout);
             css->printState(s2, std::cout);
 
             project_constrained_motion_failed_counter++;
         }
-        else {
+        else
+        {
             std::cout << "discrete_geodesic is satisfied within checkMotion!\n";
             css->printState(s1, std::cout);
             css->printState(s2, std::cout);
         }
         // std::cout << project_constrained_motion_failed_counter << std::endl;
         return discrete_geodesic;
-
-
     }
 
-    auto checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const
-        -> bool override
+    auto
+    checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const -> bool override
     {
-        //Intentionally not implemented
+        // Intentionally not implemented
         throw ompl::Exception("Not implemented!");
     }
 };
@@ -468,33 +494,26 @@ auto main(int argc, char **argv) -> int
 {
     // if the argument state_only is provided, save it
     bool state_only = false;
-    if (argc > 1 && std::string(argv[1]) == "state_only") {
+    if (argc > 1 && std::string(argv[1]) == "state_only")
+    {
         state_only = true;
     }
 
-    std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {
-        -0.01, -10.01, -0.01, -10.01, -10.01, -10.01
-    };
+    std::array<float, 6 * Robot::n_eef> tsr_lower_bound = {-0.01, -10.01, -0.01, -10.01, -10.01, -10.01};
 
-    std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
-        0.01, 10.01, 0.01, 10.01, 10.01, 10.01
-    };
-    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 1,0,0,   0.3486, 0.647752, 0.2399}};
+    std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {0.01, 10.01, 0.01, 10.01, 10.01, 10.01};
+    std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 1, 0, 0, 0.3486, 0.647752, 0.2399}};
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
 
     vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
-        eef_transforms_ref_frame_w_world,
-        eef_transforms,
-        tsr_lower_bound,
-        tsr_upper_bound
-    );
-    vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>> task_constraint(
-        tsr_constraint
-    );
+        eef_transforms_ref_frame_w_world, eef_transforms, tsr_lower_bound, tsr_upper_bound);
+    vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+        task_constraint(tsr_constraint);
 
-    static constexpr std::array<float, dimension> start = {1.01600, 0.68800, 0.08700, -1.28100, -0.06000, 1.95500, 1.89100};
-    static constexpr std::array<float, dimension> goal = {-1.18400, 0.68900, 0.15400, -1.27400, -0.10600, 1.95500, -0.24000};
-
+    static constexpr std::array<float, dimension> start = {
+        1.01600, 0.68800, 0.08700, -1.28100, -0.06000, 1.95500, 1.89100};
+    static constexpr std::array<float, dimension> goal = {
+        -1.18400, 0.68900, 0.15400, -1.27400, -0.10600, 1.95500, -0.24000};
 
     static const std::vector<std::array<float, 3>> problem = {
         // {0.55, 0, 0.25},
@@ -539,7 +558,6 @@ auto main(int argc, char **argv) -> int
     auto one_v = Configuration(ones);
     Robot::scale_configuration(zero_v);
     Robot::scale_configuration(one_v);
-
 
     ob::RealVectorBounds bounds(dimension);
     for (auto i = 0U; i < dimension; ++i)
@@ -607,21 +625,25 @@ auto main(int argc, char **argv) -> int
     auto css = std::make_shared<ob::ProjectedStateSpace>(space, constraint);
     auto cc = std::dynamic_pointer_cast<CustomConstraint>(constraint);
     if (!cc)
+    {
         throw std::runtime_error("Constraint is not a CustomConstraint");
+    }
 
     cc->setProjectedStateSpace(css);
     // Define the constrained space information for this constrained state space.
     auto csi = std::make_shared<ob::ConstrainedSpaceInformation>(css);
     // Create space information and set state validator and custom VAMP motion validator
-    //auto si = std::make_shared<ob::SpaceInformation>(space);
-
+    // auto si = std::make_shared<ob::SpaceInformation>(space);
 
     auto mv = std::shared_ptr<ob::MotionValidator>();
 
-    if(state_only){
+    if (state_only)
+    {
         mv = std::make_shared<OMPLMotionValidator>(csi, env_v);
         std::cout << "OMPL Motion Validator created" << std::endl;
-    }else{
+    }
+    else
+    {
         mv = std::make_shared<VAMPMotionValidator>(csi, env_v);
         std::cout << "VAMP Motion Validator created" << std::endl;
     }
@@ -636,7 +658,6 @@ auto main(int argc, char **argv) -> int
     {
         start_ompl[i] = start[i];
         goal_ompl[i] = goal[i];
-
     }
 
     auto pdef = std::make_shared<ob::ProblemDefinition>(csi);
@@ -665,10 +686,12 @@ auto main(int argc, char **argv) -> int
     auto counter = std::make_shared<unsigned int>(0);
 
     // Create a PlannerTerminationCondition with a lambda
-    ompl::base::PlannerTerminationCondition ptc([counter, maxIterations]() mutable {
-        (*counter)++;
-        return *counter >= maxIterations;
-    });
+    ompl::base::PlannerTerminationCondition ptc(
+        [counter, maxIterations]() mutable
+        {
+            (*counter)++;
+            return *counter >= maxIterations;
+        });
     auto start_time = std::chrono::steady_clock::now();
 
     ob::PlannerStatus solved = planner->solve(ptc);
@@ -676,8 +699,7 @@ auto main(int argc, char **argv) -> int
 
     if (solved)
     {
-        og::PathGeometric *path =
-        pdef->getSolutionPath()->as<og::PathGeometric>();
+        og::PathGeometric *path = pdef->getSolutionPath()->as<og::PathGeometric>();
         std::ofstream outfile("trajectory.txt");
         outfile << std::fixed << std::setprecision(10);
         std::cout << "Raw path length: " << path->length() << std::endl;
@@ -692,7 +714,9 @@ auto main(int argc, char **argv) -> int
             for (std::size_t j = 0; j < dimension; ++j)
             {
                 if (j > 0)
+                {
                     outfile << ",";
+                }
                 outfile << result[j];
             }
             outfile << "\n";
@@ -700,23 +724,24 @@ auto main(int argc, char **argv) -> int
         outfile.close();
     }
 
-    std::cout << "Invalid distance counter outside: " << vamp::planning::invalid_distance_counter_outside << std::endl;
-    std::cout << "Invalid distance counter inside: " << vamp::planning::invalid_distance_counter_inside << std::endl;
+    std::cout << "Invalid distance counter outside: " << vamp::planning::invalid_distance_counter_outside
+              << std::endl;
+    std::cout << "Invalid distance counter inside: " << vamp::planning::invalid_distance_counter_inside
+              << std::endl;
     std::cout << "Collision counter: " << vamp::planning::collision_counter << std::endl;
     std::cout << "Unable to project counter: " << vamp::planning::unable_to_project_counter << std::endl;
     std::cout << "Number of iterations: " << *counter << "\n";
 
     auto customConstraint = std::dynamic_pointer_cast<CustomConstraint>(constraint);
-    std::cout << "Number of failed projections: " <<    customConstraint->num_failed_projections << std::endl;
-
-
+    std::cout << "Number of failed projections: " << customConstraint->num_failed_projections << std::endl;
 
     // Only accept exact solutions
     if (solved == ob::PlannerStatus::EXACT_SOLUTION)
     {
         std::cout << "Found solution in " << nanoseconds / 1e6 << "ms! Simplfying..." << std::endl;
 
-        // std::cout << "Project constrained motion failed counter: " << mv->project_constrained_motion_failed_counter << std::endl;
+        // std::cout << "Project constrained motion failed counter: " <<
+        // mv->project_constrained_motion_failed_counter << std::endl;
 
         // Simplify the path using OMPL's path simplification
         /*
@@ -740,13 +765,11 @@ auto main(int argc, char **argv) -> int
 
         path_geometric.print(std::cout);
         */
-       return 0;
+        return 0;
     }
     else
     {
         std::cout << "No solution found" << std::endl;
         return 1;
     }
-
-
 }
