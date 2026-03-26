@@ -132,23 +132,23 @@ auto main(int, char **) -> int
     eef_transforms_ref_frame_w_world[2] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
     eef_transforms_ref_frame_w_world[3] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
 
-    vamp::planning::TaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
+    vamp::planning::constraint::TaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
         eef_transforms_ref_frame_w_world, eef_transforms, std::make_pair(tsr_lower_bound, tsr_upper_bound));
 
-    vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_constraint(
+    vamp::planning::constraint::BimanualTaskSpaceConstraint<Robot, rake> bimanual_constraint(
         target_pose, std::make_pair(lower_bound, upper_bound));
-    vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4> com_constraint(polygon_points);
+    vamp::planning::constraint::CoMTaskSpaceConstraint<Robot, rake, 4> com_constraint(polygon_points);
 
-    vamp::planning::SelfCollisionConstraint<Robot, rake> self_collision_constraint;
+    vamp::planning::constraint::SelfCollisionConstraint<Robot, rake> self_collision_constraint;
 
-    vamp::planning::ComposableConstraints<
+    vamp::planning::constraint::ComposableConstraints<
         Robot,
         rake,
         decltype(feet_tsr_constraint),
         decltype(com_constraint),
         decltype(bimanual_constraint)>
         task_constraint(feet_tsr_constraint, com_constraint, bimanual_constraint);
-    // vamp::planning::ComposableConstraints<Robot, rake, decltype(bimanual_constraint),
+    // vamp::planning::constraint::ComposableConstraints<Robot, rake, decltype(bimanual_constraint),
     // decltype(com_constraint)> task_constraint(
     //     bimanual_constraint,
     //     com_constraint
@@ -157,7 +157,7 @@ auto main(int, char **) -> int
     rrtc_settings.range = 1.0;
     rrtc_settings.max_iterations = 100000;
     rrtc_settings.dynamic_domain = true;
-    rrtc_settings.projection_method = vamp::planning::ProjMethod::InnerLM;
+    rrtc_settings.projection_method = vamp::planning::constraint::ProjMethod::InnerLM;
     rrtc_settings.descend_rate = 1.0;
     auto result = vamp::planning::CRRTC<
         Robot,

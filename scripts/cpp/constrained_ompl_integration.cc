@@ -153,7 +153,7 @@ class CustomConstraint : public ob::Constraint
 {
 public:
     mutable vamp::planning::
-        ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+        ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
             constraints;
     mutable size_t num_failed_projections = 0;
 
@@ -162,7 +162,7 @@ private:
 
 public:
     CustomConstraint(
-        vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+        vamp::planning::constraint::ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
             &x)
       : ob::Constraint(Robot::dimension, Robot::dimension - 6), constraints(x)
     {
@@ -247,7 +247,7 @@ public:
         ConfigurationBlock last_projected_block;
         // std::cout << "After converted to configuration block, it is " << block << "\n";
         bool result = constraints.projectConfiguration(
-            block, last_projected_block, vamp::planning::ProjMethod::InnerLM, 10.0, 1.0, 15, false);
+            block, last_projected_block, vamp::planning::constraint::ProjMethod::InnerLM, 10.0, 1.0, 15, false);
         // std::cout << "After pojection, the configuration block is " << block << "\n";
         // std::cout << "Result of projection is " << result << "\n";
         typename Robot::ConfigurationArray last_projected;
@@ -396,13 +396,13 @@ struct VAMPMotionValidator : public ob::MotionValidator
         std::vector<Configuration> projected_vector_dummy;
 
         // Step 5. Call VAMP’s constrained validator
-        auto result = vamp::planning::project_constraint_motion<Robot, rake, 1>(
+        auto result = vamp::planning::constraint::project_constraint_motion<Robot, rake, 1>(
             configuration1,
             configuration2,
             projected_vector_dummy,
             custom_constraint->constraints,
             env_v,
-            vamp::planning::ProjMethod::OuterLM,
+            vamp::planning::constraint::ProjMethod::OuterLM,
             1.0,
             20);
 
@@ -505,9 +505,9 @@ auto main(int argc, char **argv) -> int
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 1, 0, 0, 0.3486, 0.647752, 0.2399}};
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
 
-    vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
+    vamp::planning::constraint::TaskSpaceConstraint<Robot, rake> tsr_constraint(
         eef_transforms_ref_frame_w_world, eef_transforms, tsr_lower_bound, tsr_upper_bound);
-    vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+    vamp::planning::constraint::ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
         task_constraint(tsr_constraint);
 
     static constexpr std::array<float, dimension> start = {

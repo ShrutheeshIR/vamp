@@ -43,7 +43,7 @@ struct Attempt
 {
     float range;
     bool dynamic_domain;
-    vamp::planning::ProjMethod proj_method;
+    vamp::planning::constraint::ProjMethod proj_method;
     float descend_rate;
     int num_projection_iterations;
     bool insert_all_to_tree;
@@ -67,11 +67,11 @@ auto main(int, char **) -> int
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     // bool dd[] = {false};
     bool dd[] = {false, true};
-    // vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM,
-    // vamp::planning::ProjMethod::OuterLM, vamp::planning::ProjMethod::GradDesc};
-    vamp::planning::ProjMethod projection_method[] = {
-        vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM};
-    // vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM};
+    // vamp::planning::constraint::ProjMethod projection_method[] = {vamp::planning::constraint::ProjMethod::InnerLM,
+    // vamp::planning::constraint::ProjMethod::OuterLM, vamp::planning::constraint::ProjMethod::GradDesc};
+    vamp::planning::constraint::ProjMethod projection_method[] = {
+        vamp::planning::constraint::ProjMethod::InnerLM, vamp::planning::constraint::ProjMethod::OuterLM};
+    // vamp::planning::constraint::ProjMethod projection_method[] = {vamp::planning::constraint::ProjMethod::InnerLM};
 
     // float descend_rates[] = {0.25, 0.5, 0.75, 1.0};
     float descend_rates[] = {0.75, 1.0};
@@ -196,32 +196,32 @@ auto main(int, char **) -> int
                                   {1, 0, 0, 0, 0, 0, 0},
                                   {1, 0, 0, 0, 0, 0, 0}}};
 
-                            vamp::planning::FeetTaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
+                            vamp::planning::constraint::FeetTaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
                                 eef_transforms_ref_frame_w_world,
                                 eef_transforms,
                                 tsr_lower_bound,
                                 tsr_upper_bound);
 
-                            // vamp::planning::TaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
+                            // vamp::planning::constraint::TaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
                             //     eef_transforms_ref_frame_w_world,
                             //     eef_transforms,
                             //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
                             // );
 
                             std::array<float, 7> transform = {1., 0.0005, 0.0005, 0.0005, 0.0, -0.303, 0.0};
-                            vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_task_constraint(
+                            vamp::planning::constraint::BimanualTaskSpaceConstraint<Robot, rake> bimanual_task_constraint(
                                 transform, lower_bound, upper_bound);
 
-                            // vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_constraint(
+                            // vamp::planning::constraint::BimanualTaskSpaceConstraint<Robot, rake> bimanual_constraint(
                             //     target_pose,
                             //     std::make_pair(lower_bound, upper_bound)
                             // );
-                            vamp::planning::CoMTaskSpaceConstraint<Robot, rake, 4> com_constraint(
+                            vamp::planning::constraint::CoMTaskSpaceConstraint<Robot, rake, 4> com_constraint(
                                 polygon_points);
 
-                            // vamp::planning::SelfCollisionConstraint<Robot, rake> self_collision_constraint;
+                            // vamp::planning::constraint::SelfCollisionConstraint<Robot, rake> self_collision_constraint;
 
-                            vamp::planning::ComposableConstraints<
+                            vamp::planning::constraint::ComposableConstraints<
                                 Robot,
                                 rake,
                                 decltype(feet_tsr_constraint),
@@ -229,7 +229,7 @@ auto main(int, char **) -> int
                                 decltype(bimanual_task_constraint)>
                                 task_constraint(
                                     feet_tsr_constraint, com_constraint, bimanual_task_constraint);
-                            // vamp::planning::ComposableConstraints<Robot, rake,
+                            // vamp::planning::constraint::ComposableConstraints<Robot, rake,
                             // decltype(bimanual_constraint), decltype(com_constraint)> task_constraint(
                             //     bimanual_constraint,
                             //     com_constraint

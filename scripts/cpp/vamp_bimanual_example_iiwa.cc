@@ -42,7 +42,7 @@ struct Attempt
 {
     float range;
     bool dynamic_domain;
-    vamp::planning::ProjMethod proj_method;
+    vamp::planning::constraint::ProjMethod proj_method;
     float descend_rate;
     int num_projection_iterations;
     float std_dev_scaling_factor;
@@ -72,9 +72,9 @@ auto main(int, char **) -> int
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     // bool dd[] = {false};
     bool dd[] = {false, true};
-    vamp::planning::ProjMethod projection_method[] = {
-        vamp::planning::ProjMethod::InnerLM, vamp::planning::ProjMethod::OuterLM};
-    // vamp::planning::ProjMethod projection_method[] = {vamp::planning::ProjMethod::InnerLM};
+    vamp::planning::constraint::ProjMethod projection_method[] = {
+        vamp::planning::constraint::ProjMethod::InnerLM, vamp::planning::constraint::ProjMethod::OuterLM};
+    // vamp::planning::constraint::ProjMethod projection_method[] = {vamp::planning::constraint::ProjMethod::InnerLM};
 
     // auto start_eefk = Robot::eefk(start);
     // auto start_rel = start_eefk[0].inverse() * start_eefk[1];
@@ -160,7 +160,7 @@ auto main(int, char **) -> int
                                 // -2.13217e-09, 0.0, 0.0, 0.6};
                                 std::array<float, 7> transform = {
                                     -0.0005, 0.927184, -0.364607, 0.0009, 5.96046e-08, 0, 0.6};
-                                vamp::planning::BimanualTaskSpaceConstraint<Robot, rake>
+                                vamp::planning::constraint::BimanualTaskSpaceConstraint<Robot, rake>
                                     bimanual_task_constraint(transform, lower_bound, upper_bound);
 
                                 vamp::planning::

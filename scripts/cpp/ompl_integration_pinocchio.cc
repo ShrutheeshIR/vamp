@@ -238,7 +238,7 @@ struct VAMPStateValidator : public ob::StateValidityChecker
     }
 
     const EnvironmentVector &env_v;
-    // vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot,
+    // vamp::planning::constraint::ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot,
     // rake>>&task_constraint;
 };
 
@@ -464,7 +464,7 @@ auto main(int argc, char **) -> int
 {
     // const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
     // const auto in_hand_pose = Eigen::Transform<float, 3, Eigen::Isometry>::Identity();
-    // vamp::planning::TaskSpaceConstraint<Robot, rake> task_constraint(in_hand_pose, target_pose,
+    // vamp::planning::constraint::TaskSpaceConstraint<Robot, rake> task_constraint(in_hand_pose, target_pose,
     // std::make_pair(lower_bound, upper_bound));
 
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};

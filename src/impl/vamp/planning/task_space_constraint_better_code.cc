@@ -33,7 +33,7 @@ vamp / src / impl / vamp / planning /
 #include <vamp/vector/math.hh>
 #include <vamp/planning/task_space_constraint.hh>  // for ProjMethod enum
 
-    namespace vamp::planning
+    namespace vamp::planning::constraint
 {
     // Small numeric helpers with sane defaults
     struct Numeric
@@ -348,5 +348,5 @@ vamp / src / impl / vamp / planning /
             max_iters,
             /*damping*/ 0.0f);
     }
-}  // namespace vamp::planning
+}  // namespace vamp::planning::constraint
 // NOLINTEND(*-magic-numbers)

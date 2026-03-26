@@ -10,7 +10,7 @@
 #include <vamp/vector/eigen.hh>
 #include <vamp/vector/math.hh>
 #include <iomanip>
-namespace vamp::planning
+namespace vamp::planning::constraint
 {
 
     // exposing to public so we can set this in settings maybe?
@@ -1618,4 +1618,4 @@ namespace vamp::planning
 
     };
 
-}  // namespace vamp::planning
+}  // namespace vamp::planning::constraint

@@ -58,7 +58,7 @@ struct Attempt
 {
     float range;
     bool dynamic_domain;
-    vamp::planning::ProjMethod proj_method;
+    vamp::planning::constraint::ProjMethod proj_method;
     float descend_rate;
     bool success;
     std::size_t planning_time;
@@ -85,7 +85,7 @@ auto main(int, char **) -> int
     std::array<float, 6> upper_bound = {0.00001, 0.00001, 0.00001, 0.00001, 0.00001, 0.00001};
 
     std::array<float, 7> transform = {0.0000348, 0.3745484, 0.9272074, 0.0000018, 0.0, 0.0, 0.171814};
-    vamp::planning::BimanualTaskSpaceConstraint<Robot, rake> bimanual_task_constraint(
+    vamp::planning::constraint::BimanualTaskSpaceConstraint<Robot, rake> bimanual_task_constraint(
         transform, lower_bound, upper_bound);
 
     typename Robot::template ConfigurationBlock<rake> block;
@@ -143,7 +143,7 @@ auto main(int, char **) -> int
     std::cout << "----Projecting ----" << std::endl;
     typename Robot::template ConfigurationBlock<rake> projected_block;
     bool success =
-        task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::GradDesc);
+        task_constraint.projectConfiguration(block, projected_block, vamp::planning::constraint::ProjMethod::GradDesc);
 
     // std::cout << fks[0].matrix() << std::endl;
     // std::cout << fks[1].matrix() << std::endl;
@@ -180,7 +180,7 @@ auto main(int, char **) -> int
         typename Robot::template ConfigurationBlock<rake> projected_block;
 
         bool success =
-            task_constraint.projectConfiguration(block, projected_block, vamp::planning::ProjMethod::InnerLM);
+            task_constraint.projectConfiguration(block, projected_block, vamp::planning::constraint::ProjMethod::InnerLM);
         for (auto i = 0U; i < Robot::dimension; i++)
         {
             std::cout << projected_block[{i, 0}] << " ";

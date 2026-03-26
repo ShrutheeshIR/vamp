@@ -58,7 +58,7 @@ struct Attempt
 {
     float range;
     bool dynamic_domain;
-    vamp::planning::ProjMethod proj_method;
+    vamp::planning::constraint::ProjMethod proj_method;
     float descend_rate;
     int num_projection_iterations;
     float std_dev_scaling_factor;
@@ -92,9 +92,9 @@ auto main(int, char **) -> int
     float ranges[] = {0.5, 1.0, 1.5, 2.0};
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     bool dd[] = {false, true};
-    vamp::planning::ProjMethod projection_method[] = {
-        vamp::planning::ProjMethod::InnerLM,
-        vamp::planning::ProjMethod::OuterLM};  //, vamp::planning::ProjMethod::GradDesc};
+    vamp::planning::constraint::ProjMethod projection_method[] = {
+        vamp::planning::constraint::ProjMethod::InnerLM,
+        vamp::planning::constraint::ProjMethod::OuterLM};  //, vamp::planning::constraint::ProjMethod::GradDesc};
 
     // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
     float descend_rates[] = {0.75, 1.0};
@@ -154,7 +154,7 @@ auto main(int, char **) -> int
                                 // 0, 0, 0, 1; eef_transforms_ref_frame_w_world[0] = Eigen::Transform<float,
                                 // 3, Eigen::Isometry>(T);
 
-                                // vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
+                                // vamp::planning::constraint::TaskSpaceConstraint<Robot, rake> tsr_constraint(
                                 //     eef_transforms_ref_frame_w_world,
                                 //     eef_transforms,
                                 //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
@@ -165,16 +165,16 @@ auto main(int, char **) -> int
                                 std::array<std::array<float, 7>, Robot::n_eef>
                                     eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
 
-                                vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
+                                vamp::planning::constraint::TaskSpaceConstraint<Robot, rake> tsr_constraint(
                                     eef_transforms_ref_frame_w_world,
                                     eef_transforms,
                                     tsr_lower_bound,
                                     tsr_upper_bound);
 
-                                vamp::planning::ComposableConstraints<
+                                vamp::planning::constraint::ComposableConstraints<
                                     Robot,
                                     rake,
-                                    vamp::planning::TaskSpaceConstraint<Robot, rake>>
+                                    vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
                                     task_constraint(tsr_constraint);
 
                                 rrtc_settings.range = range;

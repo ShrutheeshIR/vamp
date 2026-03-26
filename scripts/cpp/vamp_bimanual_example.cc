@@ -35,7 +35,7 @@ struct Attempt
 {
     float range;
     bool dynamic_domain;
-    vamp::planning::ProjMethod proj_method;
+    vamp::planning::constraint::ProjMethod proj_method;
     float descend_rate;
     int num_projection_iterations;
     float std_dev_scaling_factor;
@@ -60,9 +60,9 @@ auto main(int, char **) -> int
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     // bool dd[] = {false};
     bool dd[] = {false, true};
-    vamp::planning::ProjMethod projection_method[] = {
-        vamp::planning::ProjMethod::InnerLM,
-        vamp::planning::ProjMethod::OuterLM};  //, vamp::planning::ProjMethod::GradDesc};
+    vamp::planning::constraint::ProjMethod projection_method[] = {
+        vamp::planning::constraint::ProjMethod::InnerLM,
+        vamp::planning::constraint::ProjMethod::OuterLM};  //, vamp::planning::constraint::ProjMethod::GradDesc};
 
     // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
     float descend_rates[] = {0.75, 1.0};
@@ -141,12 +141,12 @@ auto main(int, char **) -> int
                                 // Eigen::Matrix<float, 4, 4> T;
                                 // T << 1, 0, 0, 0, 0, 1, 0, -0.3, 0, 0, 1, 0, 0, 0, 0, 1;
                                 // const Eigen::Transform<float, 3, Eigen::Isometry> target_pose(T);
-                                // vamp::planning::BimanualTaskSpaceConstraint<Robot, rake>
+                                // vamp::planning::constraint::BimanualTaskSpaceConstraint<Robot, rake>
                                 // bimanual_task_constraint(target_pose, std::make_pair(lower_bound,
                                 // upper_bound));
 
                                 std::array<float, 7> transform = {1.00, 0.0, 0.00, 0.00, 0.0, -0.3, 0.0};
-                                vamp::planning::BimanualTaskSpaceConstraint<Robot, rake>
+                                vamp::planning::constraint::BimanualTaskSpaceConstraint<Robot, rake>
                                     bimanual_task_constraint(transform, lower_bound, upper_bound);
 
                                 vamp::planning::

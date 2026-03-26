@@ -240,13 +240,13 @@ class CustomConstraint : public ob::Constraint
 {
 public:
     mutable vamp::planning::
-        ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+        ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
             constraints;
     mutable size_t num_failed_projections = 0;
 
 public:
     CustomConstraint(
-        vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+        vamp::planning::constraint::ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
             &x)
       : ob::Constraint(Robot::dimension, Robot::dimension - 6, 0.0001), constraints(x)
     {
@@ -294,7 +294,7 @@ public:
         // return true;
 
         bool result = constraints.projectConfiguration(
-            config_block, last_projected_block, vamp::planning::ProjMethod::InnerLM, 5.0, 1.0, 25, false);
+            config_block, last_projected_block, vamp::planning::constraint::ProjMethod::InnerLM, 5.0, 1.0, 25, false);
         if (result)
         {
             for (auto i = 0U; i < Robot::dimension; ++i)
@@ -328,7 +328,7 @@ public:
         // // return true;
 
         // bool result = constraints.projectConfiguration(config_block, last_projected_block,
-        // vamp::planning::ProjMethod::InnerLM, 5.0, 1.0, 25, false); if (result){
+        // vamp::planning::constraint::ProjMethod::InnerLM, 5.0, 1.0, 25, false); if (result){
         //     for (auto i = 0U; i < Robot::dimension; ++i) {
         //         x[i] = static_cast<double>(last_projected_block[{i, rake - 1}]);
         //         // std::cout << x[i] << " ";
@@ -393,7 +393,7 @@ struct VAMPStateValidator : public ob::StateValidityChecker
     VAMPStateValidator(
         ob::SpaceInformation *si,
         const EnvironmentVector &env_v,
-        vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+        vamp::planning::constraint::ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
             &task_constraint)
       : ob::StateValidityChecker(si), env_v(env_v), task_constraint(task_constraint)
     {
@@ -402,7 +402,7 @@ struct VAMPStateValidator : public ob::StateValidityChecker
     VAMPStateValidator(
         const ob::SpaceInformationPtr &si,
         const EnvironmentVector &env_v,
-        vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+        vamp::planning::constraint::ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
             &task_constraint)
       : ob::StateValidityChecker(si), env_v(env_v), task_constraint(task_constraint)
     {
@@ -424,13 +424,13 @@ struct VAMPStateValidator : public ob::StateValidityChecker
         Configuration robot_config(float_config_from_x);
 
         std::vector<typename Robot::Configuration> projected_vector;
-        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(
+        bool projection_result = vamp::planning::constraint::project_constraint_motion<Robot, rake, Robot::resolution>(
             robot_config,
             robot_config,
             projected_vector,
             task_constraint,
             env_v,
-            vamp::planning::ProjMethod::InnerLM,
+            vamp::planning::constraint::ProjMethod::InnerLM,
             1.0,
             20,
             false);
@@ -444,7 +444,7 @@ struct VAMPStateValidator : public ob::StateValidityChecker
     }
 
     const EnvironmentVector &env_v;
-    vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+    vamp::planning::constraint::ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
         &task_constraint;
 };
 
@@ -453,7 +453,7 @@ struct VAMPMotionValidator : public ob::MotionValidator
     VAMPMotionValidator(
         ob::SpaceInformation *si,
         const EnvironmentVector &env_v,
-        vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+        vamp::planning::constraint::ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
             &task_constraint)
       : ob::MotionValidator(si), env_v(env_v), task_constraint(task_constraint)
     {
@@ -462,7 +462,7 @@ struct VAMPMotionValidator : public ob::MotionValidator
     VAMPMotionValidator(
         const ob::SpaceInformationPtr &si,
         const EnvironmentVector &env_v,
-        vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+        vamp::planning::constraint::ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
             &task_constraint)
       : ob::MotionValidator(si), env_v(env_v), task_constraint(task_constraint)
     {
@@ -484,13 +484,13 @@ struct VAMPMotionValidator : public ob::MotionValidator
         Configuration robot_config_2(float_config_from_x2);
 
         std::vector<typename Robot::Configuration> projected_vector;
-        bool projection_result = vamp::planning::project_constraint_motion<Robot, rake, Robot::resolution>(
+        bool projection_result = vamp::planning::constraint::project_constraint_motion<Robot, rake, Robot::resolution>(
             robot_config_1,
             robot_config_2,
             projected_vector,
             task_constraint,
             env_v,
-            vamp::planning::ProjMethod::InnerLM,
+            vamp::planning::constraint::ProjMethod::InnerLM,
             1.0,
             20,
             false);
@@ -504,7 +504,7 @@ struct VAMPMotionValidator : public ob::MotionValidator
     }
 
     const EnvironmentVector &env_v;
-    vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+    vamp::planning::constraint::ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
         &task_constraint;
 };
 
@@ -573,10 +573,10 @@ int main()
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {{0, 1, 0, 0, 0.3486, 0.647752, 0.2399}};
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
 
-    vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
+    vamp::planning::constraint::TaskSpaceConstraint<Robot, rake> tsr_constraint(
         eef_transforms_ref_frame_w_world, eef_transforms, tsr_lower_bound, tsr_upper_bound);
 
-    vamp::planning::ComposableConstraints<Robot, rake, vamp::planning::TaskSpaceConstraint<Robot, rake>>
+    vamp::planning::constraint::ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
         task_constraint(tsr_constraint);
 
     // Create a shared pointer to our constraint.

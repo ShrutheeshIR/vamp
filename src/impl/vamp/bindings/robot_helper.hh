@@ -418,13 +418,13 @@ namespace vamp::binding
             }
         };
 
-        using TSR_Constraint = vamp::planning::TaskSpaceConstraint<Robot, rake>;
-        using COM_Constraint = vamp::planning::CoMTaskSpaceConstraint<Robot, rake, num_com_polygons>;
-        using Bimanual_Constraint = vamp::planning::BimanualTaskSpaceConstraint<Robot, rake>;
+        using TSR_Constraint = vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>;
+        using COM_Constraint = vamp::planning::constraint::CoMTaskSpaceConstraint<Robot, rake, num_com_polygons>;
+        using Bimanual_Constraint = vamp::planning::constraint::BimanualTaskSpaceConstraint<Robot, rake>;
 
-        using Composable_TSR = vamp::planning::ComposableConstraints<Robot, rake, TSR_Constraint>;
-        using Composable_COM = vamp::planning::ComposableConstraints<Robot, rake, COM_Constraint>;
-        using Composable_TSR_COM = vamp::planning::ComposableConstraints<Robot, rake, TSR_Constraint, COM_Constraint>;
+        using Composable_TSR = vamp::planning::constraint::ComposableConstraints<Robot, rake, TSR_Constraint>;
+        using Composable_COM = vamp::planning::constraint::ComposableConstraints<Robot, rake, COM_Constraint>;
+        using Composable_TSR_COM = vamp::planning::constraint::ComposableConstraints<Robot, rake, TSR_Constraint, COM_Constraint>;
 
         using CRRTC_TSR =
             ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, TSR_Constraint>, vamp::planning::RRTCSettings, Composable_TSR>;
@@ -433,8 +433,8 @@ namespace vamp::binding
         // using CRRTC_COM =
         //     ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, Composable_COM>, vamp::planning::RRTCSettings, Composable_COM>;
 
-        using Composable_Bimanual = vamp::planning::ComposableConstraints<Robot, rake, Bimanual_Constraint>;
-        using Composable_TSR_COM_Bimanual = vamp::planning::ComposableConstraints<Robot, rake, TSR_Constraint, COM_Constraint, Bimanual_Constraint>;
+        using Composable_Bimanual = vamp::planning::constraint::ComposableConstraints<Robot, rake, Bimanual_Constraint>;
+        using Composable_TSR_COM_Bimanual = vamp::planning::constraint::ComposableConstraints<Robot, rake, TSR_Constraint, COM_Constraint, Bimanual_Constraint>;
         using CRRTC_Bimanual =
             ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, Bimanual_Constraint>, vamp::planning::RRTCSettings, Composable_Bimanual>;
 
@@ -454,24 +454,24 @@ namespace vamp::binding
 
     template<typename Robot, typename... Constraints>
     void bind_composable(nanobind::module_ &m) {
-        using CC = vamp::planning::ComposableConstraints<Robot, rake, Constraints...>;
+        using CC = vamp::planning::constraint::ComposableConstraints<Robot, rake, Constraints...>;
         using NA = NDArrayInput<Robot>;
         using NDArray = typename NA::Type;
 
         std::string pyname = "Composable";
         (pyname.append("_").append(std::string(Constraints::name)), ...);
 
-        nanobind::class_<CC, vamp::planning::RobotConstraint<Robot, rake>>(m, pyname.c_str())
+        nanobind::class_<CC, vamp::planning::constraint::RobotConstraint<Robot, rake>>(m, pyname.c_str())
             .def(nanobind::init<const Constraints&...>())
             .def("distanceToConstraint",
-                [](const vamp::planning::ComposableConstraints<Robot, rake, Constraints...>& self,  const NDArray &c_in) {
+                [](const vamp::planning::constraint::ComposableConstraints<Robot, rake, Constraints...>& self,  const NDArray &c_in) {
                 return self.distanceToConstraint(NA::template block<rake>(c_in))[{0, 0}];
             }, "Get distance to constraint")
             .def("projectConfiguration",
-                    [](vamp::planning::ComposableConstraints<Robot, rake, Constraints...>& self,  const NDArray &c_in, int projection_method, float max_q_dist, float descent_rate, int num_projection_iterations, bool verbose) {
+                    [](vamp::planning::constraint::ComposableConstraints<Robot, rake, Constraints...>& self,  const NDArray &c_in, int projection_method, float max_q_dist, float descent_rate, int num_projection_iterations, bool verbose) {
                     auto c = NA::template block<rake>(c_in);
                     auto c_out = NA::template block<rake>(c_in);
-                    self.projectConfiguration(c, c_out, static_cast<vamp::planning::ProjMethod>(projection_method),max_q_dist, descent_rate, num_projection_iterations, verbose);
+                    self.projectConfiguration(c, c_out, static_cast<vamp::planning::constraint::ProjMethod>(projection_method),max_q_dist, descent_rate, num_projection_iterations, verbose);
                     // convert the c_out back to NDArray and return 
                     return NA::array_from_block(c_out, 0);
                 }, "Project a configuration onto the constraint manifold");
@@ -703,7 +703,7 @@ namespace vamp::binding
 
 
 
-        nb::class_<vamp::planning::RobotConstraint<Robot,rake>>(submodule, "_BaseConstraint")
+        nb::class_<vamp::planning::constraint::RobotConstraint<Robot,rake>>(submodule, "_BaseConstraint")
             .def(nb::init<>());
 
         nb::class_<typename HPN::TSR_Constraint>(submodule, "TaskSpaceConstraint")
@@ -843,7 +843,7 @@ namespace vamp::binding
         //     return HPN::ConstrainedPlannerHelper<vamp::planning::CRRTC, vamp::planning::RRTCSettings,
         //                              std::decay_t<decltype(constraint_instance)>>::single();
         // });
-        // ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, vamp::planning::TaskSpaceConstraint<Robot, rake>>, vamp::planning::RRTCSettings, TSR_Constraint>
+        // ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>, vamp::planning::RRTCSettings, TSR_Constraint>
 
         return submodule;
     }

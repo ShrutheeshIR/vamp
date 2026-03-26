@@ -9,7 +9,7 @@
 #include <vamp/planning/validate.hh>
 
 
-namespace vamp::planning
+namespace vamp::planning::constraint
 {
     static int invalid_distance_counter_outside = 0;
     static int invalid_distance_counter_inside = 0;
@@ -308,4 +308,4 @@ namespace vamp::planning
         return project_constraint_vector<Robot, rake, resolution>(
             start, vector, infinite_distance ? 10000.F : vector.l2_norm(), projected_vector, constraint, environment, projection_method, projection_descent_rate);
     }
-}  // namespace vamp::planning
+}  // namespace vamp::planning::constraint

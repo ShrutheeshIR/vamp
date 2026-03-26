@@ -17,7 +17,7 @@ namespace vamp::planning::constraint
     inline static auto smooth_bspline(
         Path<Robot> &path,
         const collision::Environment<FloatVector<rake>> &environment,
-        vamp::planning::ComposableConstraints<Robot, rake, Constraints...> &constraint,
+        vamp::planning::constraint::ComposableConstraints<Robot, rake, Constraints...> &constraint,
         const BSplineSettings &settings,
         ProjMethod projection_method = ProjMethod::InnerLM,
         float projection_descent_rate = 1.0F,
@@ -140,7 +140,7 @@ namespace vamp::planning::constraint
     inline static auto shortcut_path(
         Path<Robot> &path,
         const collision::Environment<FloatVector<rake>> &environment,
-        vamp::planning::ComposableConstraints<Robot, rake, Constraints...> &constraint,
+        vamp::planning::constraint::ComposableConstraints<Robot, rake, Constraints...> &constraint,
         const ShortcutSettings & /*settings*/,
         ProjMethod projection_method = ProjMethod::InnerLM,
         float projection_descent_rate = 1.0F,
@@ -231,7 +231,7 @@ namespace vamp::planning::constraint
     inline auto simplify_with_constraints(
         const Path<Robot> &path,
         const collision::Environment<FloatVector<rake>> &environment,
-        vamp::planning::ComposableConstraints<Robot, rake, Constraints...> &constraint,
+        vamp::planning::constraint::ComposableConstraints<Robot, rake, Constraints...> &constraint,
         const SimplifySettings &settings,
         const typename vamp::rng::RNG<Robot>::Ptr rng,
         ProjMethod projection_method = ProjMethod::InnerLM,

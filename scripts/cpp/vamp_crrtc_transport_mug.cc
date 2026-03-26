@@ -55,10 +55,10 @@ static constexpr float radius = 0.15;
 auto main(int, char **) -> int
 {
     vamp::planning::RRTCSettings rrtc_settings;
-    vamp::planning::ProjMethod projection_method[] = {
-        vamp::planning::ProjMethod::InnerLM,
-        vamp::planning::ProjMethod::OuterLM,
-        vamp::planning::ProjMethod::GradDesc};
+    vamp::planning::constraint::ProjMethod projection_method[] = {
+        vamp::planning::constraint::ProjMethod::InnerLM,
+        vamp::planning::constraint::ProjMethod::OuterLM,
+        vamp::planning::constraint::ProjMethod::GradDesc};
 
     EnvironmentInput environment;
     std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/shelf_panda.txt");
@@ -108,7 +108,7 @@ auto main(int, char **) -> int
         {0, 0.707107, 0, 0.707107, 0.354, 0.7, 0.243}};
     std::array<std::array<float, 7>, Robot::n_eef> eef_transforms_ref_frame_w_world = {{1, 0, 0, 0, 0, 0, 0}};
 
-    vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
+    vamp::planning::constraint::TaskSpaceConstraint<Robot, rake> tsr_constraint(
         eef_transforms_ref_frame_w_world, eef_transforms, tsr_lower_bound, tsr_upper_bound);
 
     // std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef> eef_transforms;
@@ -119,18 +119,18 @@ auto main(int, char **) -> int
     // T << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
     // eef_transforms_ref_frame_w_world[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
 
-    // vamp::planning::TaskSpaceConstraint<Robot, rake> tsr_constraint(
+    // vamp::planning::constraint::TaskSpaceConstraint<Robot, rake> tsr_constraint(
     //     eef_transforms_ref_frame_w_world,
     //     eef_transforms,
     //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
     // );
 
-    vamp::planning::ComposableConstraints<Robot, rake, decltype(tsr_constraint)> task_constraint(
+    vamp::planning::constraint::ComposableConstraints<Robot, rake, decltype(tsr_constraint)> task_constraint(
         tsr_constraint);
 
     rrtc_settings.range = 1.0;
     rrtc_settings.dynamic_domain = false;
-    rrtc_settings.projection_method = vamp::planning::ProjMethod::InnerLM;
+    rrtc_settings.projection_method = vamp::planning::constraint::ProjMethod::InnerLM;
     rrtc_settings.descend_rate = 1.0;
 
     auto result = vamp::planning::CRRTC<Robot, rake, Robot::resolution, decltype(tsr_constraint)>::solve(
