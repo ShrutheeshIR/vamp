@@ -26,7 +26,9 @@
 #include <vamp/planning/crrtc.hh>
 
 #include <vamp/planning/constraints/task_space_constraint.hh>
-
+#include <vamp/planning/constraints/CoM_task_space_constraint.hh>
+#include <vamp/planning/constraints/bimanual_task_space_constraint.hh>
+#include <vamp/planning/constraints/composable_constraint.hh>
 #include <vamp/vector.hh>
 
 #include <nanobind/nanobind.h>

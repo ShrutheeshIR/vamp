@@ -8,6 +8,7 @@
 // #include <vamp/planning/validate.hh>
 #include <vamp/planning/crrtc.hh>
 #include <vamp/planning/constraints/task_space_constraint.hh>
+#include <vamp/planning/constraints/bimanual_task_space_constraint.hh>
 #include <vamp/planning/validate_constraint.hh>
 
 // #include <vamp/planning/simplify.hh>

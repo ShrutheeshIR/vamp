@@ -9,6 +9,7 @@
 #include <vamp/random/rng.hh>
 #include <vamp/vector.hh>
 #include <vamp/planning/constraints/task_space_constraint.hh>
+#include <vamp/planning/constraints/composable_constraint.hh>
 #include <vamp/planning/validate_constraint.hh>
 
 namespace vamp::planning::constraint
