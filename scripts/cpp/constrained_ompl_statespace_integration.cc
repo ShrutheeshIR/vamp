@@ -239,7 +239,7 @@ inline static auto vamp_to_ompl(const Configuration &c, ob::State *state)
 class CustomConstraint : public ob::Constraint
 {
 public:
-    mutable vamp::planning::
+    mutable 
         vamp::planning::constraint::ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
             constraints;
     mutable size_t num_failed_projections = 0;
