@@ -570,10 +570,10 @@ auto main(int argc, char **argv) -> int
 
     std::shared_ptr<ob::Constraint> constraint = std::make_shared<CustomConstraint>(task_constraint);
 
-    vamp::planning::invalid_distance_counter_outside = 0;
-    vamp::planning::invalid_distance_counter_inside = 0;
-    vamp::planning::collision_counter = 0;
-    vamp::planning::unable_to_project_counter = 0;
+    vamp::planning::constraint::invalid_distance_counter_outside = 0;
+    vamp::planning::constraint::invalid_distance_counter_inside = 0;
+    vamp::planning::constraint::collision_counter = 0;
+    vamp::planning::constraint::unable_to_project_counter = 0;
 
     // Code used for finding a feasible start and goal if the start and goal are not good
     /*
@@ -724,12 +724,12 @@ auto main(int argc, char **argv) -> int
         outfile.close();
     }
 
-    std::cout << "Invalid distance counter outside: " << vamp::planning::invalid_distance_counter_outside
+    std::cout << "Invalid distance counter outside: " << vamp::planning::constraint::invalid_distance_counter_outside
               << std::endl;
-    std::cout << "Invalid distance counter inside: " << vamp::planning::invalid_distance_counter_inside
+    std::cout << "Invalid distance counter inside: " << vamp::planning::constraint::invalid_distance_counter_inside
               << std::endl;
-    std::cout << "Collision counter: " << vamp::planning::collision_counter << std::endl;
-    std::cout << "Unable to project counter: " << vamp::planning::unable_to_project_counter << std::endl;
+    std::cout << "Collision counter: " << vamp::planning::constraint::collision_counter << std::endl;
+    std::cout << "Unable to project counter: " << vamp::planning::constraint::unable_to_project_counter << std::endl;
     std::cout << "Number of iterations: " << *counter << "\n";
 
     auto customConstraint = std::dynamic_pointer_cast<CustomConstraint>(constraint);
