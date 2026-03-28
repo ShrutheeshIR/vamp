@@ -5,7 +5,7 @@
 #include <vamp/utils.hh>
 #include <vamp/vector.hh>
 #include <vamp/collision/environment.hh>
-#include <vamp/planning/task_space_constraint.hh>
+#include <vamp/planning/constraints/task_space_constraint.hh>
 #include <vamp/planning/validate.hh>
 
 
