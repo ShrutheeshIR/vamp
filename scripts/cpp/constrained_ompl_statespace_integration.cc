@@ -30,7 +30,7 @@
 #include <ompl/base/SpaceInformation.h>
 #include <ompl/base/spaces/constraint/ProjectedStateSpace.h>
 #include <ompl/base/ConstrainedSpaceInformation.h>
-#include <vamp/planning/task_space_constraint.hh>
+#include <vamp/planning/constraints/task_space_constraint.hh>
 #include <vamp/planning/validate_constraint.hh>
 #include <ompl/base/PlannerTerminationCondition.h>
 #include <ompl/base/terminationconditions/IterationTerminationCondition.h>

@@ -31,7 +31,7 @@ vamp / src / impl / vamp / planning /
 
 #include <vamp/vector.hh>
 #include <vamp/vector/math.hh>
-#include <vamp/planning/task_space_constraint.hh>  // for ProjMethod enum
+#include <vamp/planning/constraints/task_space_constraint.hh>  // for ProjMethod enum
 
     namespace vamp::planning::constraint
 {

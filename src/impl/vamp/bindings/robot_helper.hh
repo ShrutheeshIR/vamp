@@ -25,7 +25,7 @@
 #include <vamp/planning/aorrtc.hh>
 #include <vamp/planning/crrtc.hh>
 
-#include <vamp/planning/task_space_constraint.hh>
+#include <vamp/planning/constraints/task_space_constraint.hh>
 
 #include <vamp/vector.hh>
 

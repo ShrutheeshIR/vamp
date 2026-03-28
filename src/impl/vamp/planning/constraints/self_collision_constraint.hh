@@ -1,3 +1,18 @@
+#pragma once
+
+#include <memory>
+
+#include <vamp/random/rng.hh>
+#include <vamp/utils.hh>
+#include <vamp/vector.hh>
+#include <Eigen/Geometry>
+#include <iostream>
+#include <vamp/vector/eigen.hh>
+#include <vamp/vector/math.hh>
+#include <iomanip>
+namespace vamp::planning::constraint
+{
+
 template <typename Robot, std::size_t rake>
     class SelfCollisionConstraint : public RobotConstraint<Robot, rake>
     {
@@ -149,4 +164,5 @@ template <typename Robot, std::size_t rake>
         }
 
 
-    };
+    };// namespace vamp::planning::constraint
+}
