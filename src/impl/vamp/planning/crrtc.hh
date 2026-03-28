@@ -27,7 +27,7 @@ namespace vamp::planning
             const Configuration &goal,
             const collision::Environment<FloatVector<rake>> &environment,
             const RRTCSettings &settings,
-            ComposableConstraints<Robot, rake, Constraints...> &constraint,
+            vamp::planning::constraint::ComposableConstraints<Robot, rake, Constraints...> &constraint,
             typename RNG::Ptr rng) noexcept -> PlanningResult<Robot>
         {
             return solve(start, std::vector<Configuration>{goal}, environment, settings, constraint, rng);
@@ -38,7 +38,7 @@ namespace vamp::planning
             const std::vector<Configuration> &goals,
             const collision::Environment<FloatVector<rake>> &environment,
             const RRTCSettings &settings,
-            ComposableConstraints<Robot, rake, Constraints...> &constraint,
+            vamp::planning::constraint::ComposableConstraints<Robot, rake, Constraints...> &constraint,
             typename RNG::Ptr rng) noexcept -> PlanningResult<Robot>
         {
             PlanningResult<Robot> result;
@@ -70,7 +70,7 @@ namespace vamp::planning
                         projected_vector,
                         constraint,
                         environment,
-                        static_cast<ProjMethod>(settings.projection_method),
+                        static_cast<vamp::planning::constraint::ProjMethod>(settings.projection_method),
                         settings.descend_rate,
                         settings.num_projection_iterations,
                         settings.insert_all_to_tree
@@ -165,7 +165,7 @@ namespace vamp::planning
                         projected_vector,
                         constraint,
                         environment,
-                        static_cast<ProjMethod>(settings.projection_method),
+                        static_cast<vamp::planning::constraint::ProjMethod>(settings.projection_method),
                         settings.descend_rate,
                         settings.num_projection_iterations,
                         settings.std_dev_scaling_factor,
@@ -246,7 +246,7 @@ namespace vamp::planning
                             projected_vector,
                             constraint,
                             environment,
-                            static_cast<ProjMethod>(settings.projection_method),
+                            static_cast<vamp::planning::constraint::ProjMethod>(settings.projection_method),
                             settings.descend_rate,
                             settings.num_projection_iterations,
                             settings.std_dev_scaling_factor

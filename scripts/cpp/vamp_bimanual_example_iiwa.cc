@@ -163,7 +163,7 @@ auto main(int, char **) -> int
                                 vamp::planning::constraint::BimanualTaskSpaceConstraint<Robot, rake>
                                     bimanual_task_constraint(transform, lower_bound, upper_bound);
 
-                                vamp::planning::
+                                vamp::planning::constraint::
                                     ComposableConstraints<Robot, rake, decltype(bimanual_task_constraint)>
                                         task_constraint(bimanual_task_constraint);
 
