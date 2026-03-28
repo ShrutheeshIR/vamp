@@ -65,7 +65,7 @@ namespace vamp::planning
             for (const auto &goal : goals)
             {
 
-                if (project_constraint_motion<Robot, rake, resolution>(
+                if (vamp::planning::constraint::project_constraint_motion<Robot, rake, resolution>(
                         start, goal,
                         projected_vector,
                         constraint,
@@ -158,7 +158,7 @@ namespace vamp::planning
                 bool reach = nearest_distance < settings.range;
                 auto extension_vector =
                     (reach) ? nearest_vector : nearest_vector * (settings.range / nearest_distance);
-                if (project_constraint_vector<Robot, rake, resolution>(
+                if (vamp::planning::constraint::project_constraint_vector<Robot, rake, resolution>(
                         nearest_configuration,
                         extension_vector,
                         (reach) ? nearest_distance : settings.range,
@@ -239,7 +239,7 @@ namespace vamp::planning
                         auto other_extension_vector =
                             (other_reach) ? other_nearest_vector : other_nearest_vector * (settings.range / other_nearest_distance);
 
-                        if(not project_constraint_vector<Robot, rake, resolution>(
+                        if(not vamp::planning::constraint::project_constraint_vector<Robot, rake, resolution>(
                             prior,
                             other_extension_vector,
                             (other_reach) ? other_nearest_distance : settings.range,
