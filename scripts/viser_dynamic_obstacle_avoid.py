@@ -63,8 +63,8 @@ class ConstrainedVampPubSub(Node):
             [-0.88021, 0.53120, -0.20601, -1.61905, 0.11733, 2.14908, 1.19294],
             [1.40490, 0.35201, -0.22762, -1.90963, 0.10796, 2.26183, 0.22238]
         ]
-        self.plan_settings.max_iterations = 100000
-        self.plan_settings.range = 0.2
+        self.plan_settings.rrtc_settings.max_iterations = 100000
+        self.plan_settings.rrtc_settings.range = 0.2
 
         self.vamp_cuboids = add_json_cuboids("resources/environments/cuboids/real_maze.json")
 

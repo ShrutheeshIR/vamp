@@ -455,6 +455,10 @@ namespace vamp::binding
 
     };
 
+    template<typename Robot, std::size_t rake, typename ConstraintT>
+    void bind_robot_constraint(nanobind::module_ &m, const char* pyname) {
+        nanobind::class_<vamp::planning::constraint::RobotConstraint<Robot, rake, ConstraintT>>(m, pyname);
+    }
 
     template<typename Robot, typename... Constraints>
     void bind_composable(nanobind::module_ &m) {
@@ -463,6 +467,7 @@ namespace vamp::binding
         using NA = NDArrayInput<Robot>;
         using NDArray = typename NA::Type;
 
+        bind_robot_constraint<Robot, rake, CC>(m, "RobotConstraint_" );
         std::string pyname = "Composable";
         (pyname.append("_").append(std::string(Constraints::name)), ...);
 
@@ -708,9 +713,8 @@ namespace vamp::binding
 
 
 
-        //nb::class_<vamp::planning::constraint::RobotConstraint<Robot,rake>>(submodule, "_BaseConstraint")
-        //    .def(nb::init<>()); 
-        // Note: I dont think it makes sense to expose this requires a derived type to intialized now. Also this doesn't appear to be used in python scripts anywhere
+        nb::class_<vamp::planning::constraint::RobotConstraint<Robot,rake>>(submodule, "_BaseConstraint")
+            .def(nb::init<>()); 
 
         nb::class_<typename HPN::TSR_Constraint>(submodule, "TaskSpaceConstraint")
             .def(nb::init<std::array<std::array<float, 7>, Robot::n_eef>, std::array<std::array<float, 7>, Robot::n_eef>, std::array<float, 6 * Robot::n_eef>, std::array<float, 6 * Robot::n_eef>>())                    // constructor args

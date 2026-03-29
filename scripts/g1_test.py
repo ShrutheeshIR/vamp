@@ -96,8 +96,8 @@ def main(
     }
     for _ in range(1):
         for combination in all_combinations:
-            plan_settings.range = combination[0]
-            plan_settings.dynamic_domain = combination[1]
+            plan_settings.rrtc_settings.range = combination[0]
+            plan_settings.rrtc_settings.dynamic_domain = combination[1]
             result = planner_func(start, goal, e, plan_settings, constraints, sampler)
 
             planning_times[combination].append(result.nanoseconds/1e6)
