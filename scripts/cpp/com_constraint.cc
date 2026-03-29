@@ -68,7 +68,7 @@ auto main(int, char **) -> int
 {
     std::cout << std::fixed << std::setprecision(5);
 
-    vamp::planning::CRRTC crrtc_settings;
+    vamp::planning::CRRTCSettings crrtc_settings;
     EnvironmentInput environment;
 
     std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/shelf_drake.txt");
