@@ -431,19 +431,19 @@ namespace vamp::binding
         using Composable_TSR_COM = vamp::planning::constraint::ComposableConstraints<Robot, rake, TSR_Constraint, COM_Constraint>;
 
         using CRRTC_TSR =
-            ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, TSR_Constraint>, vamp::planning::RRTCSettings, vamp::planning::constraint::ConstraintSettings, Composable_TSR>;
+            ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, TSR_Constraint>, vamp::planning::CRRTCSettings, Composable_TSR>;
         using CRRTC_TSR_COM =
-            ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, TSR_Constraint, COM_Constraint>, vamp::planning::RRTCSettings, vamp::planning::constraint::ConstraintSettings, Composable_TSR_COM>;
+            ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, TSR_Constraint, COM_Constraint>, vamp::planning::CRRTCSettings, Composable_TSR_COM>;
         // using CRRTC_COM =
         //     ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, Composable_COM>, vamp::planning::RRTCSettings, Composable_COM>;
 
         using Composable_Bimanual = vamp::planning::constraint::ComposableConstraints<Robot, rake, Bimanual_Constraint>;
         using Composable_TSR_COM_Bimanual = vamp::planning::constraint::ComposableConstraints<Robot, rake, TSR_Constraint, COM_Constraint, Bimanual_Constraint>;
         using CRRTC_Bimanual =
-            ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, Bimanual_Constraint>, vamp::planning::RRTCSettings, vamp::planning::constraint::ConstraintSettings, Composable_Bimanual>;
+            ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, Bimanual_Constraint>, vamp::planning::CRRTCSettings, Composable_Bimanual>;
 
         using CRRTC_TSR_COM_Bimanual =
-            ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, TSR_Constraint, COM_Constraint, Bimanual_Constraint>, vamp::planning::RRTCSettings, vamp::planning::constraint::ConstraintSettings, Composable_TSR_COM_Bimanual>;
+            ConstrainedPlannerHelper<vamp::planning::CRRTC<Robot, rake, Robot::resolution, TSR_Constraint, COM_Constraint, Bimanual_Constraint>, vamp::planning::CRRTCSettings, Composable_TSR_COM_Bimanual>;
 
 
         using Simplifier_TSR_COM_Bimanual =
