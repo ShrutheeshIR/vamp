@@ -15,7 +15,7 @@ namespace vamp::planning::constraint
 
 
 template <typename Robot, std::size_t rake>
-class BimanualTaskSpaceConstraint : public RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint>
+class BimanualTaskSpaceConstraint : public RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint<Robot, rake>>
     {
         /**
          * A TSR constraint is expressed as 2 transformation matrices
@@ -161,9 +161,9 @@ class BimanualTaskSpaceConstraint : public RobotConstraint<Robot, rake, Bimanual
             //     right_eef_pose_w_ref_left_eef.translation().y(),
             //     right_eef_pose_w_ref_left_eef.translation().z()};
 
-            RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint>::template assignBlock<7>(right_eef_pose_w_ref_left_eef, tsr_function_inp.rTlB);
-            RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint>::template assignBlock<6>(lower_bound, tsr_function_inp.lbB);
-            RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint>::template assignBlock<6>(upper_bound, tsr_function_inp.ubB);
+            RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint<Robot, rake>>::template assignBlock<7>(right_eef_pose_w_ref_left_eef, tsr_function_inp.rTlB);
+            RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint<Robot, rake>>::template assignBlock<6>(lower_bound, tsr_function_inp.lbB);
+            RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint<Robot, rake>>::template assignBlock<6>(upper_bound, tsr_function_inp.ubB);
             // tsr_function_inp.print();
         }
 
@@ -280,7 +280,7 @@ class BimanualTaskSpaceConstraint : public RobotConstraint<Robot, rake, Bimanual
                 std::cout << "Invalid projection method: " << projection_method << std::endl;
                 throw std::runtime_error("Invalid projection method");
             }
-            RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint>::integrateJointConfiguration(q, q_new, grad, alpha);
+            RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint<Robot, rake>>::integrateJointConfiguration(q, q_new, grad, alpha);
             return dist;
         }
 
