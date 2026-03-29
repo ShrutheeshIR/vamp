@@ -713,8 +713,8 @@ namespace vamp::binding
 
 
 
-        nb::class_<vamp::planning::constraint::RobotConstraint<Robot,rake>>(submodule, "_BaseConstraint")
-            .def(nb::init<>()); 
+        //nb::class_<vamp::planning::constraint::RobotConstraint<Robot,rake>>(submodule, "_BaseConstraint")
+        //    .def(nb::init<>()); 
 
         nb::class_<typename HPN::TSR_Constraint>(submodule, "TaskSpaceConstraint")
             .def(nb::init<std::array<std::array<float, 7>, Robot::n_eef>, std::array<std::array<float, 7>, Robot::n_eef>, std::array<float, 6 * Robot::n_eef>, std::array<float, 6 * Robot::n_eef>>())                    // constructor args
