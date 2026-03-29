@@ -250,7 +250,7 @@ namespace vamp::planning
                             projected_vector,
                             constraint,
                             environment,
-                            static_cast<vamp::planning::constraint::ProjMethod>(constraint_ettings.projection_method),
+                            static_cast<vamp::planning::constraint::ProjMethod>(constraint_settings.projection_method),
                             constraint_settings.descend_rate,
                             constraint_settings.num_projection_iterations,
                             constraint_settings.std_dev_scaling_factor
