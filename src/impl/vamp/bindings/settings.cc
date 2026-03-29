@@ -37,7 +37,7 @@ void vamp::binding::init_settings(nanobind::module_ &pymodule)
 
     nb::class_<vp::CRRTCSettings>(pymodule, "CRRTCSettings")
         .def(nb::init<>())
-        .def_rw("rrtc_settings", &vp::CRRTCSettings::rrt_settings)
+        .def_rw("rrtc_settings", &vp::CRRTCSettings::rrtc_settings)
         .def_rw("constraint_settings", &vp::CRRTCSettings::constraint_settings);
 
     nb::class_<vp::AORRTCSettings>(pymodule, "AORRTCSettings")
