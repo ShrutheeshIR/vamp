@@ -13,7 +13,7 @@
 #include <vamp/planning/constraints/feet_task_space_constraint.hh>
 #include <vamp/planning/constraints/self_collision_constraint.hh>
 #include <vamp/planning/validate_constraint.hh>
-#include <vamp/planning/constraint_settings.hh>
+#include <vamp/planning/constraints/constraint_settings.hh>
 
 // #include <vamp/planning/simplify.hh>
 #include <vamp/robots/g1_unitree.hh>
