@@ -819,8 +819,8 @@ namespace vamp::binding
         }
 
     #define CONSTRAINEDPLANNER(name, func, desc, ...)                                                                       \
-        MF(name, func::single, desc, "start"_a, "goal"_a, "environment"_a, "settings"_a, "constraint"_a, "rng"_a);               \
-        MF(name, func::multi, desc, "start"_a, "goal"_a, "environment"_a, "settings"_a, "constraint"_a, "rng"_a);
+        MF(name, func::single, desc, "start"_a, "goal"_a, "environment"_a, "rrtc_settings"_a, "constraint_settings"_a, "constraint"_a, "rng"_a);               \
+        MF(name, func::multi, desc, "start"_a, "goal"_a, "environment"_a, "rrtc_settings"_a, "constraint_settings"_a, "constraint"_a, "rng"_a);
 
             CONSTRAINEDPLANNER("crrtc", CRRTC_TSR, "CRRTConnectTSR");
             CONSTRAINEDPLANNER("crrtc", CRRTC_TSR_COM, "CRRTConnectTSRCOM");
