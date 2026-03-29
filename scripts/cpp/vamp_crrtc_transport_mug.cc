@@ -57,7 +57,7 @@ static constexpr float radius = 0.15;
 auto main(int, char **) -> int
 {
     vamp::planning::RRTCSettings rrtc_settings;
-    vamp::planning::ConstraintSettings constraint_settings;
+    vamp::planning::constraint::ConstraintSettings constraint_settings;
     vamp::planning::constraint::ProjMethod projection_method[] = {
         vamp::planning::constraint::ProjMethod::InnerLM,
         vamp::planning::constraint::ProjMethod::OuterLM,

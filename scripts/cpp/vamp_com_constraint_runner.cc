@@ -43,7 +43,7 @@ static constexpr Robot::ConfigurationArray goal = {
 auto main(int, char **) -> int
 {
     vamp::planning::RRTCSettings rrtc_settings;
-    vamp::planning::ConstraintSettings constraint_settings;
+    vamp::planning::constraint::ConstraintSettings constraint_settings;
 
     EnvironmentInput environment;
     // std::ofstream outfile_sph("spheres.txt");

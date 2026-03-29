@@ -57,7 +57,7 @@ struct Attempt
 auto main(int, char **) -> int
 {
     vamp::planning::RRTCSettings rrtc_settings;
-    vamp::planning::ConstraintSettings constraint_settings;
+    vamp::planning::constraint::ConstraintSettings constraint_settings;
 
     float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
     // float ranges[] = {0.5, 0.75};
