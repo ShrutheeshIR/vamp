@@ -460,13 +460,14 @@ namespace vamp::binding
     template<typename Robot, typename... Constraints>
     void bind_composable(nanobind::module_ &m) {
         using CC = vamp::planning::constraint::ComposableConstraints<Robot, rake, Constraints...>;
+        using Base = vamp::planning::constraint::RobotConstraint<Robot, rake, CC>;
         using NA = NDArrayInput<Robot>;
         using NDArray = typename NA::Type;
 
         std::string pyname = "Composable";
         (pyname.append("_").append(std::string(Constraints::name)), ...);
 
-        nanobind::class_<CC, vamp::planning::constraint::RobotConstraint<Robot, rake>>(m, pyname.c_str())
+        nanobind::class_<CC, Base>(m, pyname.c_str())
             .def(nanobind::init<const Constraints&...>())
             .def("distanceToConstraint",
                 [](const vamp::planning::constraint::ComposableConstraints<Robot, rake, Constraints...>& self,  const NDArray &c_in) {
@@ -708,8 +709,9 @@ namespace vamp::binding
 
 
 
-        nb::class_<vamp::planning::constraint::RobotConstraint<Robot,rake>>(submodule, "_BaseConstraint")
-            .def(nb::init<>());
+        //nb::class_<vamp::planning::constraint::RobotConstraint<Robot,rake>>(submodule, "_BaseConstraint")
+        //    .def(nb::init<>()); 
+        // Note: I dont think it makes sense to expose this requires a derived type to intialized now. Also this doesn't appear to be used in python scripts anywhere
 
         nb::class_<typename HPN::TSR_Constraint>(submodule, "TaskSpaceConstraint")
             .def(nb::init<std::array<std::array<float, 7>, Robot::n_eef>, std::array<std::array<float, 7>, Robot::n_eef>, std::array<float, 6 * Robot::n_eef>, std::array<float, 6 * Robot::n_eef>>())                    // constructor args
