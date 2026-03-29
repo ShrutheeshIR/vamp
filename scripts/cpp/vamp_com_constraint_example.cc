@@ -14,7 +14,7 @@
 #include <vamp/planning/constraints/composable_constraint.hh>
 #include <vamp/planning/constraints/feet_task_space_constraint.hh>
 #include <vamp/planning/constraints/self_collision_constraint.hh>
-#include <vamp/planning/constraints/constraint_settings.hh>
+#include <vamp/planning/crrtc_settings.hh>
 // #include <vamp/planning/simplify.hh>
 #include <vamp/robots/g1_unitree.hh>
 #include <vamp/random/halton.hh>
@@ -65,8 +65,7 @@ struct Attempt
 
 auto main(int, char **) -> int
 {
-    vamp::planning::RRTCSettings rrtc_settings;
-    vamp::planning::constraint::ConstraintSettings constraint_settings;
+    vamp::planning::CRRTCSettings crrtc_settings;
 
     float ranges[] = {0.5, 0.75, 1.0};
     // float ranges[] = {1.0};
@@ -241,15 +240,15 @@ auto main(int, char **) -> int
                             //     com_constraint
                             // );
 
-                            rrtc_settings.range = range;
-                            rrtc_settings.max_iterations = 100000;
-                            rrtc_settings.dynamic_domain = dyndom;
-                            constraint_settings.projection_method = pm;
-                            constraint_settings.descend_rate = descent_rate;
+                            crrtc_settings.rrtc_settings.range = range;
+                            crrtc_settings.rrtc_settings.max_iterations = 100000;
+                            crrtc_settings.rrtc_settings.dynamic_domain = dyndom;
+                            crrtc_settings.constraint_settings.projection_method = pm;
+                            crrtc_settings.constraint_settings.descend_rate = descent_rate;
 
-                            rrtc_settings.radius = 10.0;
-                            constraint_settings.num_projection_iterations = num_projection_iterations;
-                            constraint_settings.insert_all_to_tree = insert_all_to_tree;
+                            crrtc_settings.rrtc_settings.radius = 10.0;
+                            crrtc_settings.constraint_settings.num_projection_iterations = num_projection_iterations;
+                            crrtc_settings.constraint_settings.insert_all_to_tree = insert_all_to_tree;
                             // std::cout << "\n\n-----------------Starting to cbirrt------------ " <<
                             // std::endl;
                             std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
@@ -272,8 +271,7 @@ auto main(int, char **) -> int
                                     Robot::Configuration(start),
                                     Robot::Configuration(goal),
                                     env_v,
-                                    rrtc_settings,
-                                    constraint_settings,
+                                    crrtc_settings,
                                     task_constraint,
                                     rng);
                             // auto result =

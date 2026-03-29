@@ -13,7 +13,7 @@
 #include <vamp/planning/constraints/feet_task_space_constraint.hh>
 #include <vamp/planning/constraints/self_collision_constraint.hh>
 #include <vamp/planning/validate_constraint.hh>
-#include <vamp/planning/constraints/constraint_settings.hh>
+#include <vamp/planning/crrtc_settings.hh>
 
 // #include <vamp/planning/simplify.hh>
 #include <vamp/robots/g1_unitree.hh>
@@ -68,9 +68,7 @@ auto main(int, char **) -> int
 {
     std::cout << std::fixed << std::setprecision(5);
 
-    vamp::planning::RRTCSettings rrtc_settings;
-    vamp::planning::constraint::ConstraintSettings constraint_settings;
-
+    vamp::planning::CRRTC crrtc_settings;
     EnvironmentInput environment;
 
     std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/shelf_drake.txt");

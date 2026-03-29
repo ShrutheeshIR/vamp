@@ -5,6 +5,7 @@
 #include <vamp/planning/aorrtc_settings.hh>
 #include <vamp/planning/simplify_settings.hh>
 #include <vamp/planning/constraints/constraint_settings.hh>
+#include <vamp/planning/crrtc_settings.hh>
 #include <nanobind/stl/vector.h>
 
 namespace nb = nanobind;
@@ -26,13 +27,18 @@ void vamp::binding::init_settings(nanobind::module_ &pymodule)
         .def_rw("start_tree_first", &vp::RRTCSettings::start_tree_first);
 
         
-     nb::class_<vp::constraint::ConstraintSettings>(pymodule, "ConstraintSettings")
+    nb::class_<vp::constraint::ConstraintSettings>(pymodule, "ConstraintSettings")
         .def(nb::init<>())
         .def_rw("projection_method", &vp::constraint::ConstraintSettings::projection_method)
         .def_rw("descend_rate", &vp::constraint::ConstraintSettings::descend_rate)
         .def_rw("std_dev_scaling_factor", &vp::constraint::ConstraintSettings::std_dev_scaling_factor)
         .def_rw("num_projection_iterations", &vp::constraint::ConstraintSettings::num_projection_iterations)
         .def_rw("insert_all_to_tree", &vp::constraint::ConstraintSettings::insert_all_to_tree);
+
+    nb::class_<vp::CRRTCSettings>(pymodule, "CRRTCSettings")
+        .def(nb::init<>())
+        .def_rw("rrtc_settings", &vp::CRRTCSettings::rrt_settings)
+        .def_rw("constraint_settings", &vp::CRRTCSettings::constraint_settings);
 
     nb::class_<vp::AORRTCSettings>(pymodule, "AORRTCSettings")
         .def(nb::init<>())

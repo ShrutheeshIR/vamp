@@ -10,7 +10,7 @@
 #include <vamp/planning/constraints/task_space_constraint.hh>
 #include <vamp/planning/constraints/bimanual_task_space_constraint.hh>
 #include <vamp/planning/validate_constraint.hh>
-#include <vamp/planning/constraints/constraint_settings.hh>
+#include <vamp/planning/crrtc_settings.hh>
 // #include <vamp/planning/simplify.hh>
 #include <vamp/robots/bimanual_panda.hh>
 #include <vamp/random/halton.hh>
@@ -74,8 +74,7 @@ struct Attempt
 
 auto main(int, char **) -> int
 {
-    vamp::planning::RRTCSettings rrtc_settings;
-    vamp::planning::constraint::ConstraintSettings constraint_settings;
+    vamp::planning::CRRTCSettings crrtc_settings;
 
     EnvironmentInput environment;
     environment.sort();

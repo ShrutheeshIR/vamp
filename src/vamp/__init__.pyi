@@ -15,6 +15,7 @@ from vamp._core import Environment as Environment
 from vamp._core import PRMNeighborParams as PRMNeighborParams
 from vamp._core import PRMSettings as PRMSettings
 from vamp._core import RRTCSettings as RRTCSettings
+from vamp._core import CRRTCSettings as CRRTCSettings
 from vamp._core import FCITNeighborParams as FCITNeighborParams
 from vamp._core import FCITSettings as FCITSettings
 from vamp._core import SimplifySettings as SimplifySettings

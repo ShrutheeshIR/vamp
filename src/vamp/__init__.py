@@ -10,6 +10,7 @@ __all__ = [
     "Cuboid",
     "Cylinder",
     "RRTCSettings",
+    "CRRTCSettings",
     "PRMSettings",
     "PRMNeighborParams",
     "FCITSettings",
@@ -37,6 +38,7 @@ from ._core import Environment as Environment
 from ._core import PRMNeighborParams as PRMNeighborParams
 from ._core import PRMSettings as PRMSettings
 from ._core import RRTCSettings as RRTCSettings
+from ._core import CRRTCSettings as CRRTCSettings
 from ._core import FCITNeighborParams as FCITNeighborParams
 from ._core import FCITSettings as FCITSettings
 from ._core import AORRTCSettings as AORRTCSettings
@@ -92,10 +94,10 @@ def configure_robot_and_planner_with_kwargs(robot_name: str, planner_name: str, 
             plan_settings.rrtc.range = ROBOT_RRT_RANGES[robot_name]
 
     elif planner_name == "crrtc":
-        plan_settings = RRTCSettings()
+        plan_settings = CRRTCSettings()
         if robot_name in ROBOT_RRT_RANGES:
-            plan_settings.range = ROBOT_RRT_RANGES[robot_name]
-            plan_settings.dynamic_domain = False
+            plan_settings.rrtc_setings.range = ROBOT_RRT_RANGES[robot_name]
+            plan_settings.rrtc_settings.dynamic_domain = False
 
     else:
         raise NotImplementedError(f"Automatic setup for planner {planner_name} is not implemented yet!")

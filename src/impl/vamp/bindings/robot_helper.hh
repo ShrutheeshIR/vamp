@@ -30,6 +30,7 @@
 #include <vamp/planning/constraints/bimanual_task_space_constraint.hh>
 #include <vamp/planning/constraints/composable_constraint.hh>
 #include <vamp/planning/constraints/constraint_settings.hh>
+#include <vamp/planning/crrtc_settings.hh>
 #include <vamp/vector.hh>
 
 #include <nanobind/nanobind.h>
@@ -373,22 +374,20 @@ namespace vamp::binding
                 const Type &start,
                 const Type &goal,
                 const EnvironmentInput &environment,
-                const RRTCSettings &rrtc_settings,
-                const ConstraintSettings &constraint_settings,
+                const CRRTCSettings &crrtc_settings,
                 CC &constraint,
                 typename RNG::Ptr rng) -> vamp::planning::PlanningResult<Robot>
             {
 
                 return Planner::solve(
-                    Input::to(start), Input::to(goal), EnvironmentVector(environment), rrtc_settings, constraint_settings, constraint, rng);
+                    Input::to(start), Input::to(goal), EnvironmentVector(environment), crrtc_settings, constraint, rng);
             }
 
             inline static auto multi(
                 const Type &start,
                 const std::vector<Type> &goals,
                 const EnvironmentInput &environment,
-                const RRTCSettings &rrtc_settings,
-                const ConstraintSettings &constraint_settings,
+                const CRRTCSettings &crrtc_settings,
                 CC &constraint,
                 typename RNG::Ptr rng) -> vamp::planning::PlanningResult<Robot>
             {
@@ -401,7 +400,7 @@ namespace vamp::binding
                 }
 
                 return Planner::solve(
-                    Input::to(start), goals_v, EnvironmentVector(environment), rrtc_settings, constraint_settings, constraint, rng);
+                    Input::to(start), goals_v, EnvironmentVector(environment), crrtc_settings, constraint, rng);
             }
 
         };
@@ -821,8 +820,8 @@ namespace vamp::binding
         }
 
     #define CONSTRAINEDPLANNER(name, func, desc, ...)                                                                       \
-        MF(name, func::single, desc, "start"_a, "goal"_a, "environment"_a, "rrtc_settings"_a, "constraint_settings"_a, "constraint"_a, "rng"_a);               \
-        MF(name, func::multi, desc, "start"_a, "goal"_a, "environment"_a, "rrtc_settings"_a, "constraint_settings"_a, "constraint"_a, "rng"_a);
+        MF(name, func::single, desc, "start"_a, "goal"_a, "environment"_a, "crrtc_settings"_a, "constraint"_a, "rng"_a);               \
+        MF(name, func::multi, desc, "start"_a, "goal"_a, "environment"_a, "crrtc_settings"_a, "constraint"_a, "rng"_a);
 
             CONSTRAINEDPLANNER("crrtc", CRRTC_TSR, "CRRTConnectTSR");
             CONSTRAINEDPLANNER("crrtc", CRRTC_TSR_COM, "CRRTConnectTSRCOM");
