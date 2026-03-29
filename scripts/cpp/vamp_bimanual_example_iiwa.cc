@@ -9,6 +9,7 @@
 #include <vamp/planning/crrtc.hh>
 #include <vamp/planning/constraints/task_space_constraint.hh>
 #include <vamp/planning/constraints/bimanual_task_space_constraint.hh>
+#include <vamp/planning/constraints/constraint_settings.hh>
 #include <vamp/planning/constraints/composable_constraint.hh>
 #include <vamp/planning/validate_constraint.hh>
 #include <vamp/planning/simplify_constraints.hh>
@@ -67,6 +68,7 @@ struct Attempt
 auto main(int, char **) -> int
 {
     vamp::planning::RRTCSettings rrtc_settings;
+    amp::planning::constraint::ConstraintSettings constraint_settings;
 
     float ranges[] = {0.5, 0.75, 1.0, 1.5, 2.0};
     // float ranges[] = {1.0};
@@ -172,12 +174,12 @@ auto main(int, char **) -> int
                                 rrtc_settings.range = range;
                                 rrtc_settings.max_iterations = 100000;
                                 rrtc_settings.dynamic_domain = dyndom;
-                                rrtc_settings.projection_method = pm;
-                                rrtc_settings.descend_rate = descent_rate;
+                                constraint_settings.projection_method = pm;
+                                constraint_settings.descend_rate = descent_rate;
                                 rrtc_settings.radius = 4.0;
-                                rrtc_settings.num_projection_iterations = num_projection_iterations;
-                                rrtc_settings.insert_all_to_tree = insert_all_to_tree;
-                                rrtc_settings.std_dev_scaling_factor = std_dev_scaling_factor;
+                                constraint_settings.num_projection_iterations = num_projection_iterations;
+                                constraint_settings.insert_all_to_tree = insert_all_to_tree;
+                                constraint_settings.std_dev_scaling_factor = std_dev_scaling_factor;
                                 // std::cout << "\n\n-----------------Starting to cbirrt------------ " <<
                                 // std::endl;
 
@@ -263,6 +265,7 @@ auto main(int, char **) -> int
                                         Robot::Configuration(goal),
                                         env_v,
                                         rrtc_settings,
+                                        constraint_settings,
                                         task_constraint,
                                         rng);
 

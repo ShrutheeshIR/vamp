@@ -9,6 +9,7 @@
 #include <vamp/planning/crrtc.hh>
 #include <vamp/planning/constraints/task_space_constraint.hh>
 #include <vamp/planning/constraints/composable_constraint.hh>
+#include <vamp/planning/constraints/constraint_settings.hh>
 #include <vamp/planning/validate_constraint.hh>
 #include <vamp/planning/simplify_constraints.hh>
 
@@ -56,6 +57,7 @@ static constexpr float radius = 0.15;
 auto main(int, char **) -> int
 {
     vamp::planning::RRTCSettings rrtc_settings;
+    vamp::planning::ConstraintSettings constraint_settings;
     vamp::planning::constraint::ProjMethod projection_method[] = {
         vamp::planning::constraint::ProjMethod::InnerLM,
         vamp::planning::constraint::ProjMethod::OuterLM,
@@ -131,11 +133,11 @@ auto main(int, char **) -> int
 
     rrtc_settings.range = 1.0;
     rrtc_settings.dynamic_domain = false;
-    rrtc_settings.projection_method = vamp::planning::constraint::ProjMethod::InnerLM;
-    rrtc_settings.descend_rate = 1.0;
+    constraint_settings.projection_method = vamp::planning::constraint::ProjMethod::InnerLM;
+    constraint_settings.descend_rate = 1.0;
 
     auto result = vamp::planning::CRRTC<Robot, rake, Robot::resolution, decltype(tsr_constraint)>::solve(
-        Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, task_constraint, rng);
+        Robot::Configuration(start), Robot::Configuration(goal), env_v, rrtc_settings, constraint_settings, task_constraint, rng);
 
     if (result.path.size() > 0)
     {

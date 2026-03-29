@@ -12,6 +12,7 @@
 #include <vamp/utils.hh>
 #include <vamp/vector.hh>
 #include "validate_constraint.hh"
+#include <vamp/planning/constraints/constraint_settings.hh>
 
 namespace vamp::planning
 {
@@ -27,18 +28,20 @@ namespace vamp::planning
             const Configuration &start,
             const Configuration &goal,
             const collision::Environment<FloatVector<rake>> &environment,
-            const RRTCSettings &settings,
+            const RRTCSettings &rrtc_settings,
+            const vamp::planning::constraint::ConstraintSettings &constraint_settings,
             vamp::planning::constraint::ComposableConstraints<Robot, rake, Constraints...> &constraint,
             typename RNG::Ptr rng) noexcept -> PlanningResult<Robot>
         {
-            return solve(start, std::vector<Configuration>{goal}, environment, settings, constraint, rng);
+            return solve(start, std::vector<Configuration>{goal}, environment, rrtc_settings, constraint_settings, constraint, rng);
         }
 
         inline static auto solve(
             const Configuration &start,
             const std::vector<Configuration> &goals,
             const collision::Environment<FloatVector<rake>> &environment,
-            const RRTCSettings &settings,
+            const RRTCSettings &rttc_settings,
+            const vamp::planning::ConstraintSettings &constraint_settings;
             vamp::planning::constraint::ComposableConstraints<Robot, rake, Constraints...> &constraint,
             typename RNG::Ptr rng) noexcept -> PlanningResult<Robot>
         {
@@ -52,14 +55,14 @@ namespace vamp::planning
 
             auto buffer = std::unique_ptr<float, decltype(&free)>(
                 vamp::utils::vector_alloc<float, FloatVectorAlignment, FloatVectorWidth>(
-                    settings.max_samples * Configuration::num_scalars_rounded),
+                    rrtc_settings.max_samples * Configuration::num_scalars_rounded),
                 &free);
 
             const auto buffer_index = [&buffer](std::size_t index) -> float *
             { return buffer.get() + index * Configuration::num_scalars_rounded; };
 
-            std::vector<std::size_t> parents(settings.max_samples);
-            std::vector<float> radii(settings.max_samples);
+            std::vector<std::size_t> parents(rrtc_settings.max_samples);
+            std::vector<float> radii(rrtc_settings.max_samples);
 
             auto start_time = std::chrono::steady_clock::now();
 
@@ -71,10 +74,10 @@ namespace vamp::planning
                         projected_vector,
                         constraint,
                         environment,
-                        static_cast<vamp::planning::constraint::ProjMethod>(settings.projection_method),
-                        settings.descend_rate,
-                        settings.num_projection_iterations,
-                        settings.insert_all_to_tree
+                        static_cast<vamp::planning::constraint::ProjMethod>(constraint_settings.projection_method),
+                        constraint_settings.descend_rate,
+                        constraint_settings.num_projection_iterations,
+                        constraint_settings.insert_all_to_tree
                     ))
                 {
                     if((projected_vector.back() - goal).l2_norm() < 0.001F){
@@ -92,9 +95,9 @@ namespace vamp::planning
             }
 
             // trees
-            bool tree_a_is_start = not settings.start_tree_first;
-            auto *tree_a = (settings.start_tree_first) ? &goal_tree : &start_tree;
-            auto *tree_b = (settings.start_tree_first) ? &start_tree : &goal_tree;
+            bool tree_a_is_start = not rrtc_settings.start_tree_first;
+            auto *tree_a = (rrtc_settings.start_tree_first) ? &goal_tree : &start_tree;
+            auto *tree_b = (rrtc_settings.start_tree_first) ? &start_tree : &goal_tree;
 
             std::size_t iter = 0;
             std::size_t free_index = start_index + 1;
@@ -117,7 +120,7 @@ namespace vamp::planning
             bool connected = false;
             int validate_failed = 0;
             int dyndomfailed = 0;
-            while (iter++ < settings.max_iterations and free_index < settings.max_samples and not connected)
+            while (iter++ < rrtc_settings.max_iterations and free_index < rrtc_settings.max_samples and not connected)
             {
                 // if (iter % 1 == 0)
                 //     std::cout << "Starting iteration : " << iter << ", " << free_index << ", " <<connected << " , " << settings.max_samples << std::endl;
@@ -125,7 +128,7 @@ namespace vamp::planning
                 float bsize = tree_b->size();
                 float ratio = std::abs(asize - bsize) / asize;
 
-                if ((not settings.balance) or ratio < settings.tree_ratio)
+                if ((not rrtc_settings.balance) or ratio < rrtc_settings.tree_ratio)
                 {
                     std::swap(tree_a, tree_b);
                     tree_a_is_start = not tree_a_is_start;
@@ -146,7 +149,7 @@ namespace vamp::planning
                 const auto nearest_radius = radii[nearest_node.index];
 
                 // std::cout << nearest_radius << ", " << nearest_distance << ", " <<  nearest_node.index << std::endl;
-                if (settings.dynamic_domain and nearest_radius < nearest_distance)
+                if (rrtc_settings.dynamic_domain and nearest_radius < nearest_distance)
                 {
                     dyndomfailed++;
                     continue;
@@ -156,21 +159,21 @@ namespace vamp::planning
 
                 auto nearest_vector = temp - nearest_configuration;
 
-                bool reach = nearest_distance < settings.range;
+                bool reach = nearest_distance < rrtc_settings.range;
                 auto extension_vector =
-                    (reach) ? nearest_vector : nearest_vector * (settings.range / nearest_distance);
+                    (reach) ? nearest_vector : nearest_vector * (rrtc_settings.range / nearest_distance);
                 if (vamp::planning::constraint::project_constraint_vector<Robot, rake, resolution>(
                         nearest_configuration,
                         extension_vector,
-                        (reach) ? nearest_distance : settings.range,
+                        (reach) ? nearest_distance : rrtc_settings.range,
                         projected_vector,
                         constraint,
                         environment,
-                        static_cast<vamp::planning::constraint::ProjMethod>(settings.projection_method),
-                        settings.descend_rate,
-                        settings.num_projection_iterations,
-                        settings.std_dev_scaling_factor,
-                        settings.insert_all_to_tree
+                        static_cast<vamp::planning::constraint::ProjMethod>(constraint_settings.projection_method),
+                        constraint_settings.descend_rate,
+                        constraint_settings.num_projection_iterations,
+                        constraint_settings.std_dev_scaling_factor,
+                        constraint_settings.insert_all_to_tree
                     ))
 
                 {
@@ -181,7 +184,7 @@ namespace vamp::planning
 
                     for(auto proj_vector : projected_vector)
                     {
-                        if (free_index >= settings.max_samples) break;  // Prevent buffer overflow
+                        if (free_index >= rrtc_settings.max_samples) break;  // Prevent buffer overflow
                         
                         new_configuration_index = buffer_index(free_index);
                         new_configuration = proj_vector;
@@ -192,9 +195,9 @@ namespace vamp::planning
                         radii[free_index] = std::numeric_limits<float>::max();
 
 
-                        if (settings.dynamic_domain and nearest_radius != std::numeric_limits<float>::max())
+                        if (rrtc_settings.dynamic_domain and nearest_radius != std::numeric_limits<float>::max())
                         {
-                            radii[parent_index] *= (1 + settings.alpha);
+                            radii[parent_index] *= (1 + rrtc_settings.alpha);
                         }
 
                         parent_index = free_index;
@@ -213,7 +216,7 @@ namespace vamp::planning
                         continue;
                     }
                     const auto &[other_nearest_node, other_nearest_distance] = *other_nearest;
-                    const std::size_t n_extensions = static_cast<std::size_t>(std::ceil(other_nearest_distance / settings.range));
+                    const std::size_t n_extensions = static_cast<std::size_t>(std::ceil(other_nearest_distance / rrtc_settings.range));
                     auto max_connect_attempts = 2 * n_extensions;
 
                     auto counter = 0U;
@@ -235,29 +238,29 @@ namespace vamp::planning
                         const auto other_nearest_configuration = other_nearest_node.as_vector();
 
                         auto other_nearest_vector = other_nearest_configuration - prior;
-                        bool other_reach = other_nearest_distance < settings.range;
+                        bool other_reach = other_nearest_distance < rrtc_settings.range;
 
                         auto other_extension_vector =
-                            (other_reach) ? other_nearest_vector : other_nearest_vector * (settings.range / other_nearest_distance);
+                            (other_reach) ? other_nearest_vector : other_nearest_vector * (rrtc_settings.range / other_nearest_distance);
 
                         if(not vamp::planning::constraint::project_constraint_vector<Robot, rake, resolution>(
                             prior,
                             other_extension_vector,
-                            (other_reach) ? other_nearest_distance : settings.range,
+                            (other_reach) ? other_nearest_distance : rrtc_settings.range,
                             projected_vector,
                             constraint,
                             environment,
-                            static_cast<vamp::planning::constraint::ProjMethod>(settings.projection_method),
-                            settings.descend_rate,
-                            settings.num_projection_iterations,
-                            settings.std_dev_scaling_factor
+                            static_cast<vamp::planning::constraint::ProjMethod>(constraint_ettings.projection_method),
+                            constraint_settings.descend_rate,
+                            constraint_settings.num_projection_iterations,
+                            constraint_settings.std_dev_scaling_factor
                             // settings.insert_all_to_tree
                             )
                         )
                         {
                             break;
                         }
-                        if (free_index >= settings.max_samples)
+                        if (free_index >= rrtc_settings.max_samples)
                             break;
 
 
@@ -266,7 +269,7 @@ namespace vamp::planning
 
                         for(auto proj_vector : projected_vector)
                         {
-                            if (free_index >= settings.max_samples) break;  // Prevent buffer overflow
+                            if (free_index >= rrtc_settings.max_samples) break;  // Prevent buffer overflow
                             
                             next_index = buffer_index(free_index);
                             next = proj_vector;
@@ -319,16 +322,16 @@ namespace vamp::planning
 
                     }
                 }
-                else if (settings.dynamic_domain)
+                else if (rrtc_settings.dynamic_domain)
                 {
                     if (nearest_radius == std::numeric_limits<float>::max())
                     {
-                        radii[nearest_node.index] = settings.radius;
+                        radii[nearest_node.index] = rrtc_settings.radius;
                     }
                     else
                     {
                         radii[nearest_node.index] =
-                            std::max(radii[nearest_node.index] * (1.F - settings.alpha), settings.min_radius);
+                            std::max(radii[nearest_node.index] * (1.F - rrtc_settings.alpha), rrtc_settings.min_radius);
                     }
                     validate_failed++;
                 }

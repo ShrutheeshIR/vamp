@@ -13,6 +13,7 @@
 #include <vamp/planning/constraints/bimanual_task_space_constraint.hh>
 #include <vamp/planning/constraints/composable_constraint.hh>
 #include <vamp/planning/constraints/self_collision_constraint.hh>
+#include <vamp/planning/constraints/constraint_settings.hh>
 // #include <vamp/planning/simplify.hh>
 #include <vamp/robots/g1_unitree.hh>
 #include <vamp/random/halton.hh>
@@ -42,6 +43,7 @@ static constexpr Robot::ConfigurationArray goal = {
 auto main(int, char **) -> int
 {
     vamp::planning::RRTCSettings rrtc_settings;
+    vamp::planning::ConstraintSettings constraint_settings;
 
     EnvironmentInput environment;
     // std::ofstream outfile_sph("spheres.txt");
@@ -160,8 +162,8 @@ auto main(int, char **) -> int
     rrtc_settings.range = 1.0;
     rrtc_settings.max_iterations = 100000;
     rrtc_settings.dynamic_domain = true;
-    rrtc_settings.projection_method = vamp::planning::constraint::ProjMethod::InnerLM;
-    rrtc_settings.descend_rate = 1.0;
+    constraint__settings.projection_method = vamp::planning::constraint::ProjMethod::InnerLM;
+    constraint_settings.descend_rate = 1.0;
     auto result = vamp::planning::CRRTC<
         Robot,
         rake,
@@ -174,6 +176,7 @@ auto main(int, char **) -> int
             Robot::Configuration(goal),
             env_v,
             rrtc_settings,
+            constraint_settings,
             task_constraint,
             rng);
 
