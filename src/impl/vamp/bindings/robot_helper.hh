@@ -367,7 +367,7 @@ namespace vamp::binding
             return filtered;
         }
 
-        template <typename Planner, typename RRTCSettings, typename CRRTCSettings, typename CC>
+        template <typename Planner, typename CRRTCSettings, typename CC>
         struct ConstrainedPlannerHelper
         {
             inline static auto single(
