@@ -14,7 +14,7 @@ namespace vamp::planning::constraint
 {
 
 template <typename Robot, std::size_t rake>
-    class SelfCollisionConstraint : public RobotConstraint<Robot, rake>
+    class SelfCollisionConstraint : public RobotConstraint<Robot, rake, SelfCollisionConstraint>
     {
         /**
          */
@@ -158,7 +158,7 @@ template <typename Robot, std::size_t rake>
                 {
                     Robot::template solve_self_collision_error_gradient_descent<rake>(jac_proj_inp, grad);
                 }
-                RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
+                RobotConstraint<Robot, rake, SelfCollisionConstraint>::integrateJointConfiguration(q, q_new, grad, alpha);
             }
             return dist;
         }

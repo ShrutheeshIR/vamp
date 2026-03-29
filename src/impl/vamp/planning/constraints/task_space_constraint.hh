@@ -22,7 +22,7 @@ namespace vamp::planning::constraint
     };
 
     // This is an abstract class
-    template <typename Robot, std::size_t rake>
+    template <typename Robot, std::size_t rake, typename ConstraintT>
     class RobotConstraint
     {
     protected:
@@ -72,7 +72,7 @@ namespace vamp::planning::constraint
 
 
     template <typename Robot, std::size_t rake>
-    class TaskSpaceConstraint : public RobotConstraint<Robot, rake>
+    class TaskSpaceConstraint : public RobotConstraint<Robot, rake, TaskSpaceConstraint>
     {
         /**
          * A TSR constraint is expressed as 2 transformation matrices
@@ -207,11 +207,11 @@ namespace vamp::planning::constraint
             std::array<float, 7 * Robot::n_eef> transform2;
             std::memcpy(transform2.data(), ref_frame_w_world.data(), sizeof(float) * 7 * Robot::n_eef);
 
-            RobotConstraint<Robot, rake>::template assignBlock<7 * Robot::n_eef>(transform1, tsr_function_inp.rTeB);
-            RobotConstraint<Robot, rake>::template assignBlock<7 * Robot::n_eef>(transform2, tsr_function_inp.wTrB);
+            RobotConstraint<Robot, rake, TaskSpaceConstraint>::template assignBlock<7 * Robot::n_eef>(transform1, tsr_function_inp.rTeB);
+            RobotConstraint<Robot, rake, TaskSpaceConstraint>::template assignBlock<7 * Robot::n_eef>(transform2, tsr_function_inp.wTrB);
 
-            RobotConstraint<Robot, rake>::template assignBlock<6 * Robot::n_eef>(lower_bound, tsr_function_inp.lbB);
-            RobotConstraint<Robot, rake>::template assignBlock<6 * Robot::n_eef>(upper_bound, tsr_function_inp.ubB);
+            RobotConstraint<Robot, rake, TaskSpaceConstraint>::template assignBlock<6 * Robot::n_eef>(lower_bound, tsr_function_inp.lbB);
+            RobotConstraint<Robot, rake, TaskSpaceConstraint>::template assignBlock<6 * Robot::n_eef>(upper_bound, tsr_function_inp.ubB);
         }
 
 
@@ -350,7 +350,7 @@ namespace vamp::planning::constraint
             else {
                 throw std::runtime_error("Invalid projection method");
             }
-            RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
+            RobotConstraint<Robot, rake, TaskSpaceConstraint>::integrateJointConfiguration(q, q_new, grad, alpha);
             return dist;
         }
 

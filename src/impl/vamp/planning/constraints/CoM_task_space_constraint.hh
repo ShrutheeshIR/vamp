@@ -15,7 +15,7 @@ namespace vamp::planning::constraint
 
 
 template <typename Robot, std::size_t rake, std::size_t num_polygons>
-    class CoMTaskSpaceConstraint : public RobotConstraint<Robot, rake>
+    class CoMTaskSpaceConstraint : public RobotConstraint<Robot, rake, CoMTaskSpaceConstraint>
     {
         /**
          */
@@ -152,7 +152,7 @@ template <typename Robot, std::size_t rake, std::size_t num_polygons>
             // std::cout << std::endl;
 
 
-            RobotConstraint<Robot, rake>::template assignBlock<2 * num_polygons>(polygon_points, com_jac_polygons.polygon_points);
+            RobotConstraint<Robot, rake, CoMTaskSpaceConstraint>::template assignBlock<2 * num_polygons>(polygon_points, com_jac_polygons.polygon_points);
         }
         auto print_robot_tsr_error(const ConfigurationBlock &q) const
         {
@@ -247,7 +247,7 @@ template <typename Robot, std::size_t rake, std::size_t num_polygons>
             else {
                 throw std::invalid_argument("Invalid projection method");
             }
-            RobotConstraint<Robot, rake>::integrateJointConfiguration(q, q_new, grad, alpha);
+            RobotConstraint<Robot, rake, CoMTaskSpaceConstraint>::integrateJointConfiguration(q, q_new, grad, alpha);
             return dist;
         }
 
