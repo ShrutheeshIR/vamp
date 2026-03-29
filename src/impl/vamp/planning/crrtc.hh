@@ -41,7 +41,7 @@ namespace vamp::planning
             const std::vector<Configuration> &goals,
             const collision::Environment<FloatVector<rake>> &environment,
             const RRTCSettings &rttc_settings,
-            const vamp::planning::constraint::ConstraintSettings &constraint_settings;
+            const vamp::planning::constraint::ConstraintSettings &constraint_settings,
             vamp::planning::constraint::ComposableConstraints<Robot, rake, Constraints...> &constraint,
             typename RNG::Ptr rng) noexcept -> PlanningResult<Robot>
         {
