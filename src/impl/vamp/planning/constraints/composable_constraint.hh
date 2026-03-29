@@ -15,7 +15,7 @@ namespace vamp::planning::constraint
 
 
 template <typename Robot, std::size_t rake, typename... Constraints>
-    class ComposableConstraints : public RobotConstraint<Robot, rake, ComposableConstraints<Robot, rake>>
+    class ComposableConstraints : public RobotConstraint<Robot, rake, ComposableConstraints<Robot, rake, Constraints...>>
     {
         std::tuple<Constraints...> constraints_;
 
