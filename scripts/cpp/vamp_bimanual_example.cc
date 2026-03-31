@@ -101,7 +101,7 @@ auto main(int, char **) -> int
                                 //     radius));
                                 // }
                                 // outfile_sph.close();
-                                std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/"
+                                std::ifstream infile("resources/environments/cuboids/"
                                                      "shelf_panda.txt");
                                 if (!infile.is_open())
                                 {
@@ -209,7 +209,7 @@ auto main(int, char **) -> int
                                                   << std::endl;
                                         // Output configurations of simplified path
                                         std::cout << std::fixed << std::setprecision(3);
-                                        std::ofstream outfile("/src/trajectory.txt");
+                                        std::ofstream outfile("trajectory.txt");
 
                                         vamp::planning::constraint::invalid_distance_counter_outside = 0;
                                         vamp::planning::constraint::invalid_distance_counter_inside = 0;

@@ -121,7 +121,7 @@ auto main(int, char **) -> int
                                 //     radius));
                                 // }
                                 // outfile_sph.close();
-                                std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/"
+                                std::ifstream infile("resources/environments/cuboids/"
                                                      "shelf_drake.txt");
                                 if (!infile.is_open())
                                 {
@@ -193,7 +193,7 @@ auto main(int, char **) -> int
                                                                 "bimanual_iiwa.txt");
                                 if (!infile_start_goal.is_open())
                                 {
-                                    infile_start_goal.open("/src/myfork/vamp/resources/start_end_points/"
+                                    infile_start_goal.open("resources/start_end_points/"
                                                            "bimanual_iiwa.txt");
                                 }
                                 if (!infile_start_goal.is_open())
@@ -312,7 +312,7 @@ auto main(int, char **) -> int
                                                   << std::endl;
                                         // Output configurations of simplified path
                                         std::cout << std::fixed << std::setprecision(3);
-                                        std::ofstream outfile("/src/trajectory.txt");
+                                        std::ofstream outfile("trajectory.txt");
 
                                         // Simplify path with default settings
                                         // vamp::planning::SimplifySettings simplify_settings;

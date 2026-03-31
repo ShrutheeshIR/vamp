@@ -213,7 +213,7 @@ auto main(int, char **) -> int
 
                             // Try a few likely paths for the JSON file
                             const std::vector<std::string> candidate_paths = {
-                                "/src/myfork/vamp/resources/environments/cuboids/real_maze.json",
+                                "resources/environments/cuboids/real_maze.json",
                             };
 
                             bool loaded = false;
@@ -320,7 +320,7 @@ auto main(int, char **) -> int
                                     std::cout << "\nPrinting Result!! " << result.path.size() << std::endl;
                                     // Output configurations of simplified path
                                     std::cout << std::fixed << std::setprecision(3);
-                                    std::ofstream outfile("/src/trajectory.txt");
+                                    std::ofstream outfile("trajectory.txt");
                                     for (const auto &config : result.path)
                                     {
                                         const auto &array = config.to_array();

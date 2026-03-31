@@ -52,7 +52,7 @@ auto main(int, char **) -> int
     //     environment.spheres.emplace_back(vamp::collision::factory::sphere::array(sphere, radius));
     // }
     // outfile_sph.close();
-    std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/shelf_drake.txt");
+    std::ifstream infile("resources/environments/cuboids/shelf_drake.txt");
     if (!infile.is_open())
     {
         std::cerr << "Failed to open file!" << std::endl;
@@ -182,7 +182,7 @@ auto main(int, char **) -> int
     {
         std::cout << "\nPrinting Result!! " << result.path.size() << std::endl;
         std::cout << std::fixed << std::setprecision(3);
-        std::ofstream outfile("/src/trajectory.txt");
+        std::ofstream outfile("trajectory.txt");
         for (const auto &config : result.path)
         {
             const auto &array = config.to_array();

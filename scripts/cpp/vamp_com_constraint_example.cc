@@ -110,7 +110,7 @@ auto main(int, char **) -> int
                             //     radius));
                             // }
                             // outfile_sph.close();
-                            std::ifstream infile("/src/myfork/vamp/resources/environments/cuboids/"
+                            std::ifstream infile("resources/environments/cuboids/"
                                                  "humanoid_shelf.txt");
                             if (!infile.is_open())
                             {
@@ -300,7 +300,7 @@ auto main(int, char **) -> int
                                     std::cout << "\nPrinting Result!! " << result.path.size() << std::endl;
                                     // Output configurations of simplified path
                                     std::cout << std::fixed << std::setprecision(3);
-                                    std::ofstream outfile("/src/trajectory.txt");
+                                    std::ofstream outfile("trajectory.txt");
                                     for (const auto &config : result.path)
                                     {
                                         const auto &array = config.to_array();
