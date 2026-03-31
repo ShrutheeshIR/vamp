@@ -176,8 +176,12 @@ def main(
     }
     for _ in range(1):
         for combination in all_combinations:
-            plan_settings.range = combination[0]
-            plan_settings.dynamic_domain = combination[1]
+            if planner == "crrtc":
+                plan_settings.rrtc_settings.range = combination[0]
+                plan_settings.rrtc_settings.dynamic_domain = combination[1]
+            else:
+                plan_settings.range = combination[0]
+                plan_settings.dynamic_domain = combination[1]
             result = planner_func(a, b, e, plan_settings, constraints, sampler)
             print(result.nanoseconds / 1e3)
             planning_times[combination].append(result.nanoseconds/1e6)

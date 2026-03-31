@@ -114,7 +114,11 @@ def main(
     # Add the attchment to the VAMP environment
     e.attach(attachment, 0)
 
-    plan_settings.range = 0.5
+    if planner == "crrtc":
+        plan_settings.rrtc_settings.range = 0.5
+    else:
+        plan_settings.range = 0.5
+
     sampler = vamp_module.halton()
     result = planner_func(a, b, e, plan_settings, constraints, sampler)
     simple = vamp_module.simplify_with_constraints(result.path, e, constraints, simp_settings, sampler)
@@ -128,12 +132,12 @@ def main(
     viz_instance.clear_all_waypoints()
 
     viz_instance.add_cuboids(env_cuboids, colors=env_colors)
-
     # optional: render the waypoints as spheres in meshcat
     eef_poses = get_eef_of_waypoints(simple.path.numpy(), "panda", planner)
     viz_instance.render_eefs(eef_poses)
 
     viz_instance.animate(simple.path.numpy(), np.arange(0, len(simple.path.numpy()), dtype=np.float64) / 50, loop=True)
+    
 
 
 if __name__ == "__main__":

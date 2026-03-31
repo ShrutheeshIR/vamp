@@ -102,8 +102,12 @@ def configure_robot_and_planner_with_kwargs(robot_name: str, planner_name: str, 
     else:
         raise NotImplementedError(f"Automatic setup for planner {planner_name} is not implemented yet!")
 
-    plan_settings.max_iterations = DEFAULT_ITERATIONS
-    plan_settings.max_samples = DEFAULT_ITERATIONS
+    if planner_name == "crrtc":
+        plan_settings.rrtc_settings.max_iterations = DEFAULT_ITERATIONS
+        plan_settings.rrtc_settings.max_samples = DEFAULT_ITERATIONS
+    else:
+        plan_settings.max_iterations = DEFAULT_ITERATIONS
+        plan_settings.max_samples = DEFAULT_ITERATIONS
 
     for k, v in kwargs.items():
         if hasattr(plan_settings, k):

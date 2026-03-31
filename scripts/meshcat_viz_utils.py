@@ -185,7 +185,7 @@ class MeshcatViz:
         self.viz.viewer["waypoints"].delete()
 
 if __name__ == '__main__':
-    traj = np.loadtxt("/src/trajectory.txt", delimiter = ",")
+    traj = np.loadtxt("trajectory.txt", delimiter = ",")
     meshcat_viz = MeshcatViz()
     meshcat_viz.init_viz()
     meshcat_viz.clear_all_waypoints()
