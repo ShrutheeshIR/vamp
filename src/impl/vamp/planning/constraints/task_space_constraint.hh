@@ -10,6 +10,7 @@
 #include <vamp/vector/eigen.hh>
 #include <vamp/vector/math.hh>
 #include <iomanip>
+
 namespace vamp::planning::constraint
 {
 
@@ -39,7 +40,6 @@ namespace vamp::planning::constraint
             }
         }
 
-
     public:
         // virtual vamp::FloatVector<rake, 1> distanceToConstraint(const ConfigurationBlock &q) = 0;
 
@@ -60,16 +60,7 @@ namespace vamp::planning::constraint
             // return q_new;
         }
 
-        // virtual vamp::FloatVector<rake, 1> projectStep(
-        //     const ConfigurationBlock &q,
-        //     ConfigurationBlock &q_new,
-        //     ProjMethod projection_method = ProjMethod::InnerLM,
-        //     bool update_q = true) = 0;
-
     };
-
-
-
 
     template <typename Robot, std::size_t rake>
     class TaskSpaceConstraint : public RobotConstraint<Robot, rake, TaskSpaceConstraint<Robot, rake>>
@@ -123,7 +114,9 @@ namespace vamp::planning::constraint
                     return ubB[eef_id * 6 + index_e - (2 * 7 + 6)];
                 }
                 else
+                {
                     return q[0];
+                }
             }
         };
 
@@ -191,29 +184,31 @@ namespace vamp::planning::constraint
         ConfigurationBlock q_old;
 
     public:
-        static constexpr char* name = "TaskSpaceConstraint";
+        static constexpr char *name = "TaskSpaceConstraint";
+
         TaskSpaceConstraint(
-            std::array<std::array<float, 7>, Robot::n_eef> eef_pose_w_ref_reference, // qw, qx, qy, qz, tx, ty, tz
-            std::array<std::array<float, 7>, Robot::n_eef> ref_frame_w_world, // qw, qx, qy, qz, tx, ty, tz
+            std::array<std::array<float, 7>, Robot::n_eef> eef_pose_w_ref_reference,  // qw, qx, qy, qz, tx,
+                                                                                      // ty, tz
+            std::array<std::array<float, 7>, Robot::n_eef> ref_frame_w_world,  // qw, qx, qy, qz, tx, ty, tz
             const std::array<float, 6 * Robot::n_eef> lower_bound,
-            const std::array<float, 6 * Robot::n_eef> upper_bound
-        )
+            const std::array<float, 6 * Robot::n_eef> upper_bound)
         {
-
-
             std::array<float, 7 * Robot::n_eef> transform1;
             std::memcpy(transform1.data(), eef_pose_w_ref_reference.data(), sizeof(float) * 7 * Robot::n_eef);
 
             std::array<float, 7 * Robot::n_eef> transform2;
             std::memcpy(transform2.data(), ref_frame_w_world.data(), sizeof(float) * 7 * Robot::n_eef);
 
-            RobotConstraint<Robot, rake, TaskSpaceConstraint<Robot, rake>>::template assignBlock<7 * Robot::n_eef>(transform1, tsr_function_inp.rTeB);
-            RobotConstraint<Robot, rake, TaskSpaceConstraint<Robot, rake>>::template assignBlock<7 * Robot::n_eef>(transform2, tsr_function_inp.wTrB);
+            RobotConstraint<Robot, rake, TaskSpaceConstraint<Robot, rake>>::template assignBlock<
+                7 * Robot::n_eef>(transform1, tsr_function_inp.rTeB);
+            RobotConstraint<Robot, rake, TaskSpaceConstraint<Robot, rake>>::template assignBlock<
+                7 * Robot::n_eef>(transform2, tsr_function_inp.wTrB);
 
-            RobotConstraint<Robot, rake, TaskSpaceConstraint<Robot, rake>>::template assignBlock<6 * Robot::n_eef>(lower_bound, tsr_function_inp.lbB);
-            RobotConstraint<Robot, rake, TaskSpaceConstraint<Robot, rake>>::template assignBlock<6 * Robot::n_eef>(upper_bound, tsr_function_inp.ubB);
+            RobotConstraint<Robot, rake, TaskSpaceConstraint<Robot, rake>>::template assignBlock<
+                6 * Robot::n_eef>(lower_bound, tsr_function_inp.lbB);
+            RobotConstraint<Robot, rake, TaskSpaceConstraint<Robot, rake>>::template assignBlock<
+                6 * Robot::n_eef>(upper_bound, tsr_function_inp.ubB);
         }
-
 
         vamp::FloatVector<rake, 1> print_robot_tsr_error(const ConfigurationBlock &q) const
         {
@@ -239,7 +234,6 @@ namespace vamp::planning::constraint
             //     std::cout << std::setprecision(5) << tsr_function_inp.ubB[{i, 0}] << " ";
             // std::cout << std::endl;
 
-
             // std::cout << "TSR Error : " << std::endl;
             // for(auto i=0U; i < 6 * 2 * Robot::dimension; i++){
             //     if(i % Robot::dimension == 0)
@@ -248,12 +242,13 @@ namespace vamp::planning::constraint
             // }
             // std::cout << std::endl;
             std::cout << "TSR Error : ";
-            for(auto i=0U; i < 6 * Robot::n_eef; i++)
+            for (auto i = 0U; i < 6 * Robot::n_eef; i++)
+            {
                 std::cout << jac_proj_inp.err[{i, 0}] << " ";
+            }
             std::cout << std::endl;
 
             return dist;
-
         }
 
         vamp::FloatVector<rake, 1> distanceToConstraint(const ConfigurationBlock &q) const
@@ -273,10 +268,7 @@ namespace vamp::planning::constraint
                 jac_proj_inp[i + jac_offset] =
                     (jac_proj_inp[i + jac_offset] - tsr_function_inp.lbB[i]).min(0.F) +
                     (jac_proj_inp[i + jac_offset] - tsr_function_inp.ubB[i]).max(0.F);
-
             }
-
-
 
             // for(int i = 0U; i < 6 * Robot::n_eef * Robot::dimension; i++){
             //     if(i % Robot::dimension == 0)
@@ -292,12 +284,9 @@ namespace vamp::planning::constraint
             // }
             // std::cout << std::endl;
 
-
-
             // for(int i = 0U; i < 6 * 2; i++)
             //     std::cout << short_jac_proj_inp.err[{i, 0}] << ", ";
             // std::cout << std::endl;
-
 
             auto d = jac_proj_inp.err[0] * jac_proj_inp.err[0];
             for (size_t i = 1; i < 6 * Robot::n_eef; i++)
@@ -342,20 +331,19 @@ namespace vamp::planning::constraint
                 // Robot::template solve_2_eef_tsr_error_lm_outer<rake>(short_jac_proj_inp, grad);
                 Robot::template solve_tsr_error_lm_outer<rake>(jac_proj_inp, grad);
             }
-            else if  (projection_method == ProjMethod::GradDesc)
+            else if (projection_method == ProjMethod::GradDesc)
             {
                 // Robot::template solve_2_eef_tsr_error_gradient_descent<rake>(short_jac_proj_inp, grad);
                 Robot::template solve_tsr_error_gradient_descent<rake>(jac_proj_inp, grad);
             }
-            else {
+            else
+            {
                 throw std::runtime_error("Invalid projection method");
             }
-            RobotConstraint<Robot, rake, TaskSpaceConstraint<Robot, rake>>::integrateJointConfiguration(q, q_new, grad, alpha);
+            RobotConstraint<Robot, rake, TaskSpaceConstraint<Robot, rake>>::integrateJointConfiguration(
+                q, q_new, grad, alpha);
             return dist;
         }
-
-
     };
 
-    
 }  // namespace vamp::planning::constraint

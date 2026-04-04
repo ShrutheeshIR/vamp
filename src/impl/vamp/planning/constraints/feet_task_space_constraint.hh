@@ -10,11 +10,11 @@
 #include <vamp/vector/eigen.hh>
 #include <vamp/vector/math.hh>
 #include <iomanip>
+
 namespace vamp::planning::constraint
 {
 
-
-template <typename Robot, std::size_t rake>
+    template <typename Robot, std::size_t rake>
     class FeetTaskSpaceConstraint : public RobotConstraint<Robot, rake, FeetTaskSpaceConstraint<Robot, rake>>
     {
         /**
@@ -66,7 +66,9 @@ template <typename Robot, std::size_t rake>
                     return ubB[eef_id * 6 + index_e - (2 * 7 + 6)];
                 }
                 else
+                {
                     return q[0];
+                }
             }
         };
 
@@ -129,8 +131,8 @@ template <typename Robot, std::size_t rake>
         };
 
         mutable JacobianProjectInp jac_proj_inp;
-        // some housekeeping variables predefined for speed
 
+        // some housekeeping variables predefined for speed
 
         struct ShortenedJacobianProjectInp
         {
@@ -143,9 +145,7 @@ template <typename Robot, std::size_t rake>
                 {
                     return J[index];
                 }
-                else if (
-                    index >= 6 * 2 * Robot::dimension &&
-                    index < 6 * 2 * Robot::dimension + 6 * 2)
+                else if (index >= 6 * 2 * Robot::dimension && index < 6 * 2 * Robot::dimension + 6 * 2)
                 {
                     return err[index - 6 * 2 * Robot::dimension];
                 }
@@ -161,9 +161,7 @@ template <typename Robot, std::size_t rake>
                 {
                     return J[index];
                 }
-                else if (
-                    index >= 6 * 2 * Robot::dimension &&
-                    index < 6 * 2 * Robot::dimension + 6 * 2)
+                else if (index >= 6 * 2 * Robot::dimension && index < 6 * 2 * Robot::dimension + 6 * 2)
                 {
                     return err[index - 6 * 2 * Robot::dimension];
                 }
@@ -190,33 +188,34 @@ template <typename Robot, std::size_t rake>
 
         mutable ShortenedJacobianProjectInp short_jac_proj_inp;
 
-
         ConfigurationBlock q_old;
 
     public:
-        static constexpr char* name = "FeetTaskSpaceConstraint";
+        static constexpr char *name = "FeetTaskSpaceConstraint";
+
         FeetTaskSpaceConstraint(
-            std::array<std::array<float, 7>, Robot::n_eef> eef_pose_w_ref_reference, // qw, qx, qy, qz, tx, ty, tz
-            std::array<std::array<float, 7>, Robot::n_eef> ref_frame_w_world, // qw, qx, qy, qz, tx, ty, tz
+            std::array<std::array<float, 7>, Robot::n_eef> eef_pose_w_ref_reference,  // qw, qx, qy, qz, tx,
+                                                                                      // ty, tz
+            std::array<std::array<float, 7>, Robot::n_eef> ref_frame_w_world,  // qw, qx, qy, qz, tx, ty, tz
             const std::array<float, 6 * Robot::n_eef> lower_bound,
-            const std::array<float, 6 * Robot::n_eef> upper_bound
-        )
+            const std::array<float, 6 * Robot::n_eef> upper_bound)
         {
-
-
             std::array<float, 7 * Robot::n_eef> transform1;
             std::memcpy(transform1.data(), eef_pose_w_ref_reference.data(), sizeof(float) * 7 * Robot::n_eef);
 
             std::array<float, 7 * Robot::n_eef> transform2;
             std::memcpy(transform2.data(), ref_frame_w_world.data(), sizeof(float) * 7 * Robot::n_eef);
 
-            RobotConstraint<Robot, rake, FeetTaskSpaceConstraint<Robot, rake>>::template assignBlock<7 * Robot::n_eef>(transform1, tsr_function_inp.rTeB);
-            RobotConstraint<Robot, rake, FeetTaskSpaceConstraint<Robot, rake>>::template assignBlock<7 * Robot::n_eef>(transform2, tsr_function_inp.wTrB);
+            RobotConstraint<Robot, rake, FeetTaskSpaceConstraint<Robot, rake>>::template assignBlock<
+                7 * Robot::n_eef>(transform1, tsr_function_inp.rTeB);
+            RobotConstraint<Robot, rake, FeetTaskSpaceConstraint<Robot, rake>>::template assignBlock<
+                7 * Robot::n_eef>(transform2, tsr_function_inp.wTrB);
 
-            RobotConstraint<Robot, rake, FeetTaskSpaceConstraint<Robot, rake>>::template assignBlock<6 * Robot::n_eef>(lower_bound, tsr_function_inp.lbB);
-            RobotConstraint<Robot, rake, FeetTaskSpaceConstraint<Robot, rake>>::template assignBlock<6 * Robot::n_eef>(upper_bound, tsr_function_inp.ubB);
+            RobotConstraint<Robot, rake, FeetTaskSpaceConstraint<Robot, rake>>::template assignBlock<
+                6 * Robot::n_eef>(lower_bound, tsr_function_inp.lbB);
+            RobotConstraint<Robot, rake, FeetTaskSpaceConstraint<Robot, rake>>::template assignBlock<
+                6 * Robot::n_eef>(upper_bound, tsr_function_inp.ubB);
         }
-
 
         auto print_robot_tsr_error(const ConfigurationBlock &q) const
         {
@@ -242,22 +241,24 @@ template <typename Robot, std::size_t rake>
             //     std::cout << std::setprecision(5) << tsr_function_inp.ubB[{i, 0}] << " ";
             // std::cout << std::endl;
 
-
             std::cout << "TSR Error : " << std::endl;
-            for(auto i=0U; i < 6 * 2 * Robot::dimension; i++){
-                if(i % Robot::dimension == 0)
+            for (auto i = 0U; i < 6 * 2 * Robot::dimension; i++)
+            {
+                if (i % Robot::dimension == 0)
+                {
                     std::cout << std::endl << "J[" << i / Robot::dimension << "] : ";
+                }
                 std::cout << short_jac_proj_inp.J[{i, 0}] << " ";
             }
             std::cout << std::endl;
             std::cout << "Error : " << std::endl;
-            for(auto i=0U; i < 6 * 2; i++)
+            for (auto i = 0U; i < 6 * 2; i++)
+            {
                 std::cout << short_jac_proj_inp.err[{i, 0}] << " ";
+            }
             std::cout << std::endl;
 
-
             return dist;
-
         }
 
         vamp::FloatVector<rake, 1> distanceToConstraint(const ConfigurationBlock &q) const
@@ -277,36 +278,37 @@ template <typename Robot, std::size_t rake>
                 jac_proj_inp[i + jac_offset] =
                     (jac_proj_inp[i + jac_offset] - tsr_function_inp.lbB[i]).min(0.F) +
                     (jac_proj_inp[i + jac_offset] - tsr_function_inp.ubB[i]).max(0.F);
-
             }
 
-            for (std::size_t eef_idx = 0; eef_idx < 2; ++eef_idx) { // eef_idx = 0 -> i=2, 1 -> i=3
+            for (std::size_t eef_idx = 0; eef_idx < 2; ++eef_idx)
+            {  // eef_idx = 0 -> i=2, 1 -> i=3
                 std::size_t i = eef_idx + 2;
 
-                for (std::size_t se3_idx = 0; se3_idx < 6; ++se3_idx) {
-                    for (std::size_t dim = 0; dim < Robot::dimension; ++dim) {
-
-
+                for (std::size_t se3_idx = 0; se3_idx < 6; ++se3_idx)
+                {
+                    for (std::size_t dim = 0; dim < Robot::dimension; ++dim)
+                    {
                         std::size_t idxB = (eef_idx * 6 + se3_idx) * Robot::dimension + dim;
                         std::size_t idxA = (i * 6 + se3_idx) * Robot::dimension + dim;
 
-                        short_jac_proj_inp[idxB] = jac_proj_inp[idxA];   // SIMD element assignment
+                        short_jac_proj_inp[idxB] = jac_proj_inp[idxA];  // SIMD element assignment
                     }
                 }
             }
 
-            for (std::size_t eef_idx = 0; eef_idx < 2; ++eef_idx) { // eef_idx = 0 -> i=2, 1 -> i=3
+            for (std::size_t eef_idx = 0; eef_idx < 2; ++eef_idx)
+            {  // eef_idx = 0 -> i=2, 1 -> i=3
                 std::size_t i = eef_idx + 2;
 
-                for (std::size_t se3_idx = 0; se3_idx < 6; ++se3_idx) {
-                        std::size_t idxB = (eef_idx * 6 + se3_idx);
-                        std::size_t idxA = (i * 6 + se3_idx);
+                for (std::size_t se3_idx = 0; se3_idx < 6; ++se3_idx)
+                {
+                    std::size_t idxB = (eef_idx * 6 + se3_idx);
+                    std::size_t idxA = (i * 6 + se3_idx);
 
-                        short_jac_proj_inp[idxB + short_jac_offset] = jac_proj_inp[idxA + jac_offset];   // SIMD element assignment
-                    }
+                    short_jac_proj_inp[idxB + short_jac_offset] =
+                        jac_proj_inp[idxA + jac_offset];  // SIMD element assignment
                 }
-
-
+            }
 
             // for(int i = 0U; i < 6 * Robot::n_eef * Robot::dimension; i++){
             //     if(i % Robot::dimension == 0)
@@ -322,7 +324,6 @@ template <typename Robot, std::size_t rake>
             // }
             // std::cout << std::endl;
 
-
             // for(int i = 0U; i < 6 * Robot::n_eef; i++)
             //     std::cout << jac_proj_inp.err[{i, 0}] << ", ";
             // std::cout << std::endl;
@@ -330,7 +331,6 @@ template <typename Robot, std::size_t rake>
             // for(int i = 0U; i < 6 * 2; i++)
             //     std::cout << short_jac_proj_inp.err[{i, 0}] << ", ";
             // std::cout << std::endl;
-
 
             auto d = short_jac_proj_inp.err[0] * short_jac_proj_inp.err[0];
             for (size_t i = 1; i < 6 * 2; i++)
@@ -365,23 +365,23 @@ template <typename Robot, std::size_t rake>
 
                 // Robot::template solve_tsr_error_lm_inner<rake>(jac_proj_inp, grad);
             }
-            else if  (projection_method == ProjMethod::OuterLM)
+            else if (projection_method == ProjMethod::OuterLM)
             {
                 Robot::template solve_2_eef_tsr_error_lm_outer<rake>(short_jac_proj_inp, grad);
                 // Robot::template solve_tsr_error_lm_outer<rake>(jac_proj_inp, grad);
             }
-            else if  (projection_method == ProjMethod::GradDesc)
+            else if (projection_method == ProjMethod::GradDesc)
             {
                 Robot::template solve_2_eef_tsr_error_gradient_descent<rake>(short_jac_proj_inp, grad);
                 // Robot::template solve_tsr_error_gradient_descent<rake>(jac_proj_inp, grad);
             }
-            else {
+            else
+            {
                 throw std::runtime_error("Invalid projection method");
             }
-            RobotConstraint<Robot, rake, FeetTaskSpaceConstraint<Robot, rake>>::integrateJointConfiguration(q, q_new, grad, alpha);
+            RobotConstraint<Robot, rake, FeetTaskSpaceConstraint<Robot, rake>>::integrateJointConfiguration(
+                q, q_new, grad, alpha);
             return dist;
         }
-
-
     };
 }  // namespace vamp::planning::constraint

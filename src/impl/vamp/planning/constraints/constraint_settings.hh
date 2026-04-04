@@ -1,4 +1,5 @@
 #pragma once
+
 namespace vamp::planning::constraint
 
 {
@@ -18,4 +19,4 @@ namespace vamp::planning::constraint
             std::cout << "Insert All to Tree: " << insert_all_to_tree << "\n";
         }
     };
-}
+}  // namespace vamp::planning::constraint

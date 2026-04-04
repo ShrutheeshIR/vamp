@@ -10,12 +10,13 @@
 #include <vamp/vector/eigen.hh>
 #include <vamp/vector/math.hh>
 #include <iomanip>
+
 namespace vamp::planning::constraint
 {
 
-
-template <typename Robot, std::size_t rake>
-class BimanualTaskSpaceConstraint : public RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint<Robot, rake>>
+    template <typename Robot, std::size_t rake>
+    class BimanualTaskSpaceConstraint
+      : public RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint<Robot, rake>>
     {
         /**
          * A TSR constraint is expressed as 2 transformation matrices
@@ -59,24 +60,32 @@ class BimanualTaskSpaceConstraint : public RobotConstraint<Robot, rake, Bimanual
                     return ubB[index_e - (7 + 6)];
                 }
                 else
+                {
                     return q[0];
+                }
             }
 
             void print() const
             {
                 std::cout << "rTlB: ";
-                for (int i = 0U; i < 7; i ++)
+                for (int i = 0U; i < 7; i++)
+                {
                     std::cout << rTlB[{i, 0}] << " ";
+                }
                 std::cout << std::endl;
 
                 std::cout << "lbB: ";
-                for (int i = 0U; i < 6; i ++)
+                for (int i = 0U; i < 6; i++)
+                {
                     std::cout << lbB[{i, 0}] << " ";
+                }
                 std::cout << std::endl;
 
                 std::cout << "ubB: ";
-                for (int i = 0U; i < 6; i ++)
+                for (int i = 0U; i < 6; i++)
+                {
                     std::cout << ubB[{i, 0}] << " ";
+                }
                 std::cout << std::endl;
             }
         };
@@ -94,9 +103,7 @@ class BimanualTaskSpaceConstraint : public RobotConstraint<Robot, rake, Bimanual
                 {
                     return J[index];
                 }
-                else if (
-                    index >= 6 *  Robot::dimension &&
-                    index < 6 * Robot::dimension + 6)
+                else if (index >= 6 * Robot::dimension && index < 6 * Robot::dimension + 6)
                 {
                     return err[index - 6 * Robot::dimension];
                 }
@@ -112,9 +119,7 @@ class BimanualTaskSpaceConstraint : public RobotConstraint<Robot, rake, Bimanual
                 {
                     return J[index];
                 }
-                else if (
-                    index >= 6 * Robot::dimension &&
-                    index < 6 * Robot::dimension + 6)
+                else if (index >= 6 * Robot::dimension && index < 6 * Robot::dimension + 6)
                 {
                     return err[index - 6 * Robot::dimension];
                 }
@@ -124,8 +129,7 @@ class BimanualTaskSpaceConstraint : public RobotConstraint<Robot, rake, Bimanual
                 }
             }
 
-            JacobianProjectInp &
-            operator=(vamp::FloatVector<rake, 6 + 6 * Robot::dimension> y)
+            JacobianProjectInp &operator=(vamp::FloatVector<rake, 6 + 6 * Robot::dimension> y)
             {
                 for (size_t i = 0; i < 6; i++)
                 {
@@ -144,26 +148,20 @@ class BimanualTaskSpaceConstraint : public RobotConstraint<Robot, rake, Bimanual
         ConfigurationBlock q_old;
 
     public:
-        static constexpr char* name = "BimanualTaskSpaceConstraint";
+        static constexpr char *name = "BimanualTaskSpaceConstraint";
+
         BimanualTaskSpaceConstraint(
             const std::array<float, 7> right_eef_pose_w_ref_left_eef,  // rTl qw, qx, qy, qz, tx, ty, tz
             const std::array<float, 6> lower_bound,
-            const std::array<float, 6> upper_bound
-    )
+            const std::array<float, 6> upper_bound)
         {
-            // Eigen::Quaternion<float> q1(right_eef_pose_w_ref_left_eef.linear());
-            // std::array<float, 7> transform1 = {
-            //     q1.w(),
-            //     q1.x(),
-            //     q1.y(),
-            //     q1.z(),
-            //     right_eef_pose_w_ref_left_eef.translation().x(),
-            //     right_eef_pose_w_ref_left_eef.translation().y(),
-            //     right_eef_pose_w_ref_left_eef.translation().z()};
 
-            RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint<Robot, rake>>::template assignBlock<7>(right_eef_pose_w_ref_left_eef, tsr_function_inp.rTlB);
-            RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint<Robot, rake>>::template assignBlock<6>(lower_bound, tsr_function_inp.lbB);
-            RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint<Robot, rake>>::template assignBlock<6>(upper_bound, tsr_function_inp.ubB);
+            RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint<Robot, rake>>::template assignBlock<7>(
+                right_eef_pose_w_ref_left_eef, tsr_function_inp.rTlB);
+            RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint<Robot, rake>>::template assignBlock<6>(
+                lower_bound, tsr_function_inp.lbB);
+            RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint<Robot, rake>>::template assignBlock<6>(
+                upper_bound, tsr_function_inp.ubB);
             // tsr_function_inp.print();
         }
 
@@ -172,17 +170,21 @@ class BimanualTaskSpaceConstraint : public RobotConstraint<Robot, rake, Bimanual
             // for(auto i=0U; i < Robot::dimension + 19; i++)
             //     std::cout << tsr_function_inp[i] << " ";
 
-
             auto dist = distanceToConstraint(q);
             std::cout << "Bimanual Error : " << std::endl;
-            for(auto i=0U; i < 6 * Robot::dimension; i++){
-                if (i%Robot::dimension == 0)
+            for (auto i = 0U; i < 6 * Robot::dimension; i++)
+            {
+                if (i % Robot::dimension == 0)
+                {
                     std::cout << std::endl << " J[" << i << "]: ";
+                }
                 std::cout << std::setprecision(5) << jac_proj_inp.J[{i, 0}] << " ";
             }
             std::cout << std::endl << "Error : ";
-            for(auto i=0U; i < 6; i++)
+            for (auto i = 0U; i < 6; i++)
+            {
                 std::cout << jac_proj_inp.err[{i, 0}] << " ";
+            }
             std::cout << std::endl;
             return dist;
         }
@@ -194,18 +196,7 @@ class BimanualTaskSpaceConstraint : public RobotConstraint<Robot, rake, Bimanual
                 tsr_function_inp.q[i] = q[i];
             }
 
-            // std::cout << "Q input: ";
-            // for(auto i=0U; i < Robot::dimension; i++)
-            //     std::cout << std::setprecision(5) << tsr_function_inp.q[{i, 0}] << " ";
-            // std::cout << std::endl;
-            // std::cout << "Transform input: ";
-            // for(auto i=0U; i < 7; i++)
-            //     std::cout << std::setprecision(5) << tsr_function_inp.rTlB[{i, 0}] << " ";
-            // std::cout << std::endl;
-
-
             Robot::template tsr_bimanual_error<rake>(tsr_function_inp, jac_proj_inp);
-
 
             const size_t jac_offset = 6 * Robot::dimension;
             for (size_t i = 0; i < 6; i++)
@@ -219,18 +210,6 @@ class BimanualTaskSpaceConstraint : public RobotConstraint<Robot, rake, Bimanual
             {
                 d = d + jac_proj_inp.err[i] * jac_proj_inp.err[i];
             }
-            // std::cout << "Bimanual Error : ";
-            // for(auto i=0U; i < 6; i++){
-            //     std::cout << std::setprecision(5) << jac_proj_inp.err[{i, 0}] << " ";
-            // }
-            // for(auto i=0U; i < 6 * Robot::dimension; i++){
-            //     if (i%Robot::dimension == 0)
-            //         std::cout << std::endl << " J[" << i << "]: ";
-            //     std::cout << std::setprecision(5) << jac_proj_inp.J[{i, 0}] << " ";
-            // }
-
-            // std::cout << std::endl;
-
             return d;
         }
 
@@ -241,7 +220,6 @@ class BimanualTaskSpaceConstraint : public RobotConstraint<Robot, rake, Bimanual
             bool update_q = true,
             float alpha = 1.0F)
         {
-
             auto dist = distanceToConstraint(q);
             // std::cout << "Bimanual constraint distance: " << dist << std::endl;
             typename Robot::template ConfigurationBlock<rake> grad;
@@ -249,41 +227,23 @@ class BimanualTaskSpaceConstraint : public RobotConstraint<Robot, rake, Bimanual
             if (projection_method == ProjMethod::InnerLM)
             {
                 Robot::template solve_tsr_relative_error_lm_inner<rake>(jac_proj_inp, grad);
-                // std::cout << "Grad for bimanual constraint: "  ;
-                // for (auto i = 0U; i < Robot::dimension; i++)
-                //         std::cout << grad[{i, 0}] << " ";
-                // std::cout << std::endl;
-                // grad = grad.zero_out_nans();
-                // std::cout << "Grad for bimanual constraint: "  ;
-                // for (auto i = 0U; i < Robot::dimension; i++)
-                //         std::cout << grad[{i, 0}] << " ";
-                // std::cout << std::endl;
-
             }
             else if (projection_method == ProjMethod::OuterLM)
             {
                 Robot::template solve_tsr_relative_error_lm_outer<rake>(jac_proj_inp, grad);
-                // std::cout << "Grad for bimanual constraint: "  ;
-                // for (auto i = 0U; i < Robot::dimension; i++)
-                //         std::cout << grad[{i, 0}] << " ";
-                // std::cout << std::endl;
             }
             else if (projection_method == ProjMethod::GradDesc)
             {
                 Robot::template solve_tsr_relative_error_gradient_descent<rake>(jac_proj_inp, grad);
-                // std::cout << "Grad for bimanual constraint: "  ;
-                // for (auto i = 0U; i < Robot::dimension; i++)
-                //         std::cout << grad[{i, 0}] << " ";
-                // std::cout << std::endl;
             }
-            else {
+            else
+            {
                 std::cout << "Invalid projection method: " << projection_method << std::endl;
                 throw std::runtime_error("Invalid projection method");
             }
-            RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint<Robot, rake>>::integrateJointConfiguration(q, q_new, grad, alpha);
+            RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint<Robot, rake>>::
+                integrateJointConfiguration(q, q_new, grad, alpha);
             return dist;
         }
-
-
     };
 }  // namespace vamp::planning::constraint

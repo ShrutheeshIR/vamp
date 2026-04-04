@@ -10,10 +10,11 @@
 #include <vamp/vector/eigen.hh>
 #include <vamp/vector/math.hh>
 #include <iomanip>
+
 namespace vamp::planning::constraint
 {
 
-template <typename Robot, std::size_t rake>
+    template <typename Robot, std::size_t rake>
     class SelfCollisionConstraint : public RobotConstraint<Robot, rake, SelfCollisionConstraint<Robot, rake>>
     {
         /**
@@ -33,7 +34,7 @@ template <typename Robot, std::size_t rake>
                     return J[index];
                 }
                 else if (
-                    index >= Robot::num_bounding_spheres *  Robot::dimension &&
+                    index >= Robot::num_bounding_spheres * Robot::dimension &&
                     index < Robot::num_bounding_spheres * Robot::dimension + 6 * Robot::n_eef)
                 {
                     return err[index - Robot::num_bounding_spheres * Robot::dimension];
@@ -52,7 +53,8 @@ template <typename Robot, std::size_t rake>
                 }
                 else if (
                     index >= Robot::num_bounding_spheres * Robot::dimension &&
-                    index < Robot::num_bounding_spheres * Robot::dimension + Robot::num_bounding_spheres * Robot::n_eef)
+                    index < Robot::num_bounding_spheres * Robot::dimension +
+                                Robot::num_bounding_spheres * Robot::n_eef)
                 {
                     return err[index - Robot::num_bounding_spheres * Robot::dimension];
                 }
@@ -63,7 +65,10 @@ template <typename Robot, std::size_t rake>
             }
 
             JacobianProjectInp &
-            operator=(vamp::FloatVector<rake, Robot::num_bounding_spheres * Robot::n_eef + Robot::num_bounding_spheres * Robot::n_eef * Robot::dimension> y)
+            operator=(vamp::FloatVector<
+                      rake,
+                      Robot::num_bounding_spheres * Robot::n_eef +
+                          Robot::num_bounding_spheres * Robot::n_eef * Robot::dimension> y)
             {
                 for (size_t i = 0; i < Robot::num_bounding_spheres; i++)
                 {
@@ -82,7 +87,8 @@ template <typename Robot, std::size_t rake>
         ConfigurationBlock q_old;
 
     public:
-        static constexpr char* name = "SelfCollisionConstraint";
+        static constexpr char *name = "SelfCollisionConstraint";
+
         SelfCollisionConstraint()
         {
             ;
@@ -93,27 +99,28 @@ template <typename Robot, std::size_t rake>
             // for(auto i=0U; i < Robot::dimension + 19; i++)
             //     std::cout << tsr_function_inp[i] << " ";
 
-
             auto dist = distanceToConstraint(q);
             std::cout << "Self collision error : " << std::endl;
-            for(auto i=0U; i < Robot::num_bounding_spheres * Robot::dimension; i++){
-                if (i%Robot::dimension == 0)
+            for (auto i = 0U; i < Robot::num_bounding_spheres * Robot::dimension; i++)
+            {
+                if (i % Robot::dimension == 0)
+                {
                     std::cout << std::endl << " J[" << i << "]: ";
+                }
                 std::cout << std::setprecision(5) << jac_proj_inp.J[{i, 0}] << " ";
             }
             std::cout << std::endl << "Error : ";
-            for(auto i=0U; i < Robot::num_bounding_spheres; i++)
+            for (auto i = 0U; i < Robot::num_bounding_spheres; i++)
+            {
                 std::cout << jac_proj_inp.err[{i, 0}] << " ";
+            }
             std::cout << std::endl;
             return dist;
-
         }
 
         vamp::FloatVector<rake, 1> distanceToConstraint(const ConfigurationBlock &q) const
         {
-
             Robot::template bounding_spheres_self_collision_error<rake>(q, jac_proj_inp);
-
 
             auto d = jac_proj_inp.err[0] * jac_proj_inp.err[0];
             for (size_t i = 1; i < Robot::num_bounding_spheres; i++)
@@ -126,7 +133,7 @@ template <typename Robot, std::size_t rake>
             // }
             // std::cout << std::endl;
 
-            return d * 0.0; //NOTE: Chatgpt pointed it out, maybe get rid of the * 0.0
+            return d * 0.0;  // NOTE: Chatgpt pointed it out, maybe get rid of the * 0.0
         }
 
         vamp::FloatVector<rake, 1> projectStep(
@@ -158,11 +165,11 @@ template <typename Robot, std::size_t rake>
                 {
                     Robot::template solve_self_collision_error_gradient_descent<rake>(jac_proj_inp, grad);
                 }
-                RobotConstraint<Robot, rake, SelfCollisionConstraint<Robot, rake>>::integrateJointConfiguration(q, q_new, grad, alpha);
+                RobotConstraint<Robot, rake, SelfCollisionConstraint<Robot, rake>>::
+                    integrateJointConfiguration(q, q_new, grad, alpha);
             }
             return dist;
         }
 
-
-    };// namespace vamp::planning::constraint
-}
+    };  // namespace vamp::planning::constraint
+}  // namespace vamp::planning::constraint

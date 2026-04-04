@@ -5,8 +5,8 @@
 #include <iostream>
 #include <iomanip>
 
-
-namespace vamp::planning {
+namespace vamp::planning
+{
     template <std::size_t rake, std::size_t dim>
     inline static auto assignBlock(std::array<float, dim> src, vamp::FloatVector<rake, dim> &dest)
     {
@@ -15,4 +15,4 @@ namespace vamp::planning {
             dest[i] = src[i];
         }
     }
-}
+}  // namespace vamp::planning
