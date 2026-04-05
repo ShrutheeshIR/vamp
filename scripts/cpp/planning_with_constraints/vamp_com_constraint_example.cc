@@ -8,13 +8,13 @@
 // #include <vamp/planning/validate.hh>
 #include <vamp/planning/crrtc.hh>
 #include <vamp/planning/constraints/task_space_constraint.hh>
-#include <vamp/planning/validate_constraint.hh>
+#include <vamp/planning/constraints/validate_constraint_motion.hh>
 #include <vamp/planning/constraints/CoM_task_space_constraint.hh>
 #include <vamp/planning/constraints/bimanual_task_space_constraint.hh>
 #include <vamp/planning/constraints/composable_constraint.hh>
 #include <vamp/planning/constraints/feet_task_space_constraint.hh>
 #include <vamp/planning/constraints/self_collision_constraint.hh>
-#include <vamp/planning/crrtc_settings.hh>
+#include <vamp/planning/constraints/crrtc_settings.hh>
 // #include <vamp/planning/simplify.hh>
 #include <vamp/robots/g1_unitree.hh>
 #include <vamp/random/halton.hh>
@@ -72,11 +72,13 @@ auto main(int, char **) -> int
     // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     // bool dd[] = {false};
     bool dd[] = {false, true};
-    // vamp::planning::constraint::ProjMethod projection_method[] = {vamp::planning::constraint::ProjMethod::InnerLM,
-    // vamp::planning::constraint::ProjMethod::OuterLM, vamp::planning::constraint::ProjMethod::GradDesc};
+    // vamp::planning::constraint::ProjMethod projection_method[] =
+    // {vamp::planning::constraint::ProjMethod::InnerLM, vamp::planning::constraint::ProjMethod::OuterLM,
+    // vamp::planning::constraint::ProjMethod::GradDesc};
     vamp::planning::constraint::ProjMethod projection_method[] = {
         vamp::planning::constraint::ProjMethod::InnerLM, vamp::planning::constraint::ProjMethod::OuterLM};
-    // vamp::planning::constraint::ProjMethod projection_method[] = {vamp::planning::constraint::ProjMethod::InnerLM};
+    // vamp::planning::constraint::ProjMethod projection_method[] =
+    // {vamp::planning::constraint::ProjMethod::InnerLM};
 
     // float descend_rates[] = {0.25, 0.5, 0.75, 1.0};
     float descend_rates[] = {0.75, 1.0};
@@ -110,8 +112,9 @@ auto main(int, char **) -> int
                             //     radius));
                             // }
                             // outfile_sph.close();
-                            std::ifstream infile("resources/environments/cuboids/"
-                                                 "humanoid_shelf.txt");
+                            std::ifstream infile(
+                                "resources/environments/cuboids/"
+                                "humanoid_shelf.txt");
                             if (!infile.is_open())
                             {
                                 std::cerr << "Failed to open file!" << std::endl;
@@ -133,8 +136,9 @@ auto main(int, char **) -> int
                                 }
                                 // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy << ",
                                 // " << dz << std::endl;
-                                environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array(
-                                    {x, y, z}, {0.0, 0.0, 0.0}, {dx / 2, dy / 2, dz / 2}));
+                                environment.cuboids.emplace_back(
+                                    vamp::collision::factory::cuboid::array(
+                                        {x, y, z}, {0.0, 0.0, 0.0}, {dx / 2, dy / 2, dz / 2}));
                             }
                             infile.close();
 
@@ -201,30 +205,34 @@ auto main(int, char **) -> int
                                   {1, 0, 0, 0, 0, 0, 0},
                                   {1, 0, 0, 0, 0, 0, 0}}};
 
-                            vamp::planning::constraint::FeetTaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
-                                eef_transforms_ref_frame_w_world,
-                                eef_transforms,
-                                tsr_lower_bound,
-                                tsr_upper_bound);
+                            vamp::planning::constraint::FeetTaskSpaceConstraint<Robot, rake>
+                                feet_tsr_constraint(
+                                    eef_transforms_ref_frame_w_world,
+                                    eef_transforms,
+                                    tsr_lower_bound,
+                                    tsr_upper_bound);
 
-                            // vamp::planning::constraint::TaskSpaceConstraint<Robot, rake> feet_tsr_constraint(
+                            // vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>
+                            // feet_tsr_constraint(
                             //     eef_transforms_ref_frame_w_world,
                             //     eef_transforms,
                             //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
                             // );
 
                             std::array<float, 7> transform = {1., 0.0005, 0.0005, 0.0005, 0.0, -0.303, 0.0};
-                            vamp::planning::constraint::BimanualTaskSpaceConstraint<Robot, rake> bimanual_task_constraint(
-                                transform, lower_bound, upper_bound);
+                            vamp::planning::constraint::BimanualTaskSpaceConstraint<Robot, rake>
+                                bimanual_task_constraint(transform, lower_bound, upper_bound);
 
-                            // vamp::planning::constraint::BimanualTaskSpaceConstraint<Robot, rake> bimanual_constraint(
+                            // vamp::planning::constraint::BimanualTaskSpaceConstraint<Robot, rake>
+                            // bimanual_constraint(
                             //     target_pose,
                             //     std::make_pair(lower_bound, upper_bound)
                             // );
                             vamp::planning::constraint::CoMTaskSpaceConstraint<Robot, rake, 4> com_constraint(
                                 polygon_points);
 
-                            // vamp::planning::constraint::SelfCollisionConstraint<Robot, rake> self_collision_constraint;
+                            // vamp::planning::constraint::SelfCollisionConstraint<Robot, rake>
+                            // self_collision_constraint;
 
                             vamp::planning::constraint::ComposableConstraints<
                                 Robot,
@@ -247,15 +255,12 @@ auto main(int, char **) -> int
                             crrtc_settings.constraint_settings.descend_rate = descent_rate;
 
                             crrtc_settings.rrtc_settings.radius = 10.0;
-                            crrtc_settings.constraint_settings.num_projection_iterations = num_projection_iterations;
+                            crrtc_settings.constraint_settings.num_projection_iterations =
+                                num_projection_iterations;
                             crrtc_settings.constraint_settings.insert_all_to_tree = insert_all_to_tree;
                             // std::cout << "\n\n-----------------Starting to cbirrt------------ " <<
                             // std::endl;
                             std::cout << range << ", " << dyndom << " " << pm << " " << descent_rate << " ";
-                            vamp::planning::constraint::invalid_distance_counter_outside = 0;
-                            vamp::planning::constraint::invalid_distance_counter_inside = 0;
-                            vamp::planning::constraint::collision_counter = 0;
-                            vamp::planning::constraint::unable_to_project_counter = 0;
 
                             // std::cout << "\n\n-----------------Starting to cbirrt------------ " <<
                             // std::endl;

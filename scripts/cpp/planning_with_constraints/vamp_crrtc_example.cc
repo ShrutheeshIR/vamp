@@ -13,8 +13,8 @@
 #include <vamp/planning/crrtc.hh>
 #include <vamp/planning/constraints/task_space_constraint.hh>
 #include <vamp/planning/constraints/composable_constraint.hh>
-#include <vamp/planning/crrtc_settings.hh>
-#include <vamp/planning/validate_constraint.hh>
+#include <vamp/planning/constraints/crrtc_settings.hh>
+#include <vamp/planning/constraints/validate_constraint_motion.hh>
 
 // #include <vamp/planning/simplify.hh>
 #include <vamp/robots/panda.hh>
@@ -186,7 +186,8 @@ auto main(int, char **) -> int
     // bool dd[] = {false, true};
     vamp::planning::constraint::ProjMethod projection_method[] = {
         vamp::planning::constraint::ProjMethod::InnerLM,
-        vamp::planning::constraint::ProjMethod::OuterLM};  //, vamp::planning::constraint::ProjMethod::GradDesc};
+        vamp::planning::constraint::ProjMethod::
+            OuterLM};  //, vamp::planning::constraint::ProjMethod::GradDesc};
 
     // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
     float descend_rates[] = {0.75, 1.0};
@@ -281,7 +282,8 @@ auto main(int, char **) -> int
                             crrtc_settings.constraint_settings.projection_method = pm;
                             crrtc_settings.constraint_settings.descend_rate = descent_rate;
                             crrtc_settings.rrtc_settings.radius = 1.0;
-                            crrtc_settings.constraint_settings.num_projection_iterations = num_projection_iterations;
+                            crrtc_settings.constraint_settings.num_projection_iterations =
+                                num_projection_iterations;
                             crrtc_settings.constraint_settings.insert_all_to_tree = insert_all_to_tree;
                             // std::cout << "\n\n-----------------Starting to cbirrt------------ " <<
                             // std::endl;

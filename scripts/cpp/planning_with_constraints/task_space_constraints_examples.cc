@@ -9,7 +9,7 @@
 // #include <vamp/planning/cbirrt.hh>
 #include <vamp/planning/constraints/task_space_constraint.hh>
 #include <vamp/planning/constraints/composable_constraint.hh>
-#include <vamp/planning/validate_constraint.hh>
+#include <vamp/planning/constraints/validate_constraint_motion.hh>
 
 // #include <vamp/planning/simplify.hh>
 #include <vamp/robots/panda.hh>
@@ -186,8 +186,9 @@ auto main(int, char **) -> int
 
     vamp::planning::constraint::TaskSpaceConstraint<Robot, rake> tsr_constraint(
         eef_transforms_ref_frame_w_world, eef_transforms, tsr_lower_bound, tsr_upper_bound);
-    vamp::planning::constraint::ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
-        task_constraint(tsr_constraint);
+    vamp::planning::constraint::
+        ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
+            task_constraint(tsr_constraint);
 
     auto start_time = std::chrono::steady_clock::now();
 
@@ -278,8 +279,8 @@ auto main(int, char **) -> int
     std::cout << diff_arr.size() << std::endl;
     std::cout << "Computing diffs : " << std::endl;
 
-    auto lane_dist_block =
-        vamp::planning::constraint::inter_lane_distance_block(initial_projected_block, Robot::Configuration(start));
+    auto lane_dist_block = vamp::planning::constraint::inter_lane_distance_block(
+        initial_projected_block, Robot::Configuration(start));
 
     typename Robot::template ConfigurationBlock<rake> start_block;
     float max_inter_dist = 0.F;
@@ -492,8 +493,9 @@ auto main(int, char **) -> int
     // std::cout << Robot::fkcc_attach(env_v, block) << std::endl;
 
     // for(auto& proj_vec : projected_vector2){
-    //     ret = vamp::planning::constraint::project_constraint_motion<Robot, rake, Robot::resolution>(proj_vec, proj_vec,
-    //     projected_vector_inside, task_constraint, env_v); std::cout << "Projected Motion: " << ret << " --
+    //     ret = vamp::planning::constraint::project_constraint_motion<Robot, rake,
+    //     Robot::resolution>(proj_vec, proj_vec, projected_vector_inside, task_constraint, env_v); std::cout
+    //     << "Projected Motion: " << ret << " --
     //     ";
 
     //     first = true;
@@ -519,8 +521,8 @@ auto main(int, char **) -> int
     // }
     // std::cout << "\n\n Running project for a single config : \n\n";
     // task_constraint.projectConfiguration(block, projected_block,
-    // vamp::planning::constraint::ProjMethod::InnerLM, 10.0, 1.0); std::cout << std::endl; first = true; for (auto i =
-    // 0U; i < Robot::dimension; ++i){
+    // vamp::planning::constraint::ProjMethod::InnerLM, 10.0, 1.0); std::cout << std::endl; first = true; for
+    // (auto i = 0U; i < Robot::dimension; ++i){
     //     holder[i] = projected_block[{i, 0}];
     //     std::cout << holder[i] << ", ";
     //     if (!first) outfile << ",";

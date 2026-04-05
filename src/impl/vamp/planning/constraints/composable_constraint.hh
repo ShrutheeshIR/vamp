@@ -16,12 +16,12 @@ namespace vamp::planning::constraint
 
     template <typename Robot, std::size_t rake, typename... Constraints>
     class ComposableConstraints
-      : public RobotConstraint<Robot, rake, ComposableConstraints<Robot, rake, Constraints...>>
     {
         std::tuple<Constraints...> constraints_;
 
     protected:
         using ConfigurationBlock = typename Robot::ConfigurationBlock<rake>;
+        using Configuration = typename Robot::Configuration;
         ConfigurationBlock q_old;
 
     public:

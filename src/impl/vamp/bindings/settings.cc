@@ -5,7 +5,7 @@
 #include <vamp/planning/aorrtc_settings.hh>
 #include <vamp/planning/simplify_settings.hh>
 #include <vamp/planning/constraints/constraint_settings.hh>
-#include <vamp/planning/crrtc_settings.hh>
+#include <vamp/planning/constraints/crrtc_settings.hh>
 #include <nanobind/stl/vector.h>
 
 namespace nb = nanobind;
@@ -26,8 +26,7 @@ void vamp::binding::init_settings(nanobind::module_ &pymodule)
         .def_rw("max_samples", &vp::RRTCSettings::max_samples)
         .def_rw("start_tree_first", &vp::RRTCSettings::start_tree_first);
 
-        
-    nb::class_<vp::constraint::ConstraintSettings>(pymodule, "ConstraintSettings")
+        nb::class_<vp::constraint::ConstraintSettings>(pymodule, "ConstraintSettings")
         .def(nb::init<>())
         .def_rw("projection_method", &vp::constraint::ConstraintSettings::projection_method)
         .def_rw("descend_rate", &vp::constraint::ConstraintSettings::descend_rate)

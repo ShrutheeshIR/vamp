@@ -28,7 +28,7 @@
 #include <ompl/base/ConstrainedSpaceInformation.h>
 #include <vamp/planning/constraints/task_space_constraint.hh>
 #include <vamp/planning/constraints/composable_constraint.hh>
-#include <vamp/planning/validate_constraint.hh>
+#include <vamp/planning/constraints/validate_constraint_motion.hh>
 #include <ompl/base/PlannerTerminationCondition.h>
 #include <ompl/base/terminationconditions/IterationTerminationCondition.h>
 #include <csignal>
@@ -153,8 +153,8 @@ inline static auto vamp_to_ompl(const Configuration &c, ob::State *state)
 class CustomConstraint : public ob::Constraint
 {
 public:
-    mutable 
-        vamp::planning::constraint::ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
+    mutable vamp::planning::constraint::
+        ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
             constraints;
     mutable size_t num_failed_projections = 0;
 
@@ -163,8 +163,9 @@ private:
 
 public:
     CustomConstraint(
-        vamp::planning::constraint::ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
-            &x)
+        vamp::planning::constraint::
+            ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
+                &x)
       : ob::Constraint(Robot::dimension, Robot::dimension - 6), constraints(x)
     {
     }
@@ -248,7 +249,13 @@ public:
         ConfigurationBlock last_projected_block;
         // std::cout << "After converted to configuration block, it is " << block << "\n";
         bool result = constraints.projectConfiguration(
-            block, last_projected_block, vamp::planning::constraint::ProjMethod::InnerLM, 10.0, 1.0, 15, false);
+            block,
+            last_projected_block,
+            vamp::planning::constraint::ProjMethod::InnerLM,
+            10.0,
+            1.0,
+            15,
+            false);
         // std::cout << "After pojection, the configuration block is " << block << "\n";
         // std::cout << "Result of projection is " << result << "\n";
         typename Robot::ConfigurationArray last_projected;
@@ -418,8 +425,8 @@ struct VAMPMotionValidator : public ob::MotionValidator
         // ompl_to_vamp(s1), ompl_to_vamp(s2), env_v);
     }
 
-    auto
-    checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const -> bool override
+    auto checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const
+        -> bool override
     {
         throw ompl::Exception("Not implemented!");
     }
@@ -483,8 +490,8 @@ struct OMPLMotionValidator : public ob::MotionValidator
         return discrete_geodesic;
     }
 
-    auto
-    checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const -> bool override
+    auto checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const
+        -> bool override
     {
         // Intentionally not implemented
         throw ompl::Exception("Not implemented!");
@@ -508,8 +515,9 @@ auto main(int argc, char **argv) -> int
 
     vamp::planning::constraint::TaskSpaceConstraint<Robot, rake> tsr_constraint(
         eef_transforms_ref_frame_w_world, eef_transforms, tsr_lower_bound, tsr_upper_bound);
-    vamp::planning::constraint::ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
-        task_constraint(tsr_constraint);
+    vamp::planning::constraint::
+        ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>
+            task_constraint(tsr_constraint);
 
     static constexpr std::array<float, dimension> start = {
         1.01600, 0.68800, 0.08700, -1.28100, -0.06000, 1.95500, 1.89100};
@@ -725,12 +733,13 @@ auto main(int argc, char **argv) -> int
         outfile.close();
     }
 
-    std::cout << "Invalid distance counter outside: " << vamp::planning::constraint::invalid_distance_counter_outside
-              << std::endl;
-    std::cout << "Invalid distance counter inside: " << vamp::planning::constraint::invalid_distance_counter_inside
-              << std::endl;
+    std::cout << "Invalid distance counter outside: "
+              << vamp::planning::constraint::invalid_distance_counter_outside << std::endl;
+    std::cout << "Invalid distance counter inside: "
+              << vamp::planning::constraint::invalid_distance_counter_inside << std::endl;
     std::cout << "Collision counter: " << vamp::planning::constraint::collision_counter << std::endl;
-    std::cout << "Unable to project counter: " << vamp::planning::constraint::unable_to_project_counter << std::endl;
+    std::cout << "Unable to project counter: " << vamp::planning::constraint::unable_to_project_counter
+              << std::endl;
     std::cout << "Number of iterations: " << *counter << "\n";
 
     auto customConstraint = std::dynamic_pointer_cast<CustomConstraint>(constraint);

@@ -10,17 +10,23 @@
 #include <vamp/vector/eigen.hh>
 #include <vamp/vector/math.hh>
 #include <iomanip>
+#include <vamp/planning/constraints/block_utils.hh>
 
 namespace vamp::planning::constraint
 {
 
     template <typename Robot, std::size_t rake>
-    class SelfCollisionConstraint : public RobotConstraint<Robot, rake, SelfCollisionConstraint<Robot, rake>>
+    class SelfCollisionConstraint
     {
+        /**
+         * A self collision constraint that uses the robot's bounding spheres to compute a differentiable error and jacobian for self collision avoidance.
+         *
+         */
         /**
          */
     protected:
         using ConfigurationBlock = typename Robot::ConfigurationBlock<rake>;
+        using Configuration = typename Robot::Configuration;
 
         struct JacobianProjectInp
         {
@@ -165,8 +171,7 @@ namespace vamp::planning::constraint
                 {
                     Robot::template solve_self_collision_error_gradient_descent<rake>(jac_proj_inp, grad);
                 }
-                RobotConstraint<Robot, rake, SelfCollisionConstraint<Robot, rake>>::
-                    integrateJointConfiguration(q, q_new, grad, alpha);
+                integrateJointConfiguration<Robot, rake>(q, q_new, grad, alpha);
             }
             return dist;
         }

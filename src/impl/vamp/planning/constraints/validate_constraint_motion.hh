@@ -12,13 +12,6 @@
 
 namespace vamp::planning::constraint
 {
-    static int invalid_distance_counter_outside = 0;
-    static int invalid_distance_counter_inside = 0;
-    static int unable_to_project_counter = 0;
-    static int collision_counter = 0;
-    static int unable_to_project_inside_counter = 0;
-    static int collision_inside_counter = 0;
-
 
     // Generate stddev samples: 0, -0.25, +0.25, -0.5, +0.5, -0.75, +0.75, -1.0
     template <std::size_t I>
@@ -113,7 +106,6 @@ namespace vamp::planning::constraint
         if (end_config_projection_index == -1)
         {
             // std::cout << "Unable to project " << std::endl;
-            unable_to_project_counter++;
             return false;
         }
 
@@ -126,7 +118,6 @@ namespace vamp::planning::constraint
             projected_distance = projected_distance + diff * diff;
             if (projected_distance > 4 * (distance) * (distance))
             {
-                invalid_distance_counter_outside++;
                 return false;
             }
             end_config_projected_array[i] = initial_projected_block[{i, end_config_projection_index}];
@@ -141,7 +132,6 @@ namespace vamp::planning::constraint
                          Robot::template fkcc<rake>(environment, initial_projected_block);
         if (not end_projected_valid)
         {
-            collision_counter++;
             return false;
         }
 
@@ -166,7 +156,6 @@ namespace vamp::planning::constraint
         if (not ableToProject)
         {
             // std::cout << "Unable to project " << std::endl;
-            unable_to_project_counter++;
             return ableToProject;
         }
 
@@ -181,7 +170,6 @@ namespace vamp::planning::constraint
         //     inter_rake_distance = inter_rake_distance + shifted_block[dim] * shifted_block[dim];
         //     if (inter_rake_distance.test_any_greater(4 * (distance / rake) * (distance / rake)))
         //     {
-        //         invalid_distance_counter_outside++;
         //         // std::cout << "Invalid config due to distance constraint" << inter_rake_distance <<  " with max distance allowed is " << 4 * (distance / rake) * (distance / rake) << std::endl;
         //         return false;
         //     }
@@ -208,7 +196,6 @@ namespace vamp::planning::constraint
             }
             if (inter_distance > 4 * (distance / rake) * (distance / rake))
             {
-                invalid_distance_counter_outside++;
                 // std::cout << "Invalid config due to distance constraint" << inter_distance << " at " << i << " with max distance allowed is " << 4 * (distance / rake) * (distance / rake) << std::endl;
                 return false;
             }
@@ -234,14 +221,11 @@ namespace vamp::planning::constraint
         }
         if (distance > 100.F)
             return valid;
-        // std::cout << initial_projected_block << std::endl;
         // auto max_inter_dist = std::sqrt(inter_rake_distance.hmax());
 
         // std::cout << "Max inter distance: " << max_inter_dist <<  " " << distance << std::endl;
         if (not valid or max_inter_dist <= (distance / rake) / n)
         {
-            if (not valid)
-                collision_counter++;
             return valid;
         }
 
@@ -253,7 +237,6 @@ namespace vamp::planning::constraint
             initial_projected_block = initial_projected_block - shifted_block / n;
             if (not constraint.projectConfiguration(initial_projected_block, projected_block, projection_method, max_inter_dist * rake, projection_descent_rate, num_projection_iterations))
             {
-                unable_to_project_inside_counter++;
                 return false;
             }
             auto q_dist = (projected_block[0] - initial_projected_block[0]) * (projected_block[0] - initial_projected_block[0]);
@@ -261,9 +244,6 @@ namespace vamp::planning::constraint
                 q_dist = q_dist + (projected_block[j] - initial_projected_block[j]) * (projected_block[j] - initial_projected_block[j]);
             if (q_dist.test_any_greater(4 * max_inter_dist / n * max_inter_dist / n))
             {
-                invalid_distance_counter_inside++;
-                // std::cout << q_dist << " " << q_dist.sqrt() << " " << max_inter_dist << std::endl;
-                // std::cout << projected_block << "," << initial_projected_block << "," << shifted_block / n <<std::endl;
                 return false;
             }
 
@@ -274,21 +254,10 @@ namespace vamp::planning::constraint
 
             if (not valid_inside)
             {
-                collision_inside_counter++;
-                // std::cout << "Collision Detected Inside" << std::endl;
                 return false;
             }
 
-            // for (auto r = 0U; r < rake; r++)
-            // {
-            //     for (auto j = 0U; j < Robot::dimension; j++)
-            //     {
-            //         last_projected[j] = projected_block[{j, r}];
-            //     }
-            //     projected_vector.push_back(typename Robot::Configuration(last_projected));
-            // }
         }
-        // std::cout << "projected : " <<  typename Robot::Configuration(last_projected) << "from " << start << "block " <<  block << " proj block " <<  projected_block << " to " <<  start + vector << n << std::endl;
         return true;
     }
 

@@ -9,9 +9,9 @@
 #include <vamp/planning/crrtc.hh>
 #include <vamp/planning/constraints/task_space_constraint.hh>
 #include <vamp/planning/constraints/composable_constraint.hh>
-#include <vamp/planning/crrtc_settings.hh>
-#include <vamp/planning/validate_constraint.hh>
-#include <vamp/planning/simplify_constraints.hh>
+#include <vamp/planning/constraints/crrtc_settings.hh>
+#include <vamp/planning/constraints/validate_constraint_motion.hh>
+#include <vamp/planning/constraints/simplify_constraints.hh>
 
 // #include <vamp/planning/simplify.hh>
 #include <vamp/robots/panda.hh>
@@ -80,23 +80,17 @@ struct Attempt
     }
 };
 
-// std::ostream& dump(std::ostream &o, const Attempt& a)
-// {
-//     return o << a.range << ", " << a.dynamic_domain << ", " << a.proj_method << ", " << a.descend_rate <<
-//     ", " << a.planning_time/1e6 << ", " << a.planning_iterations << std::endl;
-// }
-
 auto main(int, char **) -> int
 {
     // Setup RRTC and plan
     vamp::planning::CRRTCSettings crrtc_settings;
 
     float ranges[] = {0.5, 1.0, 1.5, 2.0};
-    // float ranges[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0};
     bool dd[] = {false, true};
     vamp::planning::constraint::ProjMethod projection_method[] = {
         vamp::planning::constraint::ProjMethod::InnerLM,
-        vamp::planning::constraint::ProjMethod::OuterLM};  //, vamp::planning::constraint::ProjMethod::GradDesc};
+        vamp::planning::constraint::ProjMethod::
+            OuterLM};  //, vamp::planning::constraint::ProjMethod::GradDesc};
 
     // float descend_rates[] = {0.1, 0.25, 0.5, 0.75, 1.0};
     float descend_rates[] = {0.75, 1.0};
@@ -126,15 +120,11 @@ auto main(int, char **) -> int
 
                                 // Build sphere cage environment
                                 EnvironmentInput environment;
-                                std::ofstream outfile_sph("spheres.txt");
                                 for (const auto &sphere : problem)
                                 {
-                                    outfile_sph << sphere[0] << "," << sphere[1] << "," << sphere[2] << ","
-                                                << radius << "\n";
                                     environment.spheres.emplace_back(
                                         vamp::collision::factory::sphere::array(sphere, radius));
                                 }
-                                outfile_sph.close();
 
                                 environment.sort();
                                 auto env_v = EnvironmentVector(environment);
@@ -146,21 +136,6 @@ auto main(int, char **) -> int
 
                                 std::array<float, 6 * Robot::n_eef> tsr_upper_bound = {
                                     0.01, 10.01, 0.01, 0.01, 0.01, 0.01};
-
-                                // std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef>
-                                // eef_transforms; Eigen::Matrix<float, 4, 4> T; T << 1,0,0,   0.3486, 0,-1,0,
-                                // 0.647752,   0,0,-1,    0.24,          0,           0,           0, 1;;
-                                // eef_transforms[0] = Eigen::Transform<float, 3, Eigen::Isometry>(T);
-                                // std::array<Eigen::Transform<float, 3, Eigen::Isometry>, Robot::n_eef>
-                                // eef_transforms_ref_frame_w_world; T << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
-                                // 0, 0, 0, 1; eef_transforms_ref_frame_w_world[0] = Eigen::Transform<float,
-                                // 3, Eigen::Isometry>(T);
-
-                                // vamp::planning::constraint::TaskSpaceConstraint<Robot, rake> tsr_constraint(
-                                //     eef_transforms_ref_frame_w_world,
-                                //     eef_transforms,
-                                //     std::make_pair(tsr_lower_bound, tsr_upper_bound)
-                                // );
 
                                 std::array<std::array<float, 7>, Robot::n_eef> eef_transforms = {
                                     {0, 1, 0, 0, 0.3486, 0.647752, 0.2399}};
@@ -184,16 +159,14 @@ auto main(int, char **) -> int
                                 crrtc_settings.constraint_settings.projection_method = pm;
                                 crrtc_settings.constraint_settings.descend_rate = descent_rate;
                                 crrtc_settings.rrtc_settings.radius = 1.0;
-                                crrtc_settings.constraint_settings.num_projection_iterations = num_projection_iterations;
+                                crrtc_settings.constraint_settings.num_projection_iterations =
+                                    num_projection_iterations;
                                 crrtc_settings.constraint_settings.insert_all_to_tree = insert_all_to_tree;
-                                crrtc_settings.constraint_settings.std_dev_scaling_factor = std_dev_scaling_factor;
+                                crrtc_settings.constraint_settings.std_dev_scaling_factor =
+                                    std_dev_scaling_factor;
                                 // std::cout << "\n\n-----------------Starting to cbirrt------------ " <<
                                 // std::endl; std::cout << range << ", " << dyndom << " " << pm << " " <<
                                 // descent_rate << " ";
-                                vamp::planning::constraint::invalid_distance_counter_outside = 0;
-                                vamp::planning::constraint::invalid_distance_counter_inside = 0;
-                                vamp::planning::constraint::collision_counter = 0;
-                                vamp::planning::constraint::unable_to_project_counter = 0;
 
                                 auto result = vamp::planning::
                                     CRRTC<Robot, rake, Robot::resolution, decltype(tsr_constraint)>::solve(
@@ -240,41 +213,6 @@ auto main(int, char **) -> int
                                         simplify_result.path.size(),
                                         result.nanoseconds + simplify_result.nanoseconds,
                                         simplify_result.path.cost()};
-
-                                    if ((succ_attempts.size() == 0) ||
-                                        (succ_attempts.size() > 0 && a < succ_attempts[0]))
-                                    {
-                                        std::cout << "\nPrinting Result!! " << result.path.size()
-                                                  << std::endl;
-                                        // Output configurations of simplified path
-                                        std::cout << std::fixed << std::setprecision(3);
-                                        std::ofstream outfile("trajectory.txt");
-                                        for (const auto &config : result.path)
-                                        {
-                                            const auto &array = config.to_array();
-                                            Robot::ConfigurationArray soln;
-                                            bool first = true;
-                                            for (auto i = 0U; i < Robot::dimension; ++i)
-                                            {
-                                                // std::cout << array[i] << ", ";
-                                                soln[i] = array[i];
-
-                                                if (!first)
-                                                {
-                                                    outfile << ",";
-                                                }
-                                                outfile << array[i];
-                                                first = false;
-                                            }
-
-                                            // auto fka = Robot::eefk(soln);
-                                            // std::cout <<std::endl << fka.matrix() <<std::endl;
-                                            // std::cout << std::endl;
-                                            outfile << "\n";
-                                        }
-                                        outfile.close();
-                                    }
-                                    // std::cin.ignore();
                                     succ_attempts.push_back(a);
                                     std::sort(succ_attempts.begin(), succ_attempts.end());
                                 }

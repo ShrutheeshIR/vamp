@@ -10,12 +10,13 @@
 #include <vamp/vector/eigen.hh>
 #include <vamp/vector/math.hh>
 #include <iomanip>
+#include <vamp/planning/constraints/block_utils.hh>
 
 namespace vamp::planning::constraint
 {
 
     template <typename Robot, std::size_t rake>
-    class FeetTaskSpaceConstraint : public RobotConstraint<Robot, rake, FeetTaskSpaceConstraint<Robot, rake>>
+    class FeetTaskSpaceConstraint
     {
         /**
          * A TSR constraint is expressed as 2 transformation matrices
@@ -26,6 +27,7 @@ namespace vamp::planning::constraint
          */
     protected:
         using ConfigurationBlock = typename Robot::ConfigurationBlock<rake>;
+        using Configuration = typename Robot::Configuration;
 
         struct TSRComputeInput
         {
@@ -206,15 +208,11 @@ namespace vamp::planning::constraint
             std::array<float, 7 * Robot::n_eef> transform2;
             std::memcpy(transform2.data(), ref_frame_w_world.data(), sizeof(float) * 7 * Robot::n_eef);
 
-            RobotConstraint<Robot, rake, FeetTaskSpaceConstraint<Robot, rake>>::template assignBlock<
-                7 * Robot::n_eef>(transform1, tsr_function_inp.rTeB);
-            RobotConstraint<Robot, rake, FeetTaskSpaceConstraint<Robot, rake>>::template assignBlock<
-                7 * Robot::n_eef>(transform2, tsr_function_inp.wTrB);
+            assignBlock<rake, 7 * Robot::n_eef>(transform1, tsr_function_inp.rTeB);
+            assignBlock<rake, 7 * Robot::n_eef>(transform2, tsr_function_inp.wTrB);
 
-            RobotConstraint<Robot, rake, FeetTaskSpaceConstraint<Robot, rake>>::template assignBlock<
-                6 * Robot::n_eef>(lower_bound, tsr_function_inp.lbB);
-            RobotConstraint<Robot, rake, FeetTaskSpaceConstraint<Robot, rake>>::template assignBlock<
-                6 * Robot::n_eef>(upper_bound, tsr_function_inp.ubB);
+            assignBlock<rake, 6 * Robot::n_eef>(lower_bound, tsr_function_inp.lbB);
+            assignBlock<rake, 6 * Robot::n_eef>(upper_bound, tsr_function_inp.ubB);
         }
 
         auto print_robot_tsr_error(const ConfigurationBlock &q) const
@@ -379,8 +377,7 @@ namespace vamp::planning::constraint
             {
                 throw std::runtime_error("Invalid projection method");
             }
-            RobotConstraint<Robot, rake, FeetTaskSpaceConstraint<Robot, rake>>::integrateJointConfiguration(
-                q, q_new, grad, alpha);
+            integrateJointConfiguration<Robot, rake>(q, q_new, grad, alpha);
             return dist;
         }
     };

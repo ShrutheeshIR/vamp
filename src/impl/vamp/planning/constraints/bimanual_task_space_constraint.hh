@@ -10,13 +10,14 @@
 #include <vamp/vector/eigen.hh>
 #include <vamp/vector/math.hh>
 #include <iomanip>
+#include <vamp/planning/constraints/block_utils.hh>
+
 
 namespace vamp::planning::constraint
 {
 
     template <typename Robot, std::size_t rake>
     class BimanualTaskSpaceConstraint
-      : public RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint<Robot, rake>>
     {
         /**
          * A TSR constraint is expressed as 2 transformation matrices
@@ -27,6 +28,7 @@ namespace vamp::planning::constraint
          */
     protected:
         using ConfigurationBlock = typename Robot::ConfigurationBlock<rake>;
+        using Configuration = typename Robot::Configuration;
 
         struct TSRComputeInput
         {
@@ -156,11 +158,11 @@ namespace vamp::planning::constraint
             const std::array<float, 6> upper_bound)
         {
 
-            RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint<Robot, rake>>::template assignBlock<7>(
+            assignBlock<rake, 7>(
                 right_eef_pose_w_ref_left_eef, tsr_function_inp.rTlB);
-            RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint<Robot, rake>>::template assignBlock<6>(
+            assignBlock<rake, 6>(
                 lower_bound, tsr_function_inp.lbB);
-            RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint<Robot, rake>>::template assignBlock<6>(
+            assignBlock<rake, 6>(
                 upper_bound, tsr_function_inp.ubB);
             // tsr_function_inp.print();
         }
@@ -241,8 +243,7 @@ namespace vamp::planning::constraint
                 std::cout << "Invalid projection method: " << projection_method << std::endl;
                 throw std::runtime_error("Invalid projection method");
             }
-            RobotConstraint<Robot, rake, BimanualTaskSpaceConstraint<Robot, rake>>::
-                integrateJointConfiguration(q, q_new, grad, alpha);
+            integrateJointConfiguration<Robot, rake>(q, q_new, grad, alpha);
             return dist;
         }
     };

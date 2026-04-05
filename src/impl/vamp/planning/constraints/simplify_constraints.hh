@@ -10,7 +10,7 @@
 #include <vamp/vector.hh>
 #include <vamp/planning/constraints/task_space_constraint.hh>
 #include <vamp/planning/constraints/composable_constraint.hh>
-#include <vamp/planning/validate_constraint.hh>
+#include <vamp/planning/constraints/validate_constraint_motion.hh>
 
 namespace vamp::planning::constraint
 {
@@ -24,8 +24,7 @@ namespace vamp::planning::constraint
         float projection_descent_rate = 1.0F,
         int num_projection_iterations = 25,
         float std_dev_scaling_factor = 0.1F,
-        bool insert_all_to_tree = false
-    ) -> bool
+        bool insert_all_to_tree = false) -> bool
     {
         if (path.size() < 3)
         {
@@ -33,7 +32,7 @@ namespace vamp::planning::constraint
         }
 
         bool changed = false;
-        std::vector <typename Robot::Configuration> projected_vector;
+        std::vector<typename Robot::Configuration> projected_vector;
         for (auto step = 0U; step < settings.max_steps; ++step)
         {
             path.subdivide();
@@ -47,20 +46,41 @@ namespace vamp::planning::constraint
 
                 if (path[index].distance(midpoint) > settings.min_change)
                 {
-                    // std::cout << "Attempting to bspline between " << index - 1 << " and " << index + 1 << std::endl;
+                    // std::cout << "Attempting to bspline between " << index - 1 << " and " << index + 1 <<
+                    // std::endl;
 
-                    if (
-                        project_constraint_motion<Robot, rake, resolution>(path[index - 1], midpoint, projected_vector, constraint, environment, projection_method, projection_descent_rate, num_projection_iterations, std_dev_scaling_factor, insert_all_to_tree) &&
-                        ((path[index - 1] - midpoint).squared_l2_norm() > (projected_vector.back() - path[index - 1]).squared_l2_norm())
-                        )
+                    if (project_constraint_motion<Robot, rake, resolution>(
+                            path[index - 1],
+                            midpoint,
+                            projected_vector,
+                            constraint,
+                            environment,
+                            projection_method,
+                            projection_descent_rate,
+                            num_projection_iterations,
+                            std_dev_scaling_factor,
+                            insert_all_to_tree) &&
+                        ((path[index - 1] - midpoint).squared_l2_norm() >
+                         (projected_vector.back() - path[index - 1]).squared_l2_norm()))
                     {
-                        // std::cout << "Attempting to bspline between checking to goal" << index - 1 << " and " << index + 1 << std::endl;
-                        if (
-                            project_constraint_motion<Robot, rake, resolution>(midpoint, path[index + 1], projected_vector, constraint, environment, projection_method, projection_descent_rate, num_projection_iterations, std_dev_scaling_factor, insert_all_to_tree) &&
-                            ((path[index + 1] - midpoint).squared_l2_norm() > (projected_vector.back() - path[index + 1]).squared_l2_norm())
-                            )
+                        // std::cout << "Attempting to bspline between checking to goal" << index - 1 << " and
+                        // " << index + 1 << std::endl;
+                        if (project_constraint_motion<Robot, rake, resolution>(
+                                midpoint,
+                                path[index + 1],
+                                projected_vector,
+                                constraint,
+                                environment,
+                                projection_method,
+                                projection_descent_rate,
+                                num_projection_iterations,
+                                std_dev_scaling_factor,
+                                insert_all_to_tree) &&
+                            ((path[index + 1] - midpoint).squared_l2_norm() >
+                             (projected_vector.back() - path[index + 1]).squared_l2_norm()))
                         {
-                            // std::cout << "Bsplining between " << index - 1 << " and " << index + 1 << std::endl;
+                            // std::cout << "Bsplining between " << index - 1 << " and " << index + 1 <<
+                            // std::endl;
                             path[index] = projected_vector.back();
                             changed |= (updated = true);
                         }
@@ -90,7 +110,8 @@ namespace vamp::planning::constraint
     //     }
 
     //     const auto max_steps = (not settings.max_steps) ? path.size() : settings.max_steps;
-    //     const auto max_empty_steps = (not settings.max_empty_steps) ? path.size() : settings.max_empty_steps;
+    //     const auto max_empty_steps = (not settings.max_empty_steps) ? path.size() :
+    //     settings.max_empty_steps;
 
     //     bool result = false;
     //     for (auto i = 0U, no_change = 0U; i < max_steps or no_change < max_empty_steps; ++i, ++no_change)
@@ -99,7 +120,8 @@ namespace vamp::planning::constraint
     //         int max_n = initial_size - 1;
 
     //         int range = 1 + static_cast<int>(
-    //                             std::floor(0.5F + static_cast<float>(initial_size) * settings.range_ratio));
+    //                             std::floor(0.5F + static_cast<float>(initial_size) *
+    //                             settings.range_ratio));
 
     //         auto point_0 = rng->dist.uniform_integer(0, max_n);
     //         auto point_1 =
@@ -147,32 +169,41 @@ namespace vamp::planning::constraint
         float projection_descent_rate = 1.0F,
         int num_projection_iterations = 25,
         float std_dev_scaling_factor = 0.1F,
-        bool insert_all_to_tree = false        
-    ) -> bool
+        bool insert_all_to_tree = false) -> bool
     {
         if (path.size() < 3)
         {
             return false;
         }
-        std::vector <typename Robot::Configuration> projected_vector;
+        std::vector<typename Robot::Configuration> projected_vector;
 
         bool result = false;
         for (auto i = 0U; i < path.size() - 2; ++i)
         {
             for (auto j = path.size() - 1; j > i + 1; --j)
             {
-                // if (project_constraint_motion<Robot, rake, resolution>(path[i], path[j], projected_vector, constraint, environment) && ((projected_vector.back() - path[j]).squared_l2_norm() < 1e-6))
-                if (project_constraint_motion<Robot, rake, resolution>(path[i], path[j], projected_vector, constraint, environment, projection_method, projection_descent_rate, num_projection_iterations, std_dev_scaling_factor, insert_all_to_tree)){
-                    if((projected_vector.back() - path[j]).squared_l2_norm() < 1e-6)
+                // if (project_constraint_motion<Robot, rake, resolution>(path[i], path[j], projected_vector,
+                // constraint, environment) && ((projected_vector.back() - path[j]).squared_l2_norm() < 1e-6))
+                if (project_constraint_motion<Robot, rake, resolution>(
+                        path[i],
+                        path[j],
+                        projected_vector,
+                        constraint,
+                        environment,
+                        projection_method,
+                        projection_descent_rate,
+                        num_projection_iterations,
+                        std_dev_scaling_factor,
+                        insert_all_to_tree))
+                {
+                    if ((projected_vector.back() - path[j]).squared_l2_norm() < 1e-6)
                     {
                         path.erase(path.begin() + i + 1, path.begin() + j);
                         // std::cout << "Shortcutting path at " << i << " to " << j << std::endl;
                         result = true;
                         break;
                     }
-
                 }
-
             }
         }
 
@@ -192,7 +223,8 @@ namespace vamp::planning::constraint
     //     }
 
     //     const auto max_steps = (not settings.max_steps) ? path.size() : settings.max_steps;
-    //     const auto max_empty_steps = (not settings.max_empty_steps) ? path.size() : settings.max_empty_steps;
+    //     const auto max_empty_steps = (not settings.max_empty_steps) ? path.size() :
+    //     settings.max_empty_steps;
 
     //     bool changed = false;
     //     for (auto step = 0U, no_change = 0U; step < max_steps and no_change < max_empty_steps;
@@ -239,22 +271,59 @@ namespace vamp::planning::constraint
         float projection_descent_rate = 1.0F,
         int num_projection_iterations = 25,
         float std_dev_scaling_factor = 0.1F,
-        bool insert_all_to_tree = false
-    ) -> PlanningResult<Robot>
+        bool insert_all_to_tree = false) -> PlanningResult<Robot>
     {
         auto start_time = std::chrono::steady_clock::now();
 
         PlanningResult<Robot> result;
 
-        const auto bspline = [&result, &environment, settings, &constraint, projection_method, projection_descent_rate, num_projection_iterations, std_dev_scaling_factor, insert_all_to_tree]()
-        { return smooth_bspline<Robot, rake, resolution>(result.path, environment, constraint, settings.bspline, projection_method, projection_descent_rate, num_projection_iterations, std_dev_scaling_factor, insert_all_to_tree); };
+        const auto bspline = [&result,
+                              &environment,
+                              settings,
+                              &constraint,
+                              projection_method,
+                              projection_descent_rate,
+                              num_projection_iterations,
+                              std_dev_scaling_factor,
+                              insert_all_to_tree]()
+        {
+            return smooth_bspline<Robot, rake, resolution>(
+                result.path,
+                environment,
+                constraint,
+                settings.bspline,
+                projection_method,
+                projection_descent_rate,
+                num_projection_iterations,
+                std_dev_scaling_factor,
+                insert_all_to_tree);
+        };
         // const auto reduce = [&result, &environment, settings, rng]()
         // {
         //     return reduce_path_vertices<Robot, rake, resolution>(
         //         result.path, environment, settings.reduce, rng);
         // };
-        const auto shortcut = [&result, &environment, settings, &constraint, projection_method, projection_descent_rate, num_projection_iterations, std_dev_scaling_factor, insert_all_to_tree]()
-        { return shortcut_path<Robot, rake, resolution>(result.path, environment, constraint, settings.shortcut, projection_method, projection_descent_rate, num_projection_iterations, std_dev_scaling_factor, insert_all_to_tree); };
+        const auto shortcut = [&result,
+                               &environment,
+                               settings,
+                               &constraint,
+                               projection_method,
+                               projection_descent_rate,
+                               num_projection_iterations,
+                               std_dev_scaling_factor,
+                               insert_all_to_tree]()
+        {
+            return shortcut_path<Robot, rake, resolution>(
+                result.path,
+                environment,
+                constraint,
+                settings.shortcut,
+                projection_method,
+                projection_descent_rate,
+                num_projection_iterations,
+                std_dev_scaling_factor,
+                insert_all_to_tree);
+        };
         // const auto perturb = [&result, &environment, settings, rng]()
         // { return perturb_path<Robot, rake, resolution>(result.path, environment, settings.perturb, rng); };
 
@@ -265,16 +334,25 @@ namespace vamp::planning::constraint
             // {PERTURB, perturb},
         };
 
-        std::vector <typename Robot::Configuration> projected_vector;
+        std::vector<typename Robot::Configuration> projected_vector;
         // Check if straight line is valid
         if (path.size() == 2 or (path.size() > 2 and project_constraint_motion<Robot, rake, resolution>(
-                                                         path.front(), path.back(), projected_vector, constraint, environment, projection_method, projection_descent_rate, num_projection_iterations, std_dev_scaling_factor, insert_all_to_tree)))
+                                                         path.front(),
+                                                         path.back(),
+                                                         projected_vector,
+                                                         constraint,
+                                                         environment,
+                                                         projection_method,
+                                                         projection_descent_rate,
+                                                         num_projection_iterations,
+                                                         std_dev_scaling_factor,
+                                                         insert_all_to_tree)))
         {
             // if the last projected configuration is not the same as the original end configuration
-            if((projected_vector.back() - path.back()).squared_l2_norm() < 1e-6)
+            if ((projected_vector.back() - path.back()).squared_l2_norm() < 1e-6)
             {
                 result.path.emplace_back(path.front());
-                for(auto i = 0U; i < projected_vector.size(); ++i)
+                for (auto i = 0U; i < projected_vector.size(); ++i)
                 {
                     result.path.emplace_back(projected_vector[i]);
                 }
@@ -282,7 +360,6 @@ namespace vamp::planning::constraint
                 result.nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
                 return result;
             }
-
         }
 
         result.path = path;
@@ -314,4 +391,4 @@ namespace vamp::planning::constraint
         result.nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
         return result;
     }
-}  // namespace vamp::planning
+}  // namespace vamp::planning::constraint

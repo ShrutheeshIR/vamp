@@ -10,18 +10,20 @@
 #include <vamp/vector/eigen.hh>
 #include <vamp/vector/math.hh>
 #include <iomanip>
+#include <vamp/planning/constraints/block_utils.hh>
+
 
 namespace vamp::planning::constraint
 {
 
     template <typename Robot, std::size_t rake, std::size_t num_polygons>
     class CoMTaskSpaceConstraint
-      : public RobotConstraint<Robot, rake, CoMTaskSpaceConstraint<Robot, rake, num_polygons>>
     {
         /**
          */
     protected:
         using ConfigurationBlock = typename Robot::ConfigurationBlock<rake>;
+        using Configuration = typename Robot::Configuration;
 
         struct CoMConstraintInp
         {
@@ -165,8 +167,7 @@ namespace vamp::planning::constraint
             //     std::cout << polygon_points[i] << " ";
             // std::cout << std::endl;
 
-            RobotConstraint<Robot, rake, CoMTaskSpaceConstraint<Robot, rake, num_polygons>>::
-                template assignBlock<2 * num_polygons>(polygon_points, com_jac_polygons.polygon_points);
+            assignBlock<rake, 2 * num_polygons>(polygon_points, com_jac_polygons.polygon_points);
         }
 
         auto print_robot_tsr_error(const ConfigurationBlock &q) const
@@ -261,8 +262,7 @@ namespace vamp::planning::constraint
             {
                 throw std::invalid_argument("Invalid projection method");
             }
-            RobotConstraint<Robot, rake, CoMTaskSpaceConstraint<Robot, rake, num_polygons>>::
-                integrateJointConfiguration(q, q_new, grad, alpha);
+            integrateJointConfiguration<Robot, rake>(q, q_new, grad, alpha);
             return dist;
         }
     };

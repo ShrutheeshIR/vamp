@@ -9,9 +9,9 @@
 #include <vamp/planning/crrtc.hh>
 #include <vamp/planning/constraints/task_space_constraint.hh>
 #include <vamp/planning/constraints/composable_constraint.hh>
-#include <vamp/planning/crrtc_settings.hh>
-#include <vamp/planning/validate_constraint.hh>
-#include <vamp/planning/simplify_constraints.hh>
+#include <vamp/planning/constraints/crrtc_settings.hh>
+#include <vamp/planning/constraints/validate_constraint_motion.hh>
+#include <vamp/planning/constraints/simplify_constraints.hh>
 
 // #include <vamp/planning/simplify.hh>
 #include <vamp/robots/panda.hh>

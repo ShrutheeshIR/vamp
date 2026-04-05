@@ -11,6 +11,8 @@
 #include <vamp/vector/math.hh>
 #include <iomanip>
 
+#include <vamp/planning/constraints/block_utils.hh>
+
 namespace vamp::planning::constraint
 {
 
@@ -22,48 +24,8 @@ namespace vamp::planning::constraint
         GradDesc  // J.T * err
     };
 
-    // This is an abstract class
-    template <typename Robot, std::size_t rake, typename ConstraintT>
-    class RobotConstraint
-    {
-    protected:
-        using Configuration = typename Robot::Configuration;
-        using ConfigurationArray = typename Robot::ConfigurationArray;
-        using ConfigurationBlock = typename Robot::ConfigurationBlock<rake>;
-
-        template <std::size_t dim>
-        inline static void assignBlock(std::array<float, dim> src, vamp::FloatVector<rake, dim> &dest)
-        {
-            for (size_t i = 0; i < dim; i++)
-            {
-                dest[i] = src[i];
-            }
-        }
-
-    public:
-        // virtual vamp::FloatVector<rake, 1> distanceToConstraint(const ConfigurationBlock &q) = 0;
-
-        inline void integrateJointConfiguration(
-            const ConfigurationBlock &q,
-            ConfigurationBlock &q_new,
-            const ConfigurationBlock &gradient,
-            float alpha = 1.0F)
-        {
-            // ConfigurationBlock q_new;
-            for (size_t i = 0; i < Robot::dimension; i++)
-            {
-                q_new[i] = q[i] - gradient[i] * alpha;
-            }
-            Robot::descale_configuration_block(q_new);
-            q_new = q_new.clamp(0.F, 1.F);
-            Robot::scale_configuration_block(q_new);
-            // return q_new;
-        }
-
-    };
-
     template <typename Robot, std::size_t rake>
-    class TaskSpaceConstraint : public RobotConstraint<Robot, rake, TaskSpaceConstraint<Robot, rake>>
+    class TaskSpaceConstraint
     {
         /**
          * A TSR constraint is expressed as 2 transformation matrices
@@ -74,6 +36,7 @@ namespace vamp::planning::constraint
          */
     protected:
         using ConfigurationBlock = typename Robot::ConfigurationBlock<rake>;
+        using Configuration = typename Robot::Configuration;
 
         struct TSRComputeInput
         {
@@ -199,15 +162,11 @@ namespace vamp::planning::constraint
             std::array<float, 7 * Robot::n_eef> transform2;
             std::memcpy(transform2.data(), ref_frame_w_world.data(), sizeof(float) * 7 * Robot::n_eef);
 
-            RobotConstraint<Robot, rake, TaskSpaceConstraint<Robot, rake>>::template assignBlock<
-                7 * Robot::n_eef>(transform1, tsr_function_inp.rTeB);
-            RobotConstraint<Robot, rake, TaskSpaceConstraint<Robot, rake>>::template assignBlock<
-                7 * Robot::n_eef>(transform2, tsr_function_inp.wTrB);
+            assignBlock<rake, 7 * Robot::n_eef>(transform1, tsr_function_inp.rTeB);
+            assignBlock<rake, 7 * Robot::n_eef>(transform2, tsr_function_inp.wTrB);
 
-            RobotConstraint<Robot, rake, TaskSpaceConstraint<Robot, rake>>::template assignBlock<
-                6 * Robot::n_eef>(lower_bound, tsr_function_inp.lbB);
-            RobotConstraint<Robot, rake, TaskSpaceConstraint<Robot, rake>>::template assignBlock<
-                6 * Robot::n_eef>(upper_bound, tsr_function_inp.ubB);
+            assignBlock<rake, 6 * Robot::n_eef>(lower_bound, tsr_function_inp.lbB);
+            assignBlock<rake, 6 * Robot::n_eef>(upper_bound, tsr_function_inp.ubB);
         }
 
         vamp::FloatVector<rake, 1> print_robot_tsr_error(const ConfigurationBlock &q) const
@@ -270,38 +229,11 @@ namespace vamp::planning::constraint
                     (jac_proj_inp[i + jac_offset] - tsr_function_inp.ubB[i]).max(0.F);
             }
 
-            // for(int i = 0U; i < 6 * Robot::n_eef * Robot::dimension; i++){
-            //     if(i % Robot::dimension == 0)
-            //         std::cout << std::endl << i/Robot::dimension << " : ";
-            //     std::cout << jac_proj_inp.J[{i, 0}] << ", ";
-            // }
-            // std::cout << std::endl;
-
-            // for(int i = 0U; i < 6 * 2 * Robot::dimension; i++){
-            //     if(i % Robot::dimension == 0)
-            //         std::cout << std::endl << i/Robot::dimension << " : ";
-            //     std::cout << short_jac_proj_inp.J[{i, 0}] << ", ";
-            // }
-            // std::cout << std::endl;
-
-            // for(int i = 0U; i < 6 * 2; i++)
-            //     std::cout << short_jac_proj_inp.err[{i, 0}] << ", ";
-            // std::cout << std::endl;
-
             auto d = jac_proj_inp.err[0] * jac_proj_inp.err[0];
             for (size_t i = 1; i < 6 * Robot::n_eef; i++)
             {
                 d = d + jac_proj_inp.err[i] * jac_proj_inp.err[i];
             }
-
-            // for(int i = 0U; i < 6 * Robot::n_eef; i++)
-            //     std::cout << jac_proj_inp.err[{i, 0}] << ", ";
-            // std::cout << std::endl;
-
-            // std::cout << "TSR Error : ";
-            // for(auto i=0U; i < 6 * 2; i++)
-            //     std::cout << short_jac_proj_inp.err[{i, 0}] << " ";
-            // std::cout << std::endl;
 
             return d;
         }
@@ -317,31 +249,21 @@ namespace vamp::planning::constraint
 
             if (projection_method == ProjMethod::InnerLM)
             {
-                // Robot::template solve_2_eef_tsr_error_lm_inner<rake>(short_jac_proj_inp, grad);
-                // grad = grad.zero_out_nans();
-
                 Robot::template solve_tsr_error_lm_inner<rake>(jac_proj_inp, grad);
-                // std::cout << "Grad for TSR constraint: "  ;
-                // for (auto i = 0U; i < Robot::dimension; i++)
-                //         std::cout << grad[i] << " ";
-                // std::cout << std::endl;
             }
             else if (projection_method == ProjMethod::OuterLM)
             {
-                // Robot::template solve_2_eef_tsr_error_lm_outer<rake>(short_jac_proj_inp, grad);
                 Robot::template solve_tsr_error_lm_outer<rake>(jac_proj_inp, grad);
             }
             else if (projection_method == ProjMethod::GradDesc)
             {
-                // Robot::template solve_2_eef_tsr_error_gradient_descent<rake>(short_jac_proj_inp, grad);
                 Robot::template solve_tsr_error_gradient_descent<rake>(jac_proj_inp, grad);
             }
             else
             {
                 throw std::runtime_error("Invalid projection method");
             }
-            RobotConstraint<Robot, rake, TaskSpaceConstraint<Robot, rake>>::integrateJointConfiguration(
-                q, q_new, grad, alpha);
+            integrateJointConfiguration<Robot, rake>(q, q_new, grad, alpha);
             return dist;
         }
     };

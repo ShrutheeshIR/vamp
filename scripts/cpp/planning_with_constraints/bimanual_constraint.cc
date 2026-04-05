@@ -9,8 +9,8 @@
 #include <vamp/planning/crrtc.hh>
 #include <vamp/planning/constraints/task_space_constraint.hh>
 #include <vamp/planning/constraints/bimanual_task_space_constraint.hh>
-#include <vamp/planning/validate_constraint.hh>
-#include <vamp/planning/crrtc_settings.hh>
+#include <vamp/planning/constraints/validate_constraint_motion.hh>
+#include <vamp/planning/constraints/crrtc_settings.hh>
 // #include <vamp/planning/simplify.hh>
 #include <vamp/robots/bimanual_panda.hh>
 #include <vamp/random/halton.hh>
@@ -143,8 +143,8 @@ auto main(int, char **) -> int
     task_constraint.print_robot_tsr_error(block);
     std::cout << "----Projecting ----" << std::endl;
     typename Robot::template ConfigurationBlock<rake> projected_block;
-    bool success =
-        task_constraint.projectConfiguration(block, projected_block, vamp::planning::constraint::ProjMethod::GradDesc);
+    bool success = task_constraint.projectConfiguration(
+        block, projected_block, vamp::planning::constraint::ProjMethod::GradDesc);
 
     // std::cout << fks[0].matrix() << std::endl;
     // std::cout << fks[1].matrix() << std::endl;
@@ -180,8 +180,8 @@ auto main(int, char **) -> int
 
         typename Robot::template ConfigurationBlock<rake> projected_block;
 
-        bool success =
-            task_constraint.projectConfiguration(block, projected_block, vamp::planning::constraint::ProjMethod::InnerLM);
+        bool success = task_constraint.projectConfiguration(
+            block, projected_block, vamp::planning::constraint::ProjMethod::InnerLM);
         for (auto i = 0U; i < Robot::dimension; i++)
         {
             std::cout << projected_block[{i, 0}] << " ";

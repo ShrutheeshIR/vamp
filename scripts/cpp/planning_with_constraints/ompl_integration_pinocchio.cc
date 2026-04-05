@@ -28,7 +28,7 @@
 #include <ompl/base/ConstrainedSpaceInformation.h>
 #include <vamp/planning/constraints/task_space_constraint.hh>
 #include <vamp/planning/constraints/composable_constraint.hh>
-#include <vamp/planning/validate_constraint.hh>
+#include <vamp/planning/validate_constraint_motion.hh>
 #include <ompl/base/PlannerTerminationCondition.h>
 #include <ompl/base/terminationconditions/IterationTerminationCondition.h>
 
@@ -239,8 +239,8 @@ struct VAMPStateValidator : public ob::StateValidityChecker
     }
 
     const EnvironmentVector &env_v;
-    // vamp::planning::constraint::ComposableConstraints<Robot, rake, vamp::planning::constraint::TaskSpaceConstraint<Robot,
-    // rake>>&task_constraint;
+    // vamp::planning::constraint::ComposableConstraints<Robot, rake,
+    // vamp::planning::constraint::TaskSpaceConstraint<Robot, rake>>&task_constraint;
 };
 
 // Helper function to convert projected state into a double veector
@@ -333,8 +333,8 @@ struct OMPLMotionValidator : public ob::MotionValidator
         return discrete_geodesic;
     }
 
-    auto
-    checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const -> bool override
+    auto checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const
+        -> bool override
     {
         // Intentionally not implemented
         throw ompl::Exception("Not implemented!");
