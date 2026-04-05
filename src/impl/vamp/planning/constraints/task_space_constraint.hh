@@ -87,20 +87,21 @@ namespace vamp::planning::constraint
 
         struct JacobianProjectInp
         {
-            vamp::FloatVector<rake, 6 * Robot::n_eef * Robot::dimension> J;  // jacobian
-            vamp::FloatVector<rake, 6 * Robot::n_eef> err;                   // error vector
+            static constexpr size_t J_size = 6 * Robot::n_eef * Robot::dimension;
+            static constexpr size_t err_size = 6 * Robot::n_eef;
+
+            vamp::FloatVector<rake, J_size> J;      // jacobian
+            vamp::FloatVector<rake, err_size> err;  // error vector
 
             auto &operator[](size_t index)
             {
-                if (index < 6 * Robot::n_eef * Robot::dimension)
+                if (index < J_size)
                 {
                     return J[index];
                 }
-                else if (
-                    index >= 6 * Robot::n_eef * Robot::dimension &&
-                    index < 6 * Robot::n_eef * Robot::dimension + 6 * Robot::n_eef)
+                else if (index >= J_size && index < J_size + err_size)
                 {
-                    return err[index - 6 * Robot::n_eef * Robot::dimension];
+                    return err[index - J_size];
                 }
                 else
                 {
@@ -110,15 +111,13 @@ namespace vamp::planning::constraint
 
             const auto operator[](size_t index) const
             {
-                if (index < 6 * Robot::n_eef * Robot::dimension)
+                if (index < J_size)
                 {
                     return J[index];
                 }
-                else if (
-                    index >= 6 * Robot::n_eef * Robot::dimension &&
-                    index < 6 * Robot::n_eef * Robot::dimension + 6 * Robot::n_eef)
+                else if (index >= J_size && index < J_size + err_size)
                 {
-                    return err[index - 6 * Robot::n_eef * Robot::dimension];
+                    return err[index - J_size];
                 }
                 else
                 {
@@ -126,14 +125,13 @@ namespace vamp::planning::constraint
                 }
             }
 
-            JacobianProjectInp &
-            operator=(vamp::FloatVector<rake, 6 * Robot::n_eef + 6 * Robot::n_eef * Robot::dimension> y)
+            JacobianProjectInp &operator=(vamp::FloatVector<rake, err_size + J_size> y)
             {
-                for (size_t i = 0; i < 6 * Robot::n_eef; i++)
+                for (size_t i = 0; i < err_size; i++)
                 {
-                    err[i] = y[6 * Robot::n_eef * Robot::dimension + i];
+                    err[i] = y[J_size + i];
                 }
-                for (size_t i = 0; i < 6 * Robot::n_eef * Robot::dimension; i++)
+                for (size_t i = 0; i < J_size; i++)
                 {
                     J[i] = y[i];
                 }
@@ -220,7 +218,6 @@ namespace vamp::planning::constraint
             Robot::template tsr_error<rake>(tsr_function_inp, jac_proj_inp);
 
             const size_t jac_offset = 6 * Robot::n_eef * Robot::dimension;
-            const size_t short_jac_offset = 6 * 2 * Robot::dimension;
 
             for (size_t i = 0; i < 6 * Robot::n_eef; i++)
             {
