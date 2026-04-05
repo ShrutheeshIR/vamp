@@ -122,9 +122,8 @@ auto main(int, char **) -> int
                                 //     radius));
                                 // }
                                 // outfile_sph.close();
-                                std::ifstream infile(
-                                    "resources/environments/cuboids/"
-                                    "shelf_drake.txt");
+                                std::ifstream infile("resources/environments/cuboids/"
+                                                     "shelf_drake.txt");
                                 if (!infile.is_open())
                                 {
                                     std::cerr << "Failed to open file!" << std::endl;
@@ -146,9 +145,8 @@ auto main(int, char **) -> int
                                     }
                                     // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy <<
                                     // ", " << dz << std::endl;
-                                    environment.cuboids.emplace_back(
-                                        vamp::collision::factory::cuboid::array(
-                                            {x, y, z}, {0.0, 0.0, 0.0}, {dx / 2, dy / 2, dz / 2}));
+                                    environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array(
+                                        {x, y, z}, {0.0, 0.0, 0.0}, {dx / 2, dy / 2, dz / 2}));
                                 }
                                 infile.close();
 
@@ -194,14 +192,12 @@ auto main(int, char **) -> int
 
                                 // from resources/start_end_points/bimanual_iiwa.txt, read in start and goal
                                 // configurations
-                                std::ifstream infile_start_goal(
-                                    "resources/start_end_points/"
-                                    "bimanual_iiwa.txt");
+                                std::ifstream infile_start_goal("resources/start_end_points/"
+                                                                "bimanual_iiwa.txt");
                                 if (!infile_start_goal.is_open())
                                 {
-                                    infile_start_goal.open(
-                                        "resources/start_end_points/"
-                                        "bimanual_iiwa.txt");
+                                    infile_start_goal.open("resources/start_end_points/"
+                                                           "bimanual_iiwa.txt");
                                 }
                                 if (!infile_start_goal.is_open())
                                 {

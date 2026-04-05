@@ -9,7 +9,6 @@
 #include <vamp/planning/constraints/composable_constraint.hh>
 #include <vamp/planning/validate.hh>
 
-
 namespace vamp::planning::constraint
 {
 
@@ -41,10 +40,10 @@ namespace vamp::planning::constraint
         inline static constexpr auto samples = generate_stddev_samples<n>(std::make_index_sequence<n>());
     };
 
-
     template <std::size_t rake, std::size_t dimension>
-    inline constexpr auto inter_lane_distance_block(const vamp::FloatVector<rake, dimension> &block,
-                                                    const vamp::FloatVector<dimension> &start) -> vamp::FloatVector<rake, dimension>
+    inline constexpr auto inter_lane_distance_block(
+        const vamp::FloatVector<rake, dimension> &block,
+        const vamp::FloatVector<dimension> &start) -> vamp::FloatVector<rake, dimension>
     {
         auto out = block;
         for (std::size_t i = 0; i < dimension; ++i)
@@ -57,14 +56,16 @@ namespace vamp::planning::constraint
 
     // template <std::size_t rake, std::size_t dimension>
     // inline constexpr auto inter_lane_distance_block(const vamp::FloatVector<rake, dimension> &block,
-    //                                                 const vamp::FloatVector<dimension> &start) -> vamp::FloatVector<rake, dimension>
+    //                                                 const vamp::FloatVector<dimension> &start) ->
+    //                                                 vamp::FloatVector<rake, dimension>
     // {
     //     auto out = block;
     //     for (std::size_t i = 0; i < dimension; ++i)
     //     {
     //         // Avoid element(i) on flattened buffers by using broadcast, which is shape-safe
     //         const auto start_vec = start.broadcast(i);
-    //         out[i] = out[i].S::template inter_lane_distance<0>(out[i].d()->data[0], start_vec.d()->data[0]);
+    //         out[i] = out[i].S::template inter_lane_distance<0>(out[i].d()->data[0],
+    //         start_vec.d()->data[0]);
     //     }
     //     return out;
     // }
@@ -98,23 +99,35 @@ namespace vamp::planning::constraint
         for (auto i = 0U; i < Robot::dimension; ++i)
         {
             // block[i] = (start + vector).broadcast(i);
-            block[i] = (start).broadcast(i) + (vector.broadcast(i) * (1.0F + stddev_multipliers * std_dev_scaling_factor));  // 0.1F is a scaling factor for std_dev
+            block[i] = (start).broadcast(i) +
+                       (vector.broadcast(i) *
+                        (1.0F + stddev_multipliers * std_dev_scaling_factor));  // 0.1F is a scaling factor
+                                                                                // for std_dev
             start_block[i] = start.broadcast(i);
         }
 
-        int end_config_projection_index = constraint.projectAnyConfiguration(block, initial_projected_block, projection_method, distance, projection_descent_rate, num_projection_iterations, false);
+        int end_config_projection_index = constraint.projectAnyConfiguration(
+            block,
+            initial_projected_block,
+            projection_method,
+            distance,
+            projection_descent_rate,
+            num_projection_iterations,
+            false);
         if (end_config_projection_index == -1)
         {
             // std::cout << "Unable to project " << std::endl;
             return false;
         }
 
-        // check if projected end config is too far from start config. If so, return false immediately without checking inter-rake distances
+        // check if projected end config is too far from start config. If so, return false immediately without
+        // checking inter-rake distances
         float projected_distance = 0.F;
         typename Robot::ConfigurationArray end_config_projected_array;
         for (auto i = 0U; i < Robot::dimension; ++i)
         {
-            float diff = initial_projected_block[{i, end_config_projection_index}] - start_block[{i, end_config_projection_index}];
+            float diff = initial_projected_block[{i, end_config_projection_index}] -
+                         start_block[{i, end_config_projection_index}];
             projected_distance = projected_distance + diff * diff;
             if (projected_distance > 4 * (distance) * (distance))
             {
@@ -126,20 +139,20 @@ namespace vamp::planning::constraint
         }
         typename Robot::Configuration end_config_projected(end_config_projected_array);
 
-        // now check if the projected end config is valid. If not, return false immediately without checking inter-rake distances
-        bool end_projected_valid = (environment.eef_attachments.size()) ?
-                         Robot::template fkcc_attach<rake>(environment, initial_projected_block) :
-                         Robot::template fkcc<rake>(environment, initial_projected_block);
+        // now check if the projected end config is valid. If not, return false immediately without checking
+        // inter-rake distances
+        bool end_projected_valid =
+            (environment.eef_attachments.size()) ?
+                Robot::template fkcc_attach<rake>(environment, initial_projected_block) :
+                Robot::template fkcc<rake>(environment, initial_projected_block);
         if (not end_projected_valid)
         {
             return false;
         }
 
-        
         auto adjusted_vector = end_config_projected - start;
         // First project just the final config
         distance = std::sqrt(projected_distance);
-
 
         // HACK: broadcast() implicitly assumes that the rake is exactly VectorWidth
         for (auto i = 0U; i < Robot::dimension; ++i)
@@ -148,18 +161,23 @@ namespace vamp::planning::constraint
             start_block[i] = start.broadcast(i);
         }
 
-        std::size_t n = static_cast<std::size_t>(std::max(std::ceil(distance / static_cast<float>(rake) * resolution), 1.F));
+        std::size_t n = static_cast<std::size_t>(
+            std::max(std::ceil(distance / static_cast<float>(rake) * resolution), 1.F));
 
         // std::cout << "Proj method " << projection_method << std::endl;
 
-        bool ableToProject = constraint.projectConfiguration(block, initial_projected_block, projection_method, distance, projection_descent_rate, num_projection_iterations);
+        bool ableToProject = constraint.projectConfiguration(
+            block,
+            initial_projected_block,
+            projection_method,
+            distance,
+            projection_descent_rate,
+            num_projection_iterations);
         if (not ableToProject)
         {
             // std::cout << "Unable to project " << std::endl;
             return ableToProject;
         }
-
-
 
         float max_inter_dist = 0.F;
 
@@ -170,7 +188,8 @@ namespace vamp::planning::constraint
         //     inter_rake_distance = inter_rake_distance + shifted_block[dim] * shifted_block[dim];
         //     if (inter_rake_distance.test_any_greater(4 * (distance / rake) * (distance / rake)))
         //     {
-        //         // std::cout << "Invalid config due to distance constraint" << inter_rake_distance <<  " with max distance allowed is " << 4 * (distance / rake) * (distance / rake) << std::endl;
+        //         // std::cout << "Invalid config due to distance constraint" << inter_rake_distance <<  "
+        //         with max distance allowed is " << 4 * (distance / rake) * (distance / rake) << std::endl;
         //         return false;
         //     }
 
@@ -190,19 +209,23 @@ namespace vamp::planning::constraint
                 }
                 else
                 {
-                    diff_arr[i + j * rake] = initial_projected_block[{j, i}] - initial_projected_block[{j, i-1}];
+                    diff_arr[i + j * rake] =
+                        initial_projected_block[{j, i}] - initial_projected_block[{j, i - 1}];
                 }
                 inter_distance = inter_distance + diff_arr[i + j * rake] * diff_arr[i + j * rake];
             }
             if (inter_distance > 4 * (distance / rake) * (distance / rake))
             {
-                // std::cout << "Invalid config due to distance constraint" << inter_distance << " at " << i << " with max distance allowed is " << 4 * (distance / rake) * (distance / rake) << std::endl;
+                // std::cout << "Invalid config due to distance constraint" << inter_distance << " at " << i
+                // << " with max distance allowed is " << 4 * (distance / rake) * (distance / rake) <<
+                // std::endl;
                 return false;
             }
             max_inter_dist = std::max(max_inter_dist, inter_distance);
         }
         max_inter_dist = std::sqrt(max_inter_dist);
-        typename Robot::template ConfigurationBlock<rake> shifted_block = typename Robot::template ConfigurationBlock<rake>(diff_arr);
+        typename Robot::template ConfigurationBlock<rake> shifted_block =
+            typename Robot::template ConfigurationBlock<rake>(diff_arr);
 
         // std::cout << "Attachment: " << environment.eef_attachments.size() << std::endl;
         bool valid = (environment.eef_attachments.size()) ?
@@ -220,7 +243,9 @@ namespace vamp::planning::constraint
             projected_vector.push_back(typename Robot::Configuration(last_projected));
         }
         if (distance > 100.F)
+        {
             return valid;
+        }
         // auto max_inter_dist = std::sqrt(inter_rake_distance.hmax());
 
         // std::cout << "Max inter distance: " << max_inter_dist <<  " " << distance << std::endl;
@@ -233,30 +258,37 @@ namespace vamp::planning::constraint
 
         for (auto i = 1U; i < n_steps; ++i)
         {
-
             initial_projected_block = initial_projected_block - shifted_block / n;
-            if (not constraint.projectConfiguration(initial_projected_block, projected_block, projection_method, max_inter_dist * rake, projection_descent_rate, num_projection_iterations))
+            if (not constraint.projectConfiguration(
+                    initial_projected_block,
+                    projected_block,
+                    projection_method,
+                    max_inter_dist * rake,
+                    projection_descent_rate,
+                    num_projection_iterations))
             {
                 return false;
             }
-            auto q_dist = (projected_block[0] - initial_projected_block[0]) * (projected_block[0] - initial_projected_block[0]);
-            for(auto j = 1U; j < Robot::dimension; j++)
-                q_dist = q_dist + (projected_block[j] - initial_projected_block[j]) * (projected_block[j] - initial_projected_block[j]);
+            auto q_dist = (projected_block[0] - initial_projected_block[0]) *
+                          (projected_block[0] - initial_projected_block[0]);
+            for (auto j = 1U; j < Robot::dimension; j++)
+            {
+                q_dist = q_dist + (projected_block[j] - initial_projected_block[j]) *
+                                      (projected_block[j] - initial_projected_block[j]);
+            }
             if (q_dist.test_any_greater(4 * max_inter_dist / n * max_inter_dist / n))
             {
                 return false;
             }
 
-
             bool valid_inside = (environment.eef_attachments.size()) ?
-                             Robot::template fkcc_attach<rake>(environment, projected_block) :
-                             Robot::template fkcc<rake>(environment, projected_block);
+                                    Robot::template fkcc_attach<rake>(environment, projected_block) :
+                                    Robot::template fkcc<rake>(environment, projected_block);
 
             if (not valid_inside)
             {
                 return false;
             }
-
         }
         return true;
     }
@@ -276,6 +308,13 @@ namespace vamp::planning::constraint
     {
         auto vector = goal - start;
         return project_constraint_vector<Robot, rake, resolution>(
-            start, vector, infinite_distance ? 10000.F : vector.l2_norm(), projected_vector, constraint, environment, projection_method, projection_descent_rate);
+            start,
+            vector,
+            infinite_distance ? 10000.F : vector.l2_norm(),
+            projected_vector,
+            constraint,
+            environment,
+            projection_method,
+            projection_descent_rate);
     }
 }  // namespace vamp::planning::constraint

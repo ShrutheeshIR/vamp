@@ -6,10 +6,8 @@ namespace vamp::planning
 {
     struct CRRTCSettings
     {
-
         RRTCSettings rrtc_settings;
         vamp::planning::constraint::ConstraintSettings constraint_settings;
-
 
         void display() const
         {

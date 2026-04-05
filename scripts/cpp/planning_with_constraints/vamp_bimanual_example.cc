@@ -102,9 +102,8 @@ auto main(int, char **) -> int
                                 //     radius));
                                 // }
                                 // outfile_sph.close();
-                                std::ifstream infile(
-                                    "resources/environments/cuboids/"
-                                    "shelf_panda.txt");
+                                std::ifstream infile("resources/environments/cuboids/"
+                                                     "shelf_panda.txt");
                                 if (!infile.is_open())
                                 {
                                     std::cerr << "Failed to open file!" << std::endl;
@@ -126,9 +125,8 @@ auto main(int, char **) -> int
                                     };
                                     // std::cout << x << ", " << y << ", " << z << ", " << dx << ", " << dy <<
                                     // ", " << dz << std::endl;
-                                    environment.cuboids.emplace_back(
-                                        vamp::collision::factory::cuboid::array(
-                                            {x, y, z}, {0.0, 0.0, 0.0}, {dx / 2, dy / 2, dz / 2}));
+                                    environment.cuboids.emplace_back(vamp::collision::factory::cuboid::array(
+                                        {x, y, z}, {0.0, 0.0, 0.0}, {dx / 2, dy / 2, dz / 2}));
                                 }
                                 infile.close();
 

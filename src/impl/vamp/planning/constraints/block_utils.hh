@@ -22,14 +22,14 @@ namespace vamp::planning::constraint
         typename Robot::ConfigurationBlock<rake> &q_new,
         const typename Robot::ConfigurationBlock<rake> &gradient,
         float alpha = 1.0F)
+    {
+        for (size_t i = 0; i < Robot::dimension; i++)
         {
-            for (size_t i = 0; i < Robot::dimension; i++)
-            {
-                q_new[i] = q[i] - gradient[i] * alpha;
-            }
-            Robot::descale_configuration_block(q_new);
-            q_new = q_new.clamp(0.F, 1.F);
-            Robot::scale_configuration_block(q_new);
+            q_new[i] = q[i] - gradient[i] * alpha;
         }
+        Robot::descale_configuration_block(q_new);
+        q_new = q_new.clamp(0.F, 1.F);
+        Robot::scale_configuration_block(q_new);
+    }
 
 }  // namespace vamp::planning::constraint

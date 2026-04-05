@@ -333,8 +333,8 @@ struct OMPLMotionValidator : public ob::MotionValidator
         return discrete_geodesic;
     }
 
-    auto checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const
-        -> bool override
+    auto
+    checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const -> bool override
     {
         // Intentionally not implemented
         throw ompl::Exception("Not implemented!");

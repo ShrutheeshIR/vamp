@@ -481,8 +481,8 @@ struct VAMPMotionValidator : public ob::MotionValidator
         return projection_result;
     }
 
-    auto checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const
-        -> bool override
+    auto
+    checkMotion(const ob::State *, const ob::State *, std::pair<ob::State *, double> &) const -> bool override
     {
         throw ompl::Exception("Not implemented!");
     }

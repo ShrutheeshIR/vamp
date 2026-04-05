@@ -12,7 +12,6 @@
 #include <iomanip>
 #include <vamp/planning/constraints/block_utils.hh>
 
-
 namespace vamp::planning::constraint
 {
 
@@ -157,13 +156,9 @@ namespace vamp::planning::constraint
             const std::array<float, 6> lower_bound,
             const std::array<float, 6> upper_bound)
         {
-
-            assignBlock<rake, 7>(
-                right_eef_pose_w_ref_left_eef, tsr_function_inp.rTlB);
-            assignBlock<rake, 6>(
-                lower_bound, tsr_function_inp.lbB);
-            assignBlock<rake, 6>(
-                upper_bound, tsr_function_inp.ubB);
+            assignBlock<rake, 7>(right_eef_pose_w_ref_left_eef, tsr_function_inp.rTlB);
+            assignBlock<rake, 6>(lower_bound, tsr_function_inp.lbB);
+            assignBlock<rake, 6>(upper_bound, tsr_function_inp.ubB);
             // tsr_function_inp.print();
         }
 

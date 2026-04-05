@@ -12,7 +12,6 @@
 #include <iomanip>
 #include <vamp/planning/constraints/block_utils.hh>
 
-
 namespace vamp::planning::constraint
 {
 

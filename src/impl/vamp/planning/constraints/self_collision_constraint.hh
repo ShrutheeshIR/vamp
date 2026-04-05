@@ -19,7 +19,8 @@ namespace vamp::planning::constraint
     class SelfCollisionConstraint
     {
         /**
-         * A self collision constraint that uses the robot's bounding spheres to compute a differentiable error and jacobian for self collision avoidance.
+         * A self collision constraint that uses the robot's bounding spheres to compute a differentiable
+         * error and jacobian for self collision avoidance.
          *
          */
         /**
