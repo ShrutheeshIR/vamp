@@ -340,6 +340,22 @@ Inside `impl/vamp`, the code is divided into the following directories:
   Each named subfolder contains `fk.hh` for each robot, which contains the automatically generated code from the tracing compiler.
   The named `{robot}.hh` folder at the top is a helper struct which maps `fk.hh` routines and other robot-specific information.
 
+## Manifold Constrained Planner
+
+The planner also support manifold-constrained planning, as detailed in [Vectorizing Projection in Manifold-Constrained Motion Planning for Real-Time Whole-Body Control(Preprint)](https://arxiv.org/abs/2309.14545). Following the intuition from RRT-Connect for VAMP, the [Constraint RRT-Connect](src/impl/vamp/planning/crrtc.hh) method similarly performs vectorized motion extension and validation through SIMD parallel projection operation onto the constraint manifold. Constraints are defined in [vamp::planning::constraints](src/impl/vamp/planning/constraints/). The [vamp::planning::constraints::project_constraint_vector](src/impl/vamp/planning/constraints/validate_constraint_motion.hh) calls the vectorized projection operations defined. We support multiple constraints through the [vamp::planning::constraints::ComposableConstraint](src/impl/vamp/planning/constraints/composable_constraint.hh) interface.
+
+Constraints can be generated for robots using the [cricket](https://github.com/CoMMALab/cricket) package. In this work, end effector constraints are generated for the 7DoF Franka Emika Panda arm, and a 14DoF Bimanual KUKA Iiwa arm. In addition, (i) end-effector, (ii) center-of-mass and a (iii) closed-link constraints are supported for a 30DoF Humanoid Digit robot, while the former two are supported for a 29DoF G1 Unitree robot.
+
+![Panda](resources/constrained_planning_demos/lineori.gif)
+![Digit](resources/constrained_planning_demos/digit_dodge_dance.gif)
+
+
+Examples of each robots for constraint specification and planning are provided in [planning_with_constraints](scripts/cpp/planning_with_constraints/).
+
+Python bindings are also provided for the robots. In addition to planning using the C-RRTC planner, bindings are provided for projection and validation of constraints.
+
+Finally, experimentally self-collision and env-collision constraints as SDFs are in works, although have not been tested for problems.
+
 ## Planned Features
 - [ ] Improved API documentation
 - [ ] Improved Python API
