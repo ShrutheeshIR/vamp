@@ -60,6 +60,25 @@ namespace vamp::planning::constraint
 
         static constexpr bool projecting = true;
 
+        // Cumulative edge-check counters, shared process-wide across every instance for
+        // this (Robot, rake, resolution) -- reset explicitly (reset_edge_stats()) between
+        // runs you want to measure separately, e.g. once per evaluate_mbm_sdf.py problem
+        // or once for a whole benchmark. Not thread-safe (plain counters): only meaningful
+        // when planning single-threaded, same caveat as the rest of this class.
+        struct EdgeCheckStats
+        {
+            std::size_t sdf_project_successes = 0;
+            std::size_t sdf_project_failures = 0;
+            std::size_t fkcc_failures_after_project = 0;
+        };
+
+        static inline EdgeCheckStats edge_stats{};
+
+        static void reset_edge_stats() noexcept
+        {
+            edge_stats = EdgeCheckStats{};
+        }
+
         explicit ConstrainedLocalPlanner(ConstraintSet<Robot, rake> constraint_set) noexcept
           : constraints(std::move(constraint_set)), connect_slack(constraints.settings().connect_slack)
         {
@@ -126,15 +145,15 @@ namespace vamp::planning::constraint
         {
             chain_.clear();
 
-            const bool reach = distance < range;
-            const float step_length = (reach) ? distance : range;
-            const auto vector = (target - from) * ((reach) ? 1.F : range / distance);
-
             // Perturb the step length per lane so projection has fallbacks when the exact
             // candidate projects poorly; lane 0 aims exactly at the candidate.
             const auto perturb = FloatVector<rake>::fill(1.F) +
                                  FloatVector<rake>(StdDevSamples<rake>::samples) *
                                      constraints.settings().perturbation_scale;
+
+            const bool reach = distance < range;
+            const float step_length = (reach) ? distance : range;
+            const auto vector = (target - from) * ((reach) ? 1.F : range / distance);
 
             Block block;
             for (auto i = 0U; i < Robot::dimension; ++i)
@@ -160,7 +179,29 @@ namespace vamp::planning::constraint
                 drift2 += diff * diff;
             }
 
-            if (drift2 > 4.F * step_length * step_length)
+            bool reject_endpoint;
+            if (constraints.settings().progress_test)
+            {
+                const auto target_arr = target.to_array();
+                float before2 = 0.F;
+                float after2 = 0.F;
+                for (auto j = 0U; j < Robot::dimension; ++j)
+                {
+                    const float b = from_arr[j] - target_arr[j];
+                    const float a = next_arr[j] - target_arr[j];
+                    before2 += b * b;
+                    after2 += a * a;
+                }
+
+                reject_endpoint = not (after2 < before2);
+            }
+            else
+            {
+                const float factor = constraints.settings().drift_factor;
+                reject_endpoint = drift2 > factor * factor * step_length * step_length;
+            }
+
+            if (reject_endpoint)
             {
                 return {SteerStatus::Trapped, chain_};
             }
@@ -247,8 +288,11 @@ namespace vamp::planning::constraint
             renormalize_so3<Robot, rake>(block);
             if (not constraints.project_all(block, distance))
             {
+                ++edge_stats.sdf_project_failures;
                 return false;
             }
+
+            ++edge_stats.sdf_project_successes;
 
             // Projection must not tear the path apart; record the inter-lane differences
             // for the sweep below.
@@ -279,6 +323,7 @@ namespace vamp::planning::constraint
 
             if (not fkcc_block<Robot, rake>(e, block))
             {
+                ++edge_stats.fkcc_failures_after_project;
                 return false;
             }
 
