@@ -17,6 +17,7 @@
 #include <vamp/planning/constraints/manifold/constraint.hh>
 #include <vamp/planning/constraints/manifold/constraint_set.hh>
 #include <vamp/planning/constraints/manifold/env_collision_constraint.hh>
+#include <vamp/planning/constraints/manifold/self_collision_constraint.hh>
 #include <vamp/planning/constraints/manifold/lead_screw_constraint.hh>
 #include <vamp/planning/constraints/manifold/twist_constraint.hh>
 #include <vamp/planning/constraints/local_planner.hh>
@@ -848,6 +849,25 @@ namespace vamp::binding
                         nb::init<const vamp::collision::Environment<float> &, float>(),
                         "environment"_a,
                         "margin"_a = 0.05F);
+            }
+
+            if constexpr (vc::robot_has_self_collision_v<Robot>)
+            {
+                using SCC = vc::SelfCollisionConstraint<Robot, rake>;
+
+                submodule.def("n_self_collision_pairs", []() { return Robot::n_self_collision_pairs; });
+                submodule.def(
+                    "n_self_collision_spheres", []() { return Robot::n_self_collision_spheres; });
+
+                nb::class_<SCC, ConstraintT>(
+                    submodule,
+                    "SelfCollisionConstraint",
+                    "Push the robot out of self-collision using one representative sphere per "
+                    "link (the middle sphere of that link's collision-sphere list) for every "
+                    "link pair the robot's SRDF leaves enabled. Each pair contributes a row "
+                    "that is zero once the two spheres are at least `margin` apart, and the "
+                    "amount of violation otherwise.")
+                    .def(nb::init<float>(), "margin"_a = 0.01F);
             }
 
             if constexpr (robot_has_twist_v<Robot>)

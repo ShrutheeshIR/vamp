@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 
 namespace vamp::planning::constraint
 {
@@ -68,5 +69,20 @@ namespace vamp::planning::constraint
         // remain (measured: Digit, the sphere cage, a hand-held mug, task-space starts). Affects the
         // bounded task-space constraints (TaskSpace, BimanualTaskSpace); the manifold is unchanged.
         bool hold_satisfied_rows = true;
+
+        // Trust region (rad / m) around the configuration a projection starts from.
+        // If positive, every descent step is clipped to [start - trust_region, start + trust_region]
+        // per joint, and the bounded task-space step (ProjMethod::BoundedLS) takes the same box as
+        // its step bounds, so the result is the nearest manifold point *within the box* rather than
+        // the nearest anywhere. This keeps a warm-started projection on the branch it started on
+        // (path-following IK continuity); a projection that cannot converge inside the box fails
+        // instead of jumping. 0 disables it. Has no effect on robots with quaternion-parameterized
+        // joints (Robot::so3_offsets).
+        float trust_region = 0.F;
+
+        // Per-joint half-widths (Robot::dimension entries, in joint order), e.g. a joint's speed
+        // limit times the time a projection stands for. If non-empty it replaces `trust_region`;
+        // an entry <= 0 leaves that joint unrestricted.
+        std::vector<float> joint_trust_region = {};
     };
 }  // namespace vamp::planning::constraint

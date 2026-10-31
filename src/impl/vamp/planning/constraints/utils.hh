@@ -21,6 +21,22 @@ namespace vamp::planning::constraint
     template <typename Robot>
     inline constexpr bool robot_has_env_collision_v = HasEnvCollision<Robot>::value;
 
+    // Detects robots generated with a "self_collision" recipe: they declare
+    // `n_self_collision_spheres`, the checked sphere pairs and the matching
+    // self_collision_jacobian/solve_self_collision_error_* kernels.
+    template <typename Robot, typename = void>
+    struct HasSelfCollision : std::false_type
+    {
+    };
+
+    template <typename Robot>
+    struct HasSelfCollision<Robot, std::void_t<decltype(Robot::n_self_collision_pairs)>> : std::true_type
+    {
+    };
+
+    template <typename Robot>
+    inline constexpr bool robot_has_self_collision_v = HasSelfCollision<Robot>::value;
+
     // Renormalize the quaternion segments of quaternion-parameterized joints back onto S^3.
     // Additive updates (gradient steps, chord interpolation) leave the sphere; dividing by
     // the norm is a valid retraction, so linear-then-renormalize is nlerp.

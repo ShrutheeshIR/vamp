@@ -61,6 +61,15 @@ namespace vamp::planning::constraint
         {
         }
 
+        // Restrict the steps of this constraint's solver to the absolute joint-space box
+        // [lower, upper] (one Block per lane), on top of the joint limits; both null clears it.
+        // Set by ConstraintSet for the duration of one projection when
+        // ConstraintSettings::trust_region is positive. Default: no-op, for constraints
+        // without a bounded solver (the set also clips every step to the box itself).
+        virtual void set_trust_box(const Block * /*lower*/, const Block * /*upper*/) const noexcept
+        {
+        }
+
         // Zero the pinned dimensions' columns (pinned[j] true, Robot::dimension entries) of
         // the Jacobian cached by the last squared_error() call, so the next step() solves
         // for the optimal descent within the active subspace and cannot move pinned joints.
@@ -232,8 +241,16 @@ namespace vamp::planning::constraint
                     BoundedSolveInput<Robot, rake, err_size, jac_size> input{solve};
                     for (auto i = 0U; i < Robot::dimension; ++i)
                     {
-                        input.lower[i] = Row::fill(Robot::lower_bound[i]) - q[i];
-                        input.upper[i] = Row::fill(Robot::upper_bound[i]) - q[i];
+                        auto lower = Row::fill(Robot::lower_bound[i]);
+                        auto upper = Row::fill(Robot::upper_bound[i]);
+                        if (has_trust_box_)
+                        {
+                            lower = lower.max(trust_lower_[i]);
+                            upper = upper.min(trust_upper_[i]);
+                        }
+
+                        input.lower[i] = lower - q[i];
+                        input.upper[i] = upper - q[i];
                     }
 
                     derived().solve_step_bounded(gradient, input);
@@ -262,6 +279,16 @@ namespace vamp::planning::constraint
         void set_hold_satisfied_rows(bool hold) const noexcept final
         {
             hold_satisfied_rows_ = hold;
+        }
+
+        void set_trust_box(const Block *lower, const Block *upper) const noexcept final
+        {
+            has_trust_box_ = lower != nullptr and upper != nullptr;
+            if (has_trust_box_)
+            {
+                trust_lower_ = *lower;
+                trust_upper_ = *upper;
+            }
         }
 
         void mask_jacobian(const bool *pinned) const noexcept final
@@ -296,6 +323,9 @@ namespace vamp::planning::constraint
     protected:
         mutable SolveBuffer<rake, err_size, jac_size> solve;
         mutable bool hold_satisfied_rows_ = ConstraintSettings{}.hold_satisfied_rows;
+        mutable bool has_trust_box_ = false;
+        mutable Block trust_lower_;
+        mutable Block trust_upper_;
         std::array<bool, err_size> equality_rows{};
 
     private:

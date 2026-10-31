@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <limits>
 #include <memory>
 #include <vector>
 
@@ -319,11 +320,48 @@ namespace vamp::planning::constraint
             const auto start = q;
             Block prev;
 
+            // Trust region: the box around the start that every step is clipped to (and that
+            // the bounded solvers take as step bounds, so they optimize inside it).
+            constexpr bool has_so3 = Robot::so3_offsets.size() > 0;
+            const bool per_joint = not settings_.joint_trust_region.empty();
+            const bool trust = (per_joint or settings_.trust_region > 0.F) and not has_so3;
+            if (per_joint and settings_.joint_trust_region.size() != Robot::dimension)
+            {
+                return Row::fill(std::numeric_limits<float>::infinity());
+            }
+
+            Block box_lower;
+            Block box_upper;
+            if (trust)
+            {
+                for (auto i = 0U; i < Robot::dimension; ++i)
+                {
+                    const float width = per_joint ? settings_.joint_trust_region[i] : settings_.trust_region;
+                    // Non-positive width: unrestricted (the bounds are far outside any joint range).
+                    const auto radius = Row::fill(width > 0.F ? width : no_max_distance);
+                    box_lower[i] = start[i] - radius;
+                    box_upper[i] = start[i] + radius;
+                }
+
+                for (const auto &c : constraints_)
+                {
+                    c->set_trust_box(&box_lower, &box_upper);
+                }
+            }
+
             auto dist = squared_error(q);
             for (std::size_t i = 0; i < settings_.max_iterations and not converged(dist); ++i)
             {
                 prev = q;
                 step_in_place(q);
+                if (trust)
+                {
+                    for (auto i = 0U; i < Robot::dimension; ++i)
+                    {
+                        q[i] = q[i].max(box_lower[i]).min(box_upper[i]);
+                    }
+                }
+
                 dist = squared_error(q);
 
                 const auto step_dist = squared_distance(q, prev);
@@ -335,6 +373,14 @@ namespace vamp::planning::constraint
                 if (drifted(step_dist) or drifted(squared_distance(q, start)))
                 {
                     break;
+                }
+            }
+
+            if (trust)
+            {
+                for (const auto &c : constraints_)
+                {
+                    c->set_trust_box(nullptr, nullptr);
                 }
             }
 

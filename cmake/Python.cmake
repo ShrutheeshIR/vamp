@@ -30,6 +30,7 @@ if(VAMP_BUILD_PYTHON_BINDINGS)
     digit=Digit
     r2c6=R2c6
     bimanual_iiwa=BimanualIiwa
+    kuka_iiwa=KukaIiwa
     g1_unitree=G1Unitree
   )
 
