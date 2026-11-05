@@ -47,6 +47,27 @@ namespace vamp::binding
             "state"_a,
             "IK-resolve a task-space state into the ambient robot's configuration. Returns "
             "(valid, ambient_configuration).");
+        // Only present on task spaces with a per-lane resolve_block_mask and a single-triple
+        // branch selector (the single-arm SE3 + psi spaces); see
+        // ParameterizedSpaceTraits::resolve_sweep.
+        if constexpr (detail::has_resolve_block_mask<typename Traits::Space>::value and
+                      has_set_smm_v<typename Traits::Space>)
+        {
+            t.def(
+                "resolve_sweep",
+                &Traits::resolve_sweep,
+                "pose"_a,
+                "psi"_a,
+                "gc"_a,
+                "environment"_a = vamp::collision::Environment<float>{},
+                "check_collision"_a = false,
+                "Resolve one end-effector pose (x, y, z, qx, qy, qz, qw) over an array of "
+                "self-motion parameters psi on the IK branch gc = (elbow_sel, shoulder_sel, "
+                "wrist_sel), SIMD-batched. Returns (valid (n,), ambient configurations (n, "
+                "dof)): valid is 1.0 where the IK has a solution within the joint limits and, "
+                "with check_collision, the configuration is free of environment and self "
+                "collision. Rows of invalid entries are meaningless.");
+        }
         // Only present on task spaces with an eefs_collision_free concept (currently
         // ParameterizedSpace/RBY1/IiwaMarker, but not BimanualIiwa::LeaderFollowerSpace);
         // see the same gate on Traits::eefs_collision_free (parameterized_space_helper.hh).

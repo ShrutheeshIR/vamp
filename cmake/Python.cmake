@@ -88,6 +88,11 @@ if(VAMP_BUILD_PYTHON_BINDINGS)
       list(APPEND VAMP_ROBOT_STRUCTS IiwaMarker)
     endif()
 
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/impl/vamp/robots/iiwa_tool.hh")
+      list(APPEND VAMP_ROBOT_MODULES iiwa_tool)
+      list(APPEND VAMP_ROBOT_STRUCTS IiwaTool)
+    endif()
+
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/impl/vamp/robots/fr3_marker.hh")
       list(APPEND VAMP_ROBOT_MODULES fr3_marker)
       list(APPEND VAMP_ROBOT_STRUCTS FR3Marker)

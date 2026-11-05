@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
@@ -93,6 +94,22 @@ namespace vamp::binding
             std::void_t<decltype(Space::template eefs_collision_free<r>(
                 std::declval<const vamp::collision::Environment<vamp::FloatVector<r>> &>(),
                 std::declval<const typename Space::template StateBlock<r> &>()))>> : std::true_type
+        {
+        };
+
+        // Detects whether Space exposes the per-lane resolve_block_mask<rake>(block) (a validity
+        // mask per lane instead of resolve_block's single "every lane valid" bool), which the
+        // batched resolve_sweep below needs.
+        template <typename Space, typename = void>
+        struct has_resolve_block_mask : std::false_type
+        {
+        };
+
+        template <typename Space>
+        struct has_resolve_block_mask<
+            Space,
+            std::void_t<decltype(Space::template resolve_block_mask<rake>(
+                std::declval<const typename Space::template StateBlock<rake> &>()))>> : std::true_type
         {
         };
     }  // namespace detail
@@ -212,6 +229,113 @@ namespace vamp::binding
             }
 
             return {valid, ambient};
+        }
+
+        // Batched resolve of ONE task-space pose over many values of the free parameter psi on
+        // a single IK branch `gc` ((elbow_sel, shoulder_sel, wrist_sel), see set_smm): the
+        // self-motion sweep. The psi values fill the SIMD lanes `rake` at a time (the last
+        // block is padded by repeating its last psi), so a sweep of n values costs n / rake
+        // IK evaluations instead of n broadcast calls. Returns (valid (n,), q (n, dim)) with
+        // valid = 1.0 where the IK has a solution on this branch and the result is inside the
+        // joint limits (resolve_block_mask's conditions) and, with `check_collision`, the
+        // resolved configuration is collision-free against `env` and the robot itself
+        // (Ambient::fkcc). q rows of invalid entries are meaningless. The collision check
+        // tests a whole block at once (fkcc collapses its lanes into one bool) and only falls
+        // back to one call per valid lane when that block reports a collision.
+        static auto resolve_sweep(
+            const std::array<float, 7> &pose,
+            const nb::ndarray<const float, nb::ndim<1>, nb::c_contig, nb::device::cpu> &psi,
+            const std::array<float, 3> &gc,
+            const Env &env,
+            bool check_collision)
+            -> std::pair<nb::ndarray<nb::numpy, float, nb::device::cpu>, nb::ndarray<nb::numpy, float, nb::device::cpu>>
+        {
+            if constexpr (detail::has_resolve_block_mask<Space>::value and has_set_smm_v<Space>)
+            {
+                using V = vamp::FloatVector<rake, 1>;
+                constexpr std::size_t dim = Ambient::dimension;
+
+                const std::size_t n = psi.shape(0);
+                const float *psi_data = psi.data();
+                std::vector<float> q_out(n * dim, 0.F);
+                std::vector<float> ok_out(n, 0.F);
+
+                Space::set_smm(gc);
+                const EnvVec env_vec(env);
+
+                for (std::size_t start = 0; start < n; start += rake)
+                {
+                    const std::size_t count = std::min<std::size_t>(rake, n - start);
+
+                    std::array<float, rake> lane_psi{};
+                    for (std::size_t l = 0; l < rake; ++l)
+                    {
+                        lane_psi[l] = psi_data[start + std::min(l, count - 1)];
+                    }
+
+                    typename Space::template StateBlock<rake> x;
+                    for (std::size_t k = 0; k < 7; ++k)
+                    {
+                        x[k] = V::fill(pose[k]);
+                    }
+
+                    x[7] = V(lane_psi);
+
+                    auto [valid, q] = Space::template resolve_block_mask<rake>(x);
+
+                    // A true lane of the comparison mask is all ones: and-ing with 1.0 turns
+                    // it into 1.0 (false lanes into 0.0).
+                    const V ok = valid & V::fill(1.F);
+                    std::array<bool, rake> lane_ok{};
+                    bool any_valid = false;
+                    for (std::size_t l = 0; l < count; ++l)
+                    {
+                        lane_ok[l] = ok[{0, l}] > 0.5F;
+                        any_valid = any_valid or lane_ok[l];
+                    }
+
+                    if (check_collision and any_valid and
+                        not Ambient::template fkcc<rake>(env_vec, q))
+                    {
+                        for (std::size_t l = 0; l < count; ++l)
+                        {
+                            if (not lane_ok[l])
+                            {
+                                continue;
+                            }
+
+                            typename Ambient::template ConfigurationBlock<rake> single;
+                            for (std::size_t i = 0; i < dim; ++i)
+                            {
+                                single[i] = V::fill(q[{i, l}]);
+                            }
+
+                            lane_ok[l] = Ambient::template fkcc<rake>(env_vec, single);
+                        }
+                    }
+
+                    for (std::size_t l = 0; l < count; ++l)
+                    {
+                        ok_out[start + l] = lane_ok[l] ? 1.F : 0.F;
+                        for (std::size_t i = 0; i < dim; ++i)
+                        {
+                            q_out[((start + l) * dim) + i] = q[{i, l}];
+                        }
+                    }
+                }
+
+                return {make_ndarray<1>(ok_out.data(), {n}), make_ndarray<2>(q_out.data(), {n, dim})};
+            }
+            else
+            {
+                (void) pose;
+                (void) psi;
+                (void) gc;
+                (void) env;
+                (void) check_collision;
+                throw std::runtime_error(
+                    "this task space has no batched resolve (resolve_block_mask + set_smm)");
+            }
         }
 
         // IK-free prefilter: hand geometry (+ any attachments) vs. environment/each other.
