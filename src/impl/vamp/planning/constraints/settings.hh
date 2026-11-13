@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <vector>
 #include <cstdint>
 
 namespace vamp::planning::constraint
@@ -67,5 +68,11 @@ namespace vamp::planning::constraint
         // together; stacked they do. Only matters for a set of more than one constraint. Off by default, which keeps
         // the step per constraint. The method does not apply to it; it takes the joint limits by clamping.
         bool stacked = false;
+
+        // Per-joint weights of the metric the drift guards of a projection (and the constrained local planner's steer
+        // and trace) measure in, one per joint; empty means every weight is 1. A projection stops when it drifts
+        // further than twice the step it was asked to make: with weights, that distance and the step are in the same
+        // weighted metric (see TaskSpaceRRTCSettings::joint_weights).
+        std::vector<float> metric_weights;
     };
 }  // namespace vamp::planning::constraint

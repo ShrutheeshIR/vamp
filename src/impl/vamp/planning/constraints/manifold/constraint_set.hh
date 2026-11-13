@@ -1,6 +1,8 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -13,6 +15,22 @@
 
 namespace vamp::planning::constraint
 {
+    // How the last projection loop (ConstraintSet::descend) ended, for debugging.
+    enum struct ProjectionExit : std::uint8_t
+    {
+        Converged,      // a lane (any-mode) or every lane (all-mode) is within the tolerance
+        MaxIterations,  // the iteration cap was reached without converging
+        Stalled,        // every lane's step was below the stall threshold
+        Drifted,        // the drift guard tripped (a lane, in all-mode; every lane, in any-mode)
+    };
+
+    struct ProjectionDiagnostics
+    {
+        ProjectionExit exit{ProjectionExit::Converged};
+        std::size_t iterations{0};  // steps taken
+        float best_error{0.F};      // the smallest squared error over the lanes at the end
+    };
+
     // Runtime collection of constraints defining a manifold, with the iterative-projection
     // loops planners use. An empty set is valid and satisfied everywhere. Not thread-safe
     // (constraints cache per-evaluation state): use one set (with unshared constraints) per
@@ -31,6 +49,15 @@ namespace vamp::planning::constraint
         explicit ConstraintSet(std::vector<Ptr> constraints, ConstraintSettings settings = {}) noexcept
           : constraints_(std::move(constraints)), settings_(settings)
         {
+            if (settings_.metric_weights.size() == Robot::dimension)
+            {
+                weighted_ = true;
+                for (auto i = 0U; i < Robot::dimension; ++i)
+                {
+                    weights2_[i] = settings_.metric_weights[i] * settings_.metric_weights[i];
+                }
+            }
+
             // The flag lives in the (shared) constraint objects, like their evaluation caches:
             // do not share one constraint between sets with different settings.
             for (const auto &constraint : constraints_)
@@ -47,6 +74,12 @@ namespace vamp::planning::constraint
         auto settings() const noexcept -> const ConstraintSettings &
         {
             return settings_;
+        }
+
+        // How the most recent project_all / project_any / project ended (mutable, like the constraints' caches).
+        auto last_projection() const noexcept -> const ProjectionDiagnostics &
+        {
+            return last_projection_;
         }
 
         // Hand the constraints the per-lane curve parameter of the states about to be projected or checked (see
@@ -267,6 +300,24 @@ namespace vamp::planning::constraint
             return d;
         }
 
+        // The squared distance in the metric of the run (ConstraintSettings::metric_weights, the raw distance without
+        // them), which the drift guards measure in.
+        auto metric_squared_distance(const Block &a, const Block &b) const noexcept -> Row
+        {
+            if (not weighted_)
+            {
+                return squared_distance(a, b);
+            }
+
+            auto d = Row::fill(weights2_[0]) * ((a[0] - b[0]) * (a[0] - b[0]));
+            for (auto i = 1U; i < Robot::dimension; ++i)
+            {
+                d = d + Row::fill(weights2_[i]) * ((a[i] - b[i]) * (a[i] - b[i]));
+            }
+
+            return d;
+        }
+
     private:
         // Most rows of the stacked step (settings().stacked), on the stack; larger sets take the step per constraint
         static constexpr std::size_t max_stacked_rows = 32;
@@ -399,29 +450,49 @@ namespace vamp::planning::constraint
             const auto start = q;
             Block prev;
 
+            auto exit = ProjectionExit::MaxIterations;
+            std::size_t iterations = 0;
             auto dist = squared_error(q);
             for (std::size_t i = 0; i < settings_.max_iterations and not converged(dist); ++i)
             {
                 prev = q;
                 step_in_place(q);
                 dist = squared_error(q);
+                iterations = i + 1;
 
                 const auto step_dist = squared_distance(q, prev);
                 if (step_dist.test_all_less_equal(stall))  // every lane stalled
                 {
+                    exit = ProjectionExit::Stalled;
                     break;
                 }
 
-                if (drifted(step_dist) or drifted(squared_distance(q, start)))
+                if (drifted(metric_squared_distance(q, prev)) or drifted(metric_squared_distance(q, start)))
                 {
+                    exit = ProjectionExit::Drifted;
                     break;
                 }
             }
 
+            if (converged(dist))
+            {
+                exit = ProjectionExit::Converged;
+            }
+
+            float best = dist[{0, 0}];
+            for (auto lane = 1U; lane < rake; ++lane)
+            {
+                best = std::min(best, dist[{0, lane}]);
+            }
+
+            last_projection_ = {exit, iterations, best};
             return dist;
         }
 
         std::vector<Ptr> constraints_;
         ConstraintSettings settings_;
+        mutable ProjectionDiagnostics last_projection_;
+        bool weighted_{false};
+        std::array<float, Robot::dimension> weights2_{};
     };
 }  // namespace vamp::planning::constraint

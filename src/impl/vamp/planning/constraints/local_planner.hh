@@ -3,6 +3,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -37,6 +38,41 @@ namespace vamp::planning::constraint
     struct StdDevSamples
     {
         inline static constexpr auto samples = generate_stddev_samples<n>();
+    };
+
+    // Why a steer (or the trace of a local path) failed, for debugging the planners from Python.
+    enum struct SteerFailure : std::uint8_t
+    {
+        None,              // the steer succeeded
+        Rejected,          // the caller's accept predicate refused the endpoint
+        NoLaneProjected,   // no lane of the perturbed step projected onto the manifold (see `projection`)
+        Drift,             // the projected endpoint is further than 2 x step_length from the start (joints)
+        EndpointCollision, // the endpoint is in collision (or outside what fkcc checks)
+        TraceProjection,   // trace: a lane of the chord's discretization did not project (see `trace_projection`)
+        TraceContinuity,   // trace: adjacent projected lanes further apart than twice the lane spacing
+        TraceCollision,    // trace: a projected lane is in collision
+        SweepProjection,   // trace sweep: a substep did not project
+        SweepDrift,        // trace sweep: a projected substep is further than 2 x substep from its interpolant
+        SweepCollision,    // trace sweep: a projected substep is in collision
+    };
+
+    struct SteerDiagnostics
+    {
+        SteerFailure failure{SteerFailure::None};
+        float step_length{0.F};           // the step the steer asked for (min(distance, range)), in the planner's metric
+        float drift_limit{0.F};           // 2 x step_length: the largest allowed distance of the endpoint from the start
+        float drift{0.F};                 // the winning lane's distance from the start in joints (set once a lane won)
+        int winner_lane{-1};              // the first lane of the perturbed step that projected (-1: none)
+        ProjectionDiagnostics projection; // how the steer's own projection (project_any) ended
+        // trace of the local path (set when the steer got that far)
+        float trace_chord{0.F};           // joint distance of the traced chord
+        float trace_gap{0.F};             // the largest gap between adjacent lanes found so far (joints)
+        float trace_allowed_gap{0.F};     // twice the lane spacing: the gap above which the path is torn
+        unsigned trace_lane{0};           // the failing lane (TraceContinuity / TraceCollision)
+        unsigned trace_substep{0};        // the failing sweep substep (Sweep*)
+        unsigned trace_substeps{0};       // the number of sweep substeps
+        float trace_drift{0.F};           // the largest squared drift from the interpolant seen in the failing substep
+        ProjectionDiagnostics trace_projection; // how the failing trace projection ended
     };
 
     // Local planner over a constraint manifold: local paths are geodesic approximations
@@ -83,6 +119,19 @@ namespace vamp::planning::constraint
         explicit ConstrainedLocalPlanner(ConstraintSet<Robot, rake> constraint_set) noexcept
           : constraints(std::move(constraint_set)), connect_slack(constraints.settings().connect_slack)
         {
+        }
+
+        // The squared weight of joint j in the metric of the run (1 without ConstraintSettings::metric_weights).
+        inline auto weight2(std::size_t j) const noexcept -> float
+        {
+            const auto &w = constraints.settings().metric_weights;
+            return (w.size() == Robot::dimension) ? w[j] * w[j] : 1.F;
+        }
+
+        // Why the most recent steer or trace ended as it did (overwritten by the next one).
+        inline auto diagnostics() const noexcept -> const SteerDiagnostics &
+        {
+            return diag_;
         }
 
         inline auto validate(
@@ -147,9 +196,12 @@ namespace vamp::planning::constraint
             Accept &&accept = Accept()) const noexcept -> Extension<Robot, Space>
         {
             chain_.clear();
+            diag_ = {};
 
             const bool reach = distance < range;
             const float step_length = (reach) ? distance : range;
+            diag_.step_length = step_length;
+            diag_.drift_limit = 2.F * step_length;
             const auto vector = (target - from) * ((reach) ? 1.F : range / distance);
 
             // Perturb the step length per lane so projection has fallbacks when the exact
@@ -173,11 +225,14 @@ namespace vamp::planning::constraint
             renormalize(block);
             const auto winner = on_manifold(
                 block, [&](Block &q) { return constraints.project_any(q, step_length); });
+            diag_.projection = constraints.last_projection();
             if (winner < 0)
             {
+                diag_.failure = SteerFailure::NoLaneProjected;
                 return {SteerStatus::Trapped, chain_};
             }
 
+            diag_.winner_lane = winner;
             const auto lane = static_cast<std::size_t>(winner);
             const auto from_arr = from.to_array();
             std::array<float, state_dimension> next_arr;
@@ -188,18 +243,21 @@ namespace vamp::planning::constraint
                 if (j < Robot::dimension)
                 {
                     const float diff = next_arr[j] - from_arr[j];
-                    drift2 += diff * diff;
+                    drift2 += diff * diff * weight2(j);
                 }
             }
 
+            diag_.drift = std::sqrt(drift2);
             if (drift2 > 4.F * step_length * step_length)
             {
+                diag_.failure = SteerFailure::Drift;
                 return {SteerStatus::Trapped, chain_};
             }
 
             Configuration next(next_arr);
             if (not accept(next))
             {
+                diag_.failure = SteerFailure::Rejected;
                 return {SteerStatus::Rejected, chain_};
             }
 
@@ -212,11 +270,12 @@ namespace vamp::planning::constraint
 
             if (not fkcc_block<Robot, rake>(e, next_block))
             {
+                diag_.failure = SteerFailure::EndpointCollision;
                 return {SteerStatus::Trapped, chain_};
             }
 
             Waypoints waypoints;
-            if (not trace(from, next, e, waypoints))
+            if (not trace(from, next, e, waypoints))  // sets diag_.failure and the trace fields
             {
                 return {SteerStatus::Trapped, chain_};
             }
@@ -280,6 +339,7 @@ namespace vamp::planning::constraint
 
     private:
         mutable std::vector<Configuration> chain_;
+        mutable SteerDiagnostics diag_;
 
         using Row = FloatVector<rake, 1>;
 
@@ -369,6 +429,18 @@ namespace vamp::planning::constraint
         {
             const auto vector = b - a;
             const float distance = (Traits::ambient(b) - Traits::ambient(a)).l2_norm();
+            float distance_metric2 = 0.F;  // the chord's length in the metric of the run (the guards of projection)
+            {
+                const auto a_state = a.to_array();
+                const auto b_state = b.to_array();
+                for (auto j = 0U; j < Robot::dimension; ++j)
+                {
+                    const float diff = b_state[j] - a_state[j];
+                    distance_metric2 += diff * diff * weight2(j);
+                }
+            }
+
+            const float distance_metric = std::sqrt(distance_metric2);
             const auto percents = FloatVector<rake>(Percents<rake>::percents);
 
             StateBlock block;
@@ -378,22 +450,31 @@ namespace vamp::planning::constraint
             }
 
             renormalize(block);
-            if (not on_manifold(block, [&](Block &q) { return constraints.project_all(q, distance); }))
+            diag_.trace_chord = distance;
+            if (not on_manifold(block, [&](Block &q) { return constraints.project_all(q, distance_metric); }))
             {
+                diag_.failure = SteerFailure::TraceProjection;
+                diag_.trace_projection = constraints.last_projection();
                 return false;
             }
 
             // Projection must not tear the path apart; record the inter-lane differences
             // for the sweep below.
             const float lane_spacing = distance / static_cast<float>(rake);
-            const float max_gap2_allowed = 4.F * lane_spacing * lane_spacing;
+            // twice the lane spacing, but never below the collision-check spacing: lanes closer than 1/resolution are
+            // as dense as any motion validation, so a shorter chord cannot make them "torn"
+            const float allowed_gap = std::max(2.F * lane_spacing, 1.F / static_cast<float>(resolution));
+            const float max_gap2_allowed = allowed_gap * allowed_gap;
+            diag_.trace_allowed_gap = allowed_gap;
             const auto a_arr = a.to_array();
 
             std::array<float, state_dimension * rake> diffs;
             float max_gap2 = 0.F;
+            float max_gap2_metric = 0.F;
             for (auto lane = 0U; lane < rake; ++lane)
             {
                 float gap2 = 0.F;
+                float gap2_metric = 0.F;
                 for (auto j = 0U; j < state_dimension; ++j)
                 {
                     const float prev = (lane == 0) ? a_arr[j] : block[{j, lane - 1}];
@@ -402,11 +483,17 @@ namespace vamp::planning::constraint
                     if (j < Robot::dimension)
                     {
                         gap2 += diff * diff;
+                        gap2_metric += diff * diff * weight2(j);
                     }
                 }
 
+                max_gap2_metric = std::max(max_gap2_metric, gap2_metric);
+
+                diag_.trace_gap = std::max(diag_.trace_gap, std::sqrt(gap2));
                 if (gap2 > max_gap2_allowed)
                 {
+                    diag_.failure = SteerFailure::TraceContinuity;
+                    diag_.trace_lane = lane;
                     return false;
                 }
 
@@ -415,6 +502,7 @@ namespace vamp::planning::constraint
 
             if (not fkcc_block<Robot, rake>(e, ambient_block(block)))
             {
+                diag_.failure = SteerFailure::TraceCollision;
                 return false;
             }
 
@@ -433,6 +521,7 @@ namespace vamp::planning::constraint
             const float max_gap = std::sqrt(max_gap2);
             const auto n_steps =
                 static_cast<std::size_t>(std::max(std::ceil(max_gap * resolution), 1.F));
+            diag_.trace_substeps = static_cast<unsigned>(n_steps);
             if (n_steps == 1)
             {
                 return true;
@@ -456,19 +545,34 @@ namespace vamp::planning::constraint
                 auto projected = linear;
                 renormalize(projected);
                 if (not on_manifold(
-                        projected, [&](Block &q) { return constraints.project_all(q, max_gap * rake); }))
+                        projected, [&](Block &q) { return constraints.project_all(q, std::sqrt(max_gap2_metric) * rake); }))
                 {
+                    diag_.failure = SteerFailure::SweepProjection;
+                    diag_.trace_substep = i;
+                    diag_.trace_projection = constraints.last_projection();
                     return false;
                 }
 
-                if (ConstraintSet<Robot, rake>::squared_distance(ambient_block(projected), ambient_block(linear))
-                        .test_any_greater_equal(max_drift2))
+                const auto drift_row =
+                    ConstraintSet<Robot, rake>::squared_distance(ambient_block(projected), ambient_block(linear));
+                if (drift_row.test_any_greater_equal(max_drift2))
                 {
+                    float worst = 0.F;
+                    for (auto lane = 0U; lane < rake; ++lane)
+                    {
+                        worst = std::max(worst, drift_row[{0, lane}]);
+                    }
+
+                    diag_.failure = SteerFailure::SweepDrift;
+                    diag_.trace_substep = i;
+                    diag_.trace_drift = worst;
                     return false;
                 }
 
                 if (not fkcc_block<Robot, rake>(e, ambient_block(projected)))
                 {
+                    diag_.failure = SteerFailure::SweepCollision;
+                    diag_.trace_substep = i;
                     return false;
                 }
             }

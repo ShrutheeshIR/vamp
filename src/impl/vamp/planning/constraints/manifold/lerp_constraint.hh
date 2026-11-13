@@ -929,4 +929,373 @@ namespace vamp::planning::constraint
         mutable InputT<false> input_;
         mutable InputT<true> segment_input_;
     };
+    // Pose constraint of all of a robot's end-effectors at once against their straight-line curves in SO(3) x R^3 (one curve per
+    // end-effector, positions lerped and rotations slerped), at one curve parameter t shared by all of them (or, in the
+    // segment form, t free on the segment it starts on, for all of them together; see LerpConstraintBase). The error is the
+    // stacked pose errors of the end-effectors, [R_t^T (p - p_t); weight log(R_t^T R)] six rows each, in the order of the
+    // robot's end-effectors, and the generated solvers step on all of its 6 n_ee rows together, as for a task-space region
+    // of several end-effectors. This is what two constraints of one hand each cannot do: their steps are taken separately
+    // and fight over the joints the hands share (the base and the torso of a mobile manipulator). The keyframes of all the
+    // curves share their parameters taus (the normalized lengths sqrt(sum over end-effectors of |dp|^2 + weight^2 theta^2) of
+    // the segments, or those given with set_parameters), so the end-effectors reach their keyframes at the same t. Needs a
+    // robot generated with the recipe keys "lerp_so3r3_multi_constraint" and "lerp_so3r3_multi_segment_constraint".
+    template <typename Robot, std::size_t rake>
+    struct LerpSO3R3MultiConstraint final
+      : LerpConstraintBase<LerpSO3R3MultiConstraint<Robot, rake>, Robot, rake, 6 * Robot::lerp_multi_end_effectors>
+    {
+        static constexpr std::size_t n_ee = Robot::lerp_multi_end_effectors;
+        static constexpr std::size_t n_rows_total = 6 * n_ee;
+
+        using Base = LerpConstraintBase<LerpSO3R3MultiConstraint<Robot, rake>, Robot, rake, n_rows_total>;
+        using Block = typename Base::Block;
+        using Row = typename Base::Row;
+        using Configuration = typename Robot::Configuration;
+        using Position = std::array<float, 3>;
+        using Quaternion = std::array<float, 4>;  // w x y z
+
+        static constexpr std::size_t n_points = Robot::lerp_points;
+
+        using Positions = std::array<Position, n_points>;
+        using Quaternions = std::array<Quaternion, n_points>;
+
+        LerpSO3R3MultiConstraint(
+            const std::array<Positions, n_ee> &positions,
+            const std::array<Quaternions, n_ee> &quaternions,
+            float rotation_weight = 1.F,
+            bool segment = false)
+        {
+            this->segment_mode_ = segment;
+
+            for (auto e = 0U; e < n_ee; ++e)
+            {
+                for (auto i = 0U; i < n_points; ++i)
+                {
+                    positions_[e][i] = Eigen::Vector3d(positions[e][i][0], positions[e][i][1], positions[e][i][2]);
+
+                    Eigen::Quaterniond rotation(
+                        quaternions[e][i][0], quaternions[e][i][1], quaternions[e][i][2], quaternions[e][i][3]);
+                    if (not(rotation.norm() > 1e-9))
+                    {
+                        throw std::invalid_argument("a keyframe's quaternion must not be zero");
+                    }
+
+                    rotation.normalize();
+                    if (i > 0 and rotation.dot(rotations_[e][i - 1]) < 0.0)
+                    {
+                        rotation.coeffs() *= -1.0;
+                    }
+
+                    rotations_[e][i] = rotation;
+                }
+
+                for (auto i = 1U; i < n_points; ++i)
+                {
+                    if (rotations_[e][i].angularDistance(rotations_[e][i - 1]) > 175.0 * 3.14159265358979323846 / 180.0)
+                    {
+                        throw std::invalid_argument(
+                            "consecutive keyframe rotations must be less than 175 degrees apart");
+                    }
+                }
+
+                for (auto i = 0U; i < n_points; ++i)
+                {
+                    for (auto axis = 0U; axis < 3; ++axis)
+                    {
+                        input_.positions[e][i * 3 + axis] =
+                            Row::fill(static_cast<float>(positions_[e][i][axis]));
+                        segment_input_.positions[e][i * 3 + axis] = input_.positions[e][i * 3 + axis];
+                    }
+
+                    input_.quaternions[e][i * 4 + 0] = Row::fill(static_cast<float>(rotations_[e][i].w()));
+                    input_.quaternions[e][i * 4 + 1] = Row::fill(static_cast<float>(rotations_[e][i].x()));
+                    input_.quaternions[e][i * 4 + 2] = Row::fill(static_cast<float>(rotations_[e][i].y()));
+                    input_.quaternions[e][i * 4 + 3] = Row::fill(static_cast<float>(rotations_[e][i].z()));
+                    for (auto c = 0U; c < 4; ++c)
+                    {
+                        segment_input_.quaternions[e][i * 4 + c] = input_.quaternions[e][i * 4 + c];
+                    }
+                }
+            }
+
+            set_rotation_weight(rotation_weight);
+        }
+
+        // The weight (m / rad) of the rotation error, and with it the parameters of the keyframes (unless set_parameters
+        // gave them): the normalized lengths of the segments, each squared length the sum over the end-effectors
+        void set_rotation_weight(float rotation_weight)
+        {
+            if (not(rotation_weight >= 0.F))
+            {
+                throw std::invalid_argument("the rotation weight must not be negative");
+            }
+
+            weight_ = rotation_weight;
+
+            if (not custom_taus_)
+            {
+                taus_[0] = 0.0;
+                for (auto i = 1U; i < n_points; ++i)
+                {
+                    double length2 = 0.0;
+                    for (auto e = 0U; e < n_ee; ++e)
+                    {
+                        const double theta = rotations_[e][i].angularDistance(rotations_[e][i - 1]);
+                        length2 += (positions_[e][i] - positions_[e][i - 1]).squaredNorm() +
+                                   static_cast<double>(weight_) * weight_ * theta * theta;
+                    }
+
+                    if (not(length2 > 1e-18))
+                    {
+                        throw std::invalid_argument("consecutive keyframe poses must be distinct");
+                    }
+
+                    taus_[i] = taus_[i - 1] + std::sqrt(length2);
+                }
+
+                for (auto i = 0U; i < n_points; ++i)
+                {
+                    taus_[i] /= taus_[n_points - 1];
+                }
+            }
+
+            upload_parameters();
+            input_.weight = Row::fill(weight_);
+            segment_input_.weight = input_.weight;
+        }
+
+        // Use these parameters for the keyframes instead of the normalized lengths of the segments. Strictly increasing,
+        // from 0 to 1.
+        void set_parameters(const std::array<double, n_points> &taus)
+        {
+            if (std::abs(taus.front()) > 1e-9 or std::abs(taus.back() - 1.0) > 1e-9)
+            {
+                throw std::invalid_argument("the parameters of the keyframes must run from 0 to 1");
+            }
+
+            for (auto i = 1U; i < n_points; ++i)
+            {
+                if (not(taus[i] > taus[i - 1]))
+                {
+                    throw std::invalid_argument("the parameters of the keyframes must be strictly increasing");
+                }
+            }
+
+            taus_ = taus;
+            custom_taus_ = true;
+            upload_parameters();
+        }
+
+        auto rotation_weight() const noexcept -> float
+        {
+            return weight_;
+        }
+
+        // The parameters of the keyframes
+        auto parameters() const noexcept -> const std::array<double, n_points> &
+        {
+            return taus_;
+        }
+
+        // The pose of end-effector `e`'s curve on the host, in double, at t (clamped to [0, 1])
+        auto value(std::size_t e, double t) const noexcept -> std::pair<Eigen::Vector3d, Eigen::Quaterniond>
+        {
+            t = std::clamp(t, 0.0, 1.0);
+            const auto segment = lerp_detail::segment_of(taus_, t);
+            const double s = (t - taus_[segment]) / (taus_[segment + 1] - taus_[segment]);
+            return {
+                positions_[e][segment] + s * (positions_[e][segment + 1] - positions_[e][segment]),
+                rotations_[e][segment].slerp(s, rotations_[e][segment + 1])};
+        }
+
+        // The t that minimizes the summed pose distance (position distance squared plus the weighted rotation angle
+        // squared, over the end-effectors) of the curves to the end-effectors at q: (t, squared distance).
+        auto closest_parameter(const Configuration &q) const -> std::pair<float, float>
+        {
+            std::array<float, Robot::dimension> values;
+            const auto array = q.to_array();
+            for (auto j = 0U; j < Robot::dimension; ++j)
+            {
+                values[j] = array[j];
+            }
+
+            std::array<Eigen::Vector3d, n_ee> xs;
+            std::array<Eigen::Quaterniond, n_ee> rotations;
+            for (auto e = 0U; e < n_ee; ++e)
+            {
+                const auto pose = Robot::eefk(values, e);
+                xs[e] = pose.translation().template cast<double>();
+                rotations[e] = Eigen::Quaterniond(pose.rotation().template cast<double>());
+            }
+
+            const auto [t, distance2] = lerp_detail::minimize_over_curve(
+                [&](double s)
+                {
+                    double total = 0.0;
+                    for (auto e = 0U; e < n_ee; ++e)
+                    {
+                        const auto [position, target_rotation] = value(e, s);
+                        const double theta = target_rotation.angularDistance(rotations[e]);
+                        total += (xs[e] - position).squaredNorm() + static_cast<double>(weight_) * weight_ * theta * theta;
+                    }
+
+                    return total;
+                });
+            return {static_cast<float>(t), static_cast<float>(distance2)};
+        }
+
+    private:
+        friend Base;
+
+        using Solve = SolveBuffer<rake, n_rows_total, n_rows_total * Robot::dimension>;
+        using SegmentBuffer = typename Base::SegmentBuffer;
+        using SegmentGradient = typename Base::SegmentGradient;
+
+        void run_kernel(const Block &q, const Row &t, Solve &solve) const noexcept
+        {
+            input_.q = q;
+            input_.t = t;
+            Robot::template lerp_so3r3_multi_error<rake>(input_, solve);
+        }
+
+        void solve_step(const Solve &solve, Block &q, ProjMethod method, float alpha) const noexcept
+        {
+            Block gradient;
+            switch (method)
+            {
+                case ProjMethod::InnerLM:
+                    Robot::template solve_lerp_so3r3_multi_error_lm_inner<rake>(solve, gradient);
+                    break;
+                case ProjMethod::OuterLM:
+                    Robot::template solve_lerp_so3r3_multi_error_lm_outer<rake>(solve, gradient);
+                    break;
+                case ProjMethod::GradDesc:
+                    Robot::template solve_lerp_so3r3_multi_error_gradient_descent<rake>(solve, gradient);
+                    break;
+                case ProjMethod::BoundedLS:
+                {
+                    BoundedSolveInput<Robot, rake, n_rows_total, n_rows_total * Robot::dimension> bounded{solve};
+                    for (auto i = 0U; i < Robot::dimension; ++i)
+                    {
+                        bounded.lower[i] = Row::fill(Robot::lower_bound[i]) - q[i];
+                        bounded.upper[i] = Row::fill(Robot::upper_bound[i]) - q[i];
+                    }
+
+                    Robot::template solve_lerp_so3r3_multi_error_bounded_ls<rake>(bounded, gradient);
+                    break;
+                }
+            }
+
+            integrate_step<Robot, rake>(q, gradient, alpha);
+        }
+
+        void run_segment_kernel(const Block &q, const Row &t, const Row &t_segment, SegmentBuffer &solve) const noexcept
+        {
+            segment_input_.q = q;
+            segment_input_.t = t;
+            segment_input_.t_segment = t_segment;
+            Robot::template lerp_so3r3_multi_segment_error<rake>(segment_input_, solve);
+        }
+
+        void solve_segment(const SegmentBuffer &solve, SegmentGradient &gradient, ProjMethod method) const noexcept
+        {
+            switch (method)
+            {
+                case ProjMethod::OuterLM:
+                    Robot::template solve_lerp_so3r3_multi_segment_error_lm_outer<rake>(solve, gradient);
+                    break;
+                case ProjMethod::GradDesc:
+                    Robot::template solve_lerp_so3r3_multi_segment_error_gradient_descent<rake>(solve, gradient);
+                    break;
+                default:  // InnerLM (the bounded solve is solve_segment_bounded)
+                    Robot::template solve_lerp_so3r3_multi_segment_error_lm_inner<rake>(solve, gradient);
+                    break;
+            }
+        }
+
+        void solve_segment_bounded(
+            const SegmentSolveInput<Robot, rake, n_rows_total> &input,
+            SegmentGradient &gradient) const noexcept
+        {
+            Robot::template solve_lerp_so3r3_multi_segment_error_bounded_ls<rake>(input, gradient);
+        }
+
+        // Input layout of the generated Robot::lerp_so3r3_multi_error (and, with the segment's t, of
+        // lerp_so3r3_multi_segment_error): q, t, [t_segment], the weight, the parameters, then for each end-effector the positions
+        // (x y z per keyframe) and the quaternions (w x y z per keyframe)
+        template <bool Segment>
+        struct InputT
+        {
+            Block q;
+            Row t;
+            Row t_segment;
+            Row weight;
+            FloatVector<rake, n_points> taus;
+            std::array<FloatVector<rake, 3 * n_points>, n_ee> positions;
+            std::array<FloatVector<rake, 4 * n_points>, n_ee> quaternions;
+
+            auto operator[](std::size_t index) const noexcept -> Row
+            {
+                if (index < Robot::dimension)
+                {
+                    return q[index];
+                }
+
+                index -= Robot::dimension;
+                if (index == 0)
+                {
+                    return t;
+                }
+
+                index -= 1;
+                if constexpr (Segment)
+                {
+                    if (index == 0)
+                    {
+                        return t_segment;
+                    }
+
+                    index -= 1;
+                }
+
+                if (index == 0)
+                {
+                    return weight;
+                }
+
+                index -= 1;
+                if (index < n_points)
+                {
+                    return taus[index];
+                }
+
+                index -= n_points;
+                const std::size_t e = index / (7 * n_points);
+                index -= e * 7 * n_points;
+                if (index < 3 * n_points)
+                {
+                    return positions[e][index];
+                }
+
+                return quaternions[e][index - 3 * n_points];
+            }
+        };
+
+        void upload_parameters() noexcept
+        {
+            for (auto i = 0U; i < n_points; ++i)
+            {
+                input_.taus[i] = Row::fill(static_cast<float>(taus_[i]));
+                segment_input_.taus[i] = input_.taus[i];
+            }
+        }
+
+        std::array<std::array<Eigen::Vector3d, n_points>, n_ee> positions_;
+        std::array<std::array<Eigen::Quaterniond, n_points>, n_ee> rotations_;
+        std::array<double, n_points> taus_;
+        float weight_ = 1.F;
+        bool custom_taus_ = false;
+
+        mutable InputT<false> input_;
+        mutable InputT<true> segment_input_;
+    };
 }  // namespace vamp::planning::constraint

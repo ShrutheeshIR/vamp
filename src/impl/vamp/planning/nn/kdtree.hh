@@ -163,6 +163,14 @@ namespace vamp::planning
             weight_ = weight;
         }
 
+        // Per-joint weights of the ambient coordinates in the metric (`ambient_dim` of them), for a Space with an extra
+        // coordinate; set it before inserting. Distances are then sqrt(sum (w_j dq_j)^2 + (weight dt)^2).
+        void set_joint_weights(const float *weights) noexcept
+        {
+            std::copy_n(weights, ambient_dim, joint_weights_.begin());
+            joint_weighted_ = true;
+        }
+
         void reserve(std::size_t n)
         {
             leaves_.reserve(2 * n / leaf_capacity + 2);
@@ -186,6 +194,13 @@ namespace vamp::planning
             if constexpr (extra > 0)
             {
                 qa[ambient_dim] *= weight_;
+                if (joint_weighted_)
+                {
+                    for (auto j = 0U; j < ambient_dim; ++j)
+                    {
+                        qa[j] *= joint_weights_[j];
+                    }
+                }
             }
 
             canonicalize(qa);
@@ -356,6 +371,14 @@ namespace vamp::planning
             std::array<float, dim> weighted;
             std::copy_n(q, dim, weighted.begin());
             weighted[ambient_dim] *= weight_;
+            if (joint_weighted_)
+            {
+                for (auto j = 0U; j < ambient_dim; ++j)
+                {
+                    weighted[j] *= joint_weights_[j];
+                }
+            }
+
             return weighted;
         }
 
@@ -689,6 +712,8 @@ namespace vamp::planning
 
         float prune_scale_ = 1.F;
         float weight_ = 1.F;  // of the extra coordinate, if the Space has one
+        std::array<float, ambient_dim> joint_weights_{};  // of the ambient coordinates, if joint_weighted_
+        bool joint_weighted_ = false;
         std::vector<Node> nodes_;
         std::vector<Leaf> leaves_;
         std::size_t size_ = 0;

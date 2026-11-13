@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <vector>
 
 #include <vamp/planning/planners/rrtc_settings.hh>
 
@@ -62,5 +63,19 @@ namespace vamp::planning
         // path that retreats is rarely wanted; false gives the unconstrained behaviour. It has no effect in the
         // robot's own space.
         bool monotone_t = true;
+
+        // For a Space with a curve parameter t: per-joint weights of the metric (the robot's joints, in order; empty
+        // means every weight is 1). The metric becomes sqrt(sum (w_j dq_j)^2 + (parameter_weight dt)^2): the
+        // nearest-neighbor tree, the step length (`range`), the goal walk's step and the drift guards of the projection
+        // and of the steer all measure in it. It makes joints of different units comparable (a planar base's metres
+        // against the arms' radians): the straight lines, and so the direction of a step, do not change, only how far
+        // along it a step of `range` goes and what counts as drift. Must have one entry per joint to take effect.
+        std::vector<float> joint_weights;
+
+        // For a Space with a curve parameter t: the goal walk accepts a step if it advances t (progress along the
+        // curve), instead of if the squared error to the region at the end of the curve decreases. On a curve whose hands
+        // first move away from their final pose, the error rises along the curve and the default rule stops the walk
+        // there, though every step along the curve is progress. Off by default (the error rule).
+        bool walk_by_parameter = false;
     };
 }  // namespace vamp::planning

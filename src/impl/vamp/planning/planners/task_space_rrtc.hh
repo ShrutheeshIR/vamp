@@ -85,6 +85,25 @@ namespace vamp::planning
             tree.set_epsilon(settings.nn_epsilon);
             tree.set_parameter_weight(parameter_weight);
 
+            // per-joint weights of the metric (settings.joint_weights): only in a Space with a curve parameter
+            const bool weighted_joints =
+                Traits::extra > 0 and settings.joint_weights.size() == static_cast<std::size_t>(ambient_dimension);
+            std::array<float, ambient_dimension> joint_weight;
+            std::array<float, ambient_dimension> joint_weight2;
+            for (auto j = 0U; j < ambient_dimension; ++j)
+            {
+                joint_weight[j] = (weighted_joints) ? settings.joint_weights[j] : 1.F;
+                joint_weight2[j] = joint_weight[j] * joint_weight[j];
+            }
+
+            if constexpr (Traits::extra > 0)
+            {
+                if (weighted_joints)
+                {
+                    tree.set_joint_weights(joint_weight.data());
+                }
+            }
+
             if constexpr (Traits::extra > 0)
             {
                 // the goal region is the constraint at the end of the curve
@@ -203,7 +222,7 @@ namespace vamp::planning
                     for (auto j = 0U; j < ambient_dimension; ++j)
                     {
                         next[j] = proposed[{j, 0}] - q[j];
-                        norm2 += next[j] * next[j];
+                        norm2 += next[j] * next[j] * joint_weight2[j];
                     }
 
                     // The step heads for (the region's LM point, the end of the curve): t is carried toward 1 along with
@@ -258,7 +277,14 @@ namespace vamp::planning
                         const Lane endpoint = lane_of(extension.endpoint());
                         const Block endpoint_block = broadcast(endpoint);
                         const float endpoint_error = region.squared_error(endpoint_block)[{0, 0}];
-                        if (not(endpoint_error < error))
+                        bool progressed = endpoint_error < error;
+                        if (settings.walk_by_parameter)
+                        {
+                            // progress along the curve: t advances
+                            progressed = endpoint[ambient_dimension] > q[ambient_dimension] + 1e-6F;
+                        }
+
+                        if (not progressed)
                         {
                             return;
                         }
@@ -353,7 +379,24 @@ namespace vamp::planning
                         if (Space::parameter(sample) < t_nearest)
                         {
                             target = Space::make_state(Space::to_ambient(sample), t_nearest);
-                            target_distance = Traits::distance(Configuration(buffer_index(nearest_index)), target);
+                            if (weighted_joints)
+                            {
+                                const auto node_array = Configuration(buffer_index(nearest_index)).to_array();
+                                const auto target_array = target.to_array();
+                                float d2 = 0.F;
+                                for (auto j = 0U; j < ambient_dimension; ++j)
+                                {
+                                    const float diff = target_array[j] - node_array[j];
+                                    d2 += diff * diff * joint_weight2[j];
+                                }
+
+                                const float dt = parameter_weight * (target_array[ambient_dimension] - node_array[ambient_dimension]);
+                                target_distance = std::sqrt(d2 + dt * dt);
+                            }
+                            else
+                            {
+                                target_distance = Traits::distance(Configuration(buffer_index(nearest_index)), target);
+                            }
                         }
                     }
                 }
