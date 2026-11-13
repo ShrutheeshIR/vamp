@@ -96,6 +96,10 @@ VAMP_DEFINE_ROBOT_FLAG(has_twist)
 // declare the number of points of the straight-line curves their kernels were traced for.
 VAMP_DEFINE_ROBOT_FLAG(lerp_points)
 
+// Robots generated with the joint pose-curve kernels ("lerp_so3r3_multi_constraint" and
+// "lerp_so3r3_multi_segment_constraint") declare the number of end-effectors they hold at once.
+VAMP_DEFINE_ROBOT_FLAG(lerp_multi_end_effectors)
+
 // Robots generated with attachment link tables declare `exempt_link_pairs` and `link_names`.
 template <typename T, typename = void>
 struct robot_has_exempt_link_pairs : std::false_type
@@ -648,6 +652,187 @@ namespace vamp::binding
             return out;
         }
 
+        // A copy of the manifold's curve constraints (and a CoMConstraint) as the goal region of the curve planner: the
+        // same set solve_task_space_curve builds, so that the pieces of the planner can be called one at a time (debugging).
+        static auto curve_goal_region(const ConstraintVec &manifold, const ConstraintSettings &cs) -> ConstraintSetT
+        {
+            using R3C = vamp::planning::constraint::LerpR3Constraint<Robot, rake>;
+            using PoseC = vamp::planning::constraint::LerpSO3R3Constraint<Robot, rake>;
+
+            std::vector<std::shared_ptr<const ConstraintT>> region_constraints;
+            for (const auto &constraint : manifold)
+            {
+                if (auto found = std::dynamic_pointer_cast<const R3C>(constraint))
+                {
+                    region_constraints.push_back(std::make_shared<const R3C>(found->fixed_copy()));
+                    continue;
+                }
+
+                if (auto found_pose = std::dynamic_pointer_cast<const PoseC>(constraint))
+                {
+                    region_constraints.push_back(std::make_shared<const PoseC>(found_pose->fixed_copy()));
+                    continue;
+                }
+
+                bool copied = false;
+                if constexpr (robot_lerp_multi_end_effectors_v<Robot>)
+                {
+                    using MultiC = vamp::planning::constraint::LerpSO3R3MultiConstraint<Robot, rake>;
+                    if (auto found_multi = std::dynamic_pointer_cast<const MultiC>(constraint))
+                    {
+                        region_constraints.push_back(std::make_shared<const MultiC>(found_multi->fixed_copy()));
+                        copied = true;
+                    }
+                }
+
+                if constexpr (robot_has_com_v<Robot>)
+                {
+                    using CMC = vamp::planning::constraint::CoMConstraint<Robot, rake>;
+                    if (auto found_com = std::dynamic_pointer_cast<const CMC>(constraint))
+                    {
+                        region_constraints.push_back(std::make_shared<const CMC>(*found_com));
+                        copied = true;
+                    }
+                }
+
+                if (not copied)
+                {
+                    throw std::invalid_argument(
+                        "manifold_constraints of the curve planner may hold lerp constraints and a CoMConstraint");
+                }
+            }
+
+            ConstraintSetT region(ConstraintVec(region_constraints.begin(), region_constraints.end()), cs);
+            region.set_parameter(vamp::FloatVector<rake, 1>::fill(1.F));
+            return region;
+        }
+
+        // One goal step of the curve planner's walk (task_space_rrtc.hh): the squared error of q at the goal region (the
+        // curve at t = 1) and the configuration after one Levenberg-Marquardt step toward it, before the walk clamps the
+        // step to its range. For debugging: returns (squared error, stepped joints).
+        static auto curve_goal_step(const Cfg &q_in, ConstraintVec manifold, const ConstraintSettings &cs)
+            -> std::tuple<float, std::array<float, Robot::dimension>>
+        {
+            auto region = curve_goal_region(manifold, cs);
+            const auto q = Input::to(q_in);
+            typename Robot::template ConfigurationBlock<rake> block;
+            for (auto j = 0U; j < Robot::dimension; ++j)
+            {
+                block[j] = q.broadcast(j);
+            }
+
+            const float error = region.squared_error(block)[{0, 0}];
+            auto proposed = block;
+            region.step_in_place(proposed);
+            std::array<float, Robot::dimension> stepped;
+            for (auto j = 0U; j < Robot::dimension; ++j)
+            {
+                stepped[j] = proposed[{j, 0}];
+            }
+
+            return {error, stepped};
+        }
+
+        static auto projection_info(const vamp::planning::constraint::ProjectionDiagnostics &p) -> nanobind::dict
+        {
+            using vamp::planning::constraint::ProjectionExit;
+            nanobind::dict d;
+            const char *exit = "converged";
+            switch (p.exit)
+            {
+                case ProjectionExit::Converged: exit = "converged"; break;
+                case ProjectionExit::MaxIterations: exit = "max_iterations"; break;
+                case ProjectionExit::Stalled: exit = "stalled"; break;
+                case ProjectionExit::Drifted: exit = "drifted"; break;
+            }
+
+            d["exit"] = exit;
+            d["iterations"] = static_cast<std::size_t>(p.iterations);
+            d["best_error"] = p.best_error;
+            return d;
+        }
+
+        // One extension of the curve planner, exactly as TaskSpaceRRTC::explore calls it: the constrained local planner's
+        // steer from the state (from, from_t) toward (target, target_t), `distance` apart in the planner's metric and at
+        // most `range` per step. Returns (status, joints of the waypoints, t of the waypoints), status 0 Rejected, 1
+        // Trapped (no progress: no lane projected, drift, endpoint in collision, or the traced path failed), 2 Advanced, 3
+        // Reached. For debugging the planner from Python.
+        static auto curve_steer(
+            const Cfg &from,
+            float from_t,
+            const Cfg &target,
+            float target_t,
+            float distance,
+            float range,
+            const Env &env,
+            ConstraintVec manifold,
+            const ConstraintSettings &cs)
+            -> std::tuple<
+                std::uint8_t,
+                std::vector<std::array<float, Robot::dimension>>,
+                std::vector<float>,
+                nanobind::dict>
+        {
+            using Space = vamp::planning::CurveSpace<Robot>;
+            using CurveLP = vamp::planning::constraint::ConstrainedLocalPlanner<Robot, rake, Robot::resolution, Space>;
+
+            const ConstraintSetT manifold_set(std::move(manifold), cs);
+            const CurveLP lp(manifold_set);
+            const auto a = Space::make_state(Input::to(from), from_t);
+            const auto b = Space::make_state(Input::to(target), target_t);
+            const auto extension = lp.steer(a, b, distance, range, true, make_environment<Robot>(env));
+
+            std::vector<std::array<float, Robot::dimension>> joints;
+            std::vector<float> parameters;
+            for (const auto &state : extension.waypoints)
+            {
+                const auto array = Space::to_ambient(state).to_array();
+                std::array<float, Robot::dimension> values;
+                for (auto j = 0U; j < Robot::dimension; ++j)
+                {
+                    values[j] = array[j];
+                }
+
+                joints.emplace_back(values);
+                parameters.emplace_back(Space::parameter(state));
+            }
+
+            using vamp::planning::constraint::SteerFailure;
+            const auto &diag = lp.diagnostics();
+            nanobind::dict info;
+            const char *failure = "none";
+            switch (diag.failure)
+            {
+                case SteerFailure::None: failure = "none"; break;
+                case SteerFailure::Rejected: failure = "rejected"; break;
+                case SteerFailure::NoLaneProjected: failure = "no_lane_projected"; break;
+                case SteerFailure::Drift: failure = "drift"; break;
+                case SteerFailure::EndpointCollision: failure = "endpoint_collision"; break;
+                case SteerFailure::TraceProjection: failure = "trace_projection"; break;
+                case SteerFailure::TraceContinuity: failure = "trace_continuity"; break;
+                case SteerFailure::TraceCollision: failure = "trace_collision"; break;
+                case SteerFailure::SweepProjection: failure = "sweep_projection"; break;
+                case SteerFailure::SweepDrift: failure = "sweep_drift"; break;
+                case SteerFailure::SweepCollision: failure = "sweep_collision"; break;
+            }
+
+            info["failure"] = failure;
+            info["step_length"] = diag.step_length;
+            info["drift_limit"] = diag.drift_limit;
+            info["drift"] = diag.drift;
+            info["winner_lane"] = diag.winner_lane;
+            info["projection"] = projection_info(diag.projection);
+            info["trace_chord"] = diag.trace_chord;
+            info["trace_gap"] = diag.trace_gap;
+            info["trace_allowed_gap"] = diag.trace_allowed_gap;
+            info["trace_lane"] = diag.trace_lane;
+            info["trace_substep"] = diag.trace_substep;
+            info["trace_substeps"] = diag.trace_substeps;
+            info["trace_drift2"] = diag.trace_drift;
+            info["trace_projection"] = projection_info(diag.trace_projection);
+            return {static_cast<std::uint8_t>(extension.status), joints, parameters, info};
+        }
+
         // Plan along a straight-line curve in (q, t): TaskSpaceRRTC over the robot's CurveSpace. Every state is a
         // configuration with the curve parameter t it sits at, sampled with the joints and held fixed while a state is
         // projected onto the curve (see TaskSpaceRRTCSettings::project_samples and ::parameter_weight). `manifold` has to
@@ -663,6 +848,13 @@ namespace vamp::binding
             const ConstraintSettings &cs,
             std::optional<float> start_t) -> CurveSpaceResult<Robot>
         {
+            // the metric weights of the run (s.joint_weights) reach the projections' drift guards through the settings
+            ConstraintSettings cs_run = cs;
+            if (s.joint_weights.size() == static_cast<std::size_t>(Robot::dimension))
+            {
+                cs_run.metric_weights = s.joint_weights;
+            }
+
             using Space = vamp::planning::CurveSpace<Robot>;
             using CurveLP = vamp::planning::constraint::
                 ConstrainedLocalPlanner<Robot, rake, Robot::resolution, Space>;
@@ -700,6 +892,22 @@ namespace vamp::binding
                 else
                 {
                     bool copied = false;
+                    if constexpr (robot_lerp_multi_end_effectors_v<Robot>)
+                    {
+                        using MultiC = vamp::planning::constraint::LerpSO3R3MultiConstraint<Robot, rake>;
+                        if (auto found_multi = std::dynamic_pointer_cast<const MultiC>(constraint))
+                        {
+                            if (not closest_start_t)
+                            {
+                                closest_start_t = [found_multi, q]()
+                                { return found_multi->closest_parameter(q).first; };
+                            }
+
+                            region_constraints.push_back(std::make_shared<const MultiC>(found_multi->fixed_copy()));
+                            copied = true;
+                        }
+                    }
+
                     if constexpr (robot_has_com_v<Robot>)
                     {
                         using CMC = vamp::planning::constraint::CoMConstraint<Robot, rake>;
@@ -726,9 +934,9 @@ namespace vamp::binding
 
             // a separate instance from the manifold's, which the planner gives the parameter of each state; the planner
             // holds the region at t = 1
-            ConstraintSetT region(ConstraintVec(region_constraints.begin(), region_constraints.end()), cs);
+            ConstraintSetT region(ConstraintVec(region_constraints.begin(), region_constraints.end()), cs_run);
 
-            const ConstraintSetT manifold_set(std::move(manifold), cs);
+            const ConstraintSetT manifold_set(std::move(manifold), cs_run);
 
             const float t = start_t ? *start_t : closest_start_t();
 
@@ -1676,6 +1884,113 @@ namespace vamp::binding
                         { return std::vector<double>(c.parameters().begin(), c.parameters().end()); },
                         "The curve parameter t of each point.");
 
+                if constexpr (robot_lerp_multi_end_effectors_v<Robot>)
+                {
+                    using LMulti = vc::LerpSO3R3MultiConstraint<Robot, rake>;
+
+                    nb::class_<LMulti, ConstraintT>(
+                        submodule,
+                        "LerpSO3R3MultiConstraint",
+                        "The pose curves of all the robot's end-effectors in one constraint (one curve per "
+                        "end-effector, sharing one t and one set of keyframe parameters): the stacked "
+                        "LerpSO3R3Constraint errors, 6 rows per end-effector, which a projection solves together "
+                        "(separate per-end-effector constraints step on their own and fight over the joints the "
+                        "end-effectors share). Takes, for each end-effector in the robot's order, lerp_points() "
+                        "positions (n x 3, x y z) and as many unit quaternions (n x 4, w x y z; consecutive ones "
+                        "less than 175 degrees apart), then the rotation weight (m / rad). With segment=True, t only "
+                        "picks the segment (the one the state's t is on): the poses may be anywhere on it, t is "
+                        "solved for next to the joints, one t for all the end-effectors.")
+                        .def(
+                            nb::init<
+                                const std::array<typename LMulti::Positions, LMulti::n_ee> &,
+                                const std::array<typename LMulti::Quaternions, LMulti::n_ee> &,
+                                float,
+                                bool>(),
+                            "points"_a,
+                            "rotations"_a,
+                            "rotation_weight"_a = 1.0F,
+                            "segment"_a = false)
+                        .def_prop_ro(
+                            "n_end_effectors",
+                            [](const LMulti &) { return LMulti::n_ee; },
+                            "The number of end-effectors whose curves it holds.")
+                        .def(
+                            "set_parameters",
+                            [](LMulti &c, const std::vector<double> &taus)
+                            {
+                                if (taus.size() != LMulti::n_points)
+                                {
+                                    throw std::invalid_argument("expected one parameter per point (lerp_points())");
+                                }
+
+                                std::array<double, LMulti::n_points> array;
+                                std::copy(taus.begin(), taus.end(), array.begin());
+                                c.set_parameters(array);
+                            },
+                            "parameters"_a,
+                            "Use these parameters for the points (strictly increasing, from 0 to 1) instead of the "
+                            "normalized segment lengths.")
+                        .def_prop_ro(
+                            "segment",
+                            [](const LMulti &c) { return c.segment_form(); },
+                            "Whether this is the segment form (t solved for on its segment) and not the fixed form.")
+                        .def(
+                            "projection_trail",
+                            [](const LMulti &c,
+                               const std::array<float, Robot::dimension> &q,
+                               float t,
+                               vc::ProjMethod method,
+                               float tolerance,
+                               std::size_t max_iterations,
+                               float alpha)
+                            { return lerp_projection_trail<Robot>(c, q, t, method, tolerance, max_iterations, alpha); },
+                            "q"_a,
+                            "t"_a,
+                            "method"_a,
+                            "tolerance"_a = 1e-8F,
+                            "max_iterations"_a = 50,
+                            "alpha"_a = 1.0F,
+                            "The iterates of one projection from (q, t): a list of (joints, t, squared error), at the "
+                            "start and after each step, until the error is within tolerance or max_iterations steps.")
+                        .def_prop_rw(
+                            "rotation_weight",
+                            &LMulti::rotation_weight,
+                            &LMulti::set_rotation_weight,
+                            "The weight (m / rad) of the rotation error; setting it recomputes the parameters of the "
+                            "points (unless set_parameters gave them).")
+                        .def(
+                            "value",
+                            [](const LMulti &c, std::size_t e, double t)
+                                -> std::tuple<std::array<double, 3>, std::array<double, 4>>
+                            {
+                                if (e >= LMulti::n_ee)
+                                {
+                                    throw std::invalid_argument("no such end-effector");
+                                }
+
+                                const auto [position, rotation] = c.value(e, t);
+                                return {
+                                    std::array<double, 3>{position[0], position[1], position[2]},
+                                    std::array<double, 4>{rotation.w(), rotation.x(), rotation.y(), rotation.z()}};
+                            },
+                            "end_effector"_a,
+                            "t"_a,
+                            "The pose of end-effector's curve at t: (position, quaternion w x y z).")
+                        .def(
+                            "closest_t",
+                            [](const LMulti &c, const std::array<float, Robot::dimension> &q)
+                                -> std::tuple<float, float>
+                            { return c.closest_parameter(typename Robot::Configuration(q)); },
+                            "q"_a,
+                            "The t whose poses on the curves are closest to the end-effectors at q, in the curves' "
+                            "metric summed over the end-effectors: (t, squared distance).")
+                        .def(
+                            "parameters",
+                            [](const LMulti &c)
+                            { return std::vector<double>(c.parameters().begin(), c.parameters().end()); },
+                            "The curve parameter t of each point.");
+                }
+
                 // numpy and plain-list inputs, as for the other planners
                 const auto def_curve_planner = [&](auto traits)
                 {
@@ -1725,6 +2040,48 @@ namespace vamp::binding
 
                 def_curve_interpolation(TA{});
                 def_curve_interpolation(TC{});
+
+                // pieces of the curve planner, for debugging it from Python
+                const auto def_curve_pieces = [&](auto traits)
+                {
+                    using Traits = decltype(traits);
+                    submodule.def(
+                        "curve_steer",
+                        &Traits::curve_steer,
+                        "start"_a,
+                        "start_t"_a,
+                        "target"_a,
+                        "target_t"_a,
+                        "distance"_a,
+                        "range"_a,
+                        "environment"_a,
+                        "manifold_constraints"_a,
+                        "constraint_settings"_a = vc::ConstraintSettings{},
+                        "One extension of task_space_rrtc_curve, as its explore step calls it: the constrained local "
+                        "planner's steer from (start, start_t) toward (target, target_t), `distance` apart in the "
+                        "planner's metric (joints and parameter_weight * dt) and at most `range` per step. Returns "
+                        "(status, joints, t, info): status 0 Rejected, 1 Trapped, 2 Advanced, 3 Reached; the joints and t "
+                        "of the waypoints of the extension (empty if Trapped); info, a dict of why the steer ended: "
+                        "failure ('none', 'rejected', 'no_lane_projected', 'drift', 'endpoint_collision', "
+                        "'trace_projection', 'trace_continuity', 'trace_collision', 'sweep_projection', 'sweep_drift', "
+                        "'sweep_collision'), the step length and drift limit, the winning lane and the drift of its "
+                        "endpoint, how the steer's projection ended (exit 'converged', 'max_iterations', 'stalled' or "
+                        "'drifted', iterations, best squared error) and, for the trace of the local path, the chord, the "
+                        "largest lane gap against the allowed one, the failing lane or sweep substep, and how its "
+                        "projection ended.");
+                    submodule.def(
+                        "curve_goal_step",
+                        &Traits::curve_goal_step,
+                        "configuration"_a,
+                        "manifold_constraints"_a,
+                        "constraint_settings"_a = vc::ConstraintSettings{},
+                        "The goal step of task_space_rrtc_curve's walk from a configuration: (squared error of the "
+                        "configuration at the goal region, the curve at t = 1 with the manifold's other constraints, and "
+                        "the joints after one Levenberg-Marquardt step toward it, before the walk clamps the step).");
+                };
+
+                def_curve_pieces(TA{});
+                def_curve_pieces(TC{});
             }
 
             bind_constraint_methods<TA>(submodule);

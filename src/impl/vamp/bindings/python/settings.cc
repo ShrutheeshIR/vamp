@@ -39,7 +39,9 @@ void vamp::binding::init_settings(nanobind::module_ &pymodule)
         .def_rw("project_samples", &vp::TaskSpaceRRTCSettings::project_samples)
         .def_rw("parameter_weight", &vp::TaskSpaceRRTCSettings::parameter_weight)
         .def_rw("interpolate_step", &vp::TaskSpaceRRTCSettings::interpolate_step)
-        .def_rw("monotone_t", &vp::TaskSpaceRRTCSettings::monotone_t);
+        .def_rw("monotone_t", &vp::TaskSpaceRRTCSettings::monotone_t)
+        .def_rw("joint_weights", &vp::TaskSpaceRRTCSettings::joint_weights)
+        .def_rw("walk_by_parameter", &vp::TaskSpaceRRTCSettings::walk_by_parameter);
 
     nb::class_<vp::AORRTCSettings>(pymodule, "AORRTCSettings")
         .def(nb::init<>())
@@ -138,6 +140,7 @@ void vamp::binding::init_settings(nanobind::module_ &pymodule)
         .def_rw("descend_rate", &vc::ConstraintSettings::descend_rate)
         .def_rw("tolerance", &vc::ConstraintSettings::tolerance)
         .def_rw("max_iterations", &vc::ConstraintSettings::max_iterations)
+        .def_rw("metric_weights", &vc::ConstraintSettings::metric_weights)
         .def_rw("perturbation_scale", &vc::ConstraintSettings::perturbation_scale)
         .def_rw("emit_all_waypoints", &vc::ConstraintSettings::emit_all_waypoints)
         .def_rw("connect_slack", &vc::ConstraintSettings::connect_slack)
