@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
+#include <unordered_set>
 #include <chrono>
 #include <cmath>
 #include <limits>
@@ -71,6 +73,15 @@ namespace vamp::planning
         {
             size_t extend_counter_failed = 0;
             size_t extend_counter_succeeded = 0;
+            size_t explore_calls = 0;
+            std::array<std::size_t, 12> explore_failures{};  // diagnostics: by SteerFailure (index 11: ok)
+            std::array<std::size_t, 12> walk_failures{};
+            size_t monotone_rejects = 0;
+            size_t walk_steps = 0;
+            std::array<std::size_t, 9> dt_ahead{};   // diagnostics: |t(sample) - t(nearest node)|, sample ahead of the node; log bins <1e-4,3e-4,1e-3,3e-3,0.01,0.03,0.1,0.3,>=0.3
+            std::array<std::size_t, 9> dt_behind{};  // same, sample behind the node
+            size_t sample_project_failures = 0;
+            std::array<std::size_t, 21> pick_bins{};  // diagnostics: t of the node picked as nearest, 0.01 wide bins up to 0.2
 
             PlanningResult<Robot, Space> result;
             const auto start_time = std::chrono::steady_clock::now();
@@ -83,7 +94,41 @@ namespace vamp::planning
             NN<Space> tree;
             tree.reserve(settings.max_samples);
             tree.set_epsilon(settings.nn_epsilon);
-            tree.set_parameter_weight(parameter_weight);
+            const bool thinning = settings.walk_keep_fraction > 0.F and settings.walk_keep_fraction < 1.F;
+            const std::size_t capacity =
+                thinning ? settings.max_samples * static_cast<std::size_t>(std::ceil(2.F / settings.walk_keep_fraction))
+                         : settings.max_samples;
+            std::vector<float> radii(capacity + 1, std::numeric_limits<float>::max());
+            std::array<std::size_t, 4> proj_exit{};   // diagnostics: how the projection ended in steers that failed with NoLaneProjected (Converged, MaxIterations, Stalled, Drifted)
+            std::array<std::size_t, 9> proj_err{};    // and sqrt(best squared error) of those: log bins <1e-3,3e-3,0.01,0.03,0.1,0.3,1,3,>=3
+            std::array<std::size_t, 2> drift_kind{};   // diagnostics: Drifted projections that tripped on the move from the previous iterate / from the start
+            std::array<std::size_t, 10> t_all{};      // node t (0.1 bins) of every steer
+            std::array<std::size_t, 10> t_noproj{};   // node t of steers that failed with NoLaneProjected
+            std::array<std::size_t, 9> base_noproj{}; // largest move (m) of the base-xy joints (metric weight < 0.5) in the step: NoLaneProjected steers, log bins <0.01,0.03,0.1,0.3,1,3,10,30,>=30
+            std::array<std::size_t, 9> base_ok{};     // the same for steers that worked
+            std::array<std::size_t, 6> drift_thr{};    // threshold of Drifted projections, bins <0.1,0.3,1,2,3,>=3 (weighted joint distance)
+            std::array<std::size_t, 7> drift_ratio_prev{};   // (move of the last iteration) / threshold at the trip: bins <1.1,<1.5,<2,<5,<20,<100,>=100
+            std::array<std::size_t, 2> att_calls{}, att_ok{}, att_walks{}, att_walks_past{};  // by attempt kind: 0 nearest-neighbor, 1 frontier
+            std::size_t cur_mode = 0;
+            static constexpr std::size_t state_dim_cap = Traits::extra > 0 ? ambient_dimension + 1 : ambient_dimension;
+            std::vector<std::size_t> drift_examples;   // captured drift failures: per example 4 scalars + node + target + projected states, floats as (x + 100) * 1e6
+            std::size_t drift_seen = 0;
+            std::array<std::array<std::size_t, 12>, 2> fail_mode{};   // explore outcomes by SteerFailure (11 ok), per attempt kind
+            std::array<std::array<std::size_t, 5>, 2> drift_step{};   // step length at Drift failures, per attempt kind: <1/32,<0.1,<0.3,<range,>=range
+            static constexpr std::size_t n_t_bins = 200;
+            std::vector<std::vector<std::size_t>> t_bins(n_t_bins);   // node indices by t (width 1 / n_t_bins), for the frontier draw
+            std::uint32_t front_state = 88172645U;
+            std::vector<std::pair<float, std::size_t>> top_nodes;   // the nodes with the highest t, sorted by t descending (size <= frontier_pool)
+            std::size_t frontier_index = 0;       // the node with the highest t so far
+            std::size_t walks_total = 0, walks_past = 0, walks_cap = 0;  // walks run, ended with t past the frontier at their start, used all max_greedy_steps attempts
+            std::array<std::size_t, 8> walk_gap{}, walk_gap_past{};      // (frontier t at start) - (start node t), same bins as pick_gap; and those that passed the frontier
+            std::array<std::size_t, 8> pick_gap{};    // diagnostics: (highest t in the tree) - (t of the picked node); log bins <1e-3,3e-3,.01,.03,.1,.3,.6,>=.6
+            float t_front = 0.F;                      // the highest t of any node so far
+            std::array<std::size_t, 7> drift_ratio_start{};  // (distance from the start) / threshold, same bins
+            std::size_t proj_iters = 0;               // sum of their projection iterations
+            std::size_t dd_rejects = 0;  // diagnostics: samples dropped because they lie outside the nearest node's domain
+            const bool separate_nn_weight = Traits::extra > 0 and settings.nn_parameter_weight >= 0.F;
+            tree.set_parameter_weight(separate_nn_weight ? settings.nn_parameter_weight : parameter_weight);
 
             // per-joint weights of the metric (settings.joint_weights): only in a Space with a curve parameter
             const bool weighted_joints =
@@ -111,9 +156,9 @@ namespace vamp::planning
             }
 
             auto buffer = vamp::utils::buffer_alloc<float, FloatVectorAlignment>(
-                settings.max_samples * Configuration::num_scalars_rounded);
+                capacity * Configuration::num_scalars_rounded);
             auto parents =
-                vamp::utils::buffer_alloc<std::size_t, FloatVectorAlignment>(settings.max_samples);
+                vamp::utils::buffer_alloc<std::size_t, FloatVectorAlignment>(capacity);
 
             const auto buffer_index = [&buffer](std::size_t index) -> float *
             { return buffer.get() + index * Configuration::num_scalars_rounded; };
@@ -122,18 +167,85 @@ namespace vamp::planning
             std::size_t iter = 0;
             const float walk_range = (settings.walk_range > 0.F) ? settings.walk_range : settings.range;
 
+            // diagnostics: why a steer failed (the constraint local planner's SteerFailure; 11: it did not)
+            const auto failure_index = [&](const auto &ext) -> std::size_t
+            {
+                if (ext.status != SteerStatus::Trapped and ext.status != SteerStatus::Rejected)
+                {
+                    return 11;
+                }
+
+                if constexpr (LocalPlanner::projecting)
+                {
+                    return static_cast<std::size_t>(lp.diagnostics().failure);
+                }
+                else
+                {
+                    return 0;
+                }
+            };
+
             std::size_t free_index = 0;
+            std::size_t tree_count = 0;       // nodes in the nearest-neighbor tree (all nodes unless the walk thins them)
+            bool deferring = false;           // while a walk runs under thinning, its nodes wait for the tree decision
+            std::vector<std::size_t> pending;
+            std::uint32_t thin_state = 2463534242U;
+            std::uint32_t base_state = 1812433253U;
+            const auto xorshift01 = [](std::uint32_t &st)
+            {
+                st ^= st << 13;
+                st ^= st >> 17;
+                st ^= st << 5;
+                return static_cast<float>(st >> 8) / 16777216.F;
+            };
+            const auto has_room = [&]() { return free_index < capacity and tree_count < settings.max_samples; };
             const auto add_node = [&](const Configuration &c, std::size_t parent) -> std::optional<std::size_t>
             {
-                if (free_index >= settings.max_samples)
+                if (free_index >= capacity or (not deferring and tree_count >= settings.max_samples))
                 {
                     return std::nullopt;
                 }
 
                 float *ptr = buffer_index(free_index);
                 c.to_array(ptr);
-                tree.insert(free_index, ptr);
+                if (deferring)
+                {
+                    pending.push_back(free_index);
+                }
+                else
+                {
+                    tree.insert(free_index, ptr);
+                    tree_count++;
+                }
+
                 parents[free_index] = (free_index == 0) ? 0 : parent;
+                if constexpr (Traits::extra > 0)
+                {
+                    t_bins[std::min<std::size_t>(n_t_bins - 1, static_cast<std::size_t>(std::max(0.F, ptr[ambient_dimension]) * static_cast<float>(n_t_bins)))].push_back(free_index);
+                    if (settings.frontier_pool > 1)
+                    {
+                        const float tn = ptr[ambient_dimension];
+                        if (top_nodes.size() < settings.frontier_pool or tn > top_nodes.back().first)
+                        {
+                            top_nodes.emplace_back(tn, free_index);
+                            std::size_t i = top_nodes.size() - 1;
+                            while (i > 0 and top_nodes[i].first > top_nodes[i - 1].first)
+                            {
+                                std::swap(top_nodes[i], top_nodes[i - 1]);
+                                --i;
+                            }
+
+                            if (top_nodes.size() > settings.frontier_pool) { top_nodes.pop_back(); }
+                        }
+                    }
+
+                    if (ptr[ambient_dimension] > t_front or free_index == 0)
+                    {
+                        t_front = ptr[ambient_dimension];
+                        frontier_index = free_index;
+                    }
+                }
+
                 return free_index++;
             };
 
@@ -198,7 +310,7 @@ namespace vamp::planning
             };
 
             // Greedy walk from `node` toward the region: one clamped LM step per added node.
-            const auto walk = [&](std::size_t node)
+            const auto walk_impl = [&](std::size_t node)
             {
                 std::size_t current = node;
                 Lane q = load(current);
@@ -263,6 +375,8 @@ namespace vamp::planning
                         const float step_length = std::min(norm, settings.range);
                         const auto extension = lp.steer(
                             Configuration(buffer_index(current)), target, step_length, settings.range, true, environment);
+                        walk_steps++;
+                        walk_failures[failure_index(extension)]++;
 
                         if (extension.status == SteerStatus::Trapped or extension.status == SteerStatus::Rejected)
                         {
@@ -343,35 +457,200 @@ namespace vamp::planning
                 }
             };
 
+            const auto walk = [&](std::size_t node)
+            {
+                const float front0 = t_front;
+                const std::size_t steps0 = walk_steps;
+                const float gap = front0 - buffer_index(node)[ambient_dimension];
+                if (thinning)
+                {
+                    deferring = true;
+                    pending.clear();
+                }
+
+                walk_impl(node);
+                if (thinning)
+                {
+                    deferring = false;
+                    const std::size_t n = pending.size();
+                    for (std::size_t k = 0; k < n; ++k)
+                    {
+                        thin_state ^= thin_state << 13;
+                        thin_state ^= thin_state >> 17;
+                        thin_state ^= thin_state << 5;
+                        const float u = static_cast<float>(thin_state >> 8) / 16777216.F;
+                        const float p = std::min(1.F, 2.F * settings.walk_keep_fraction * static_cast<float>(k + 1) / static_cast<float>(n + 1));
+                        if ((k + 1 == n or u < p) and tree_count < settings.max_samples)
+                        {
+                            tree.insert(pending[k], buffer_index(pending[k]));
+                            tree_count++;
+                        }
+                    }
+                }
+
+                walks_total++;
+                static constexpr std::array<float, 7> wedges{1e-3F, 3e-3F, 0.01F, 0.03F, 0.1F, 0.3F, 0.6F};
+                std::size_t wb = 7;
+                for (std::size_t e = 0; e < 7; ++e) { if (gap < wedges[e]) { wb = e; break; } }
+                walk_gap[wb]++;
+                att_walks[cur_mode]++;
+                if (t_front > front0 + 1e-6F) { walks_past++; walk_gap_past[wb]++; att_walks_past[cur_mode]++; }
+                if (walk_steps - steps0 >= settings.max_greedy_steps) { walks_cap++; }
+            };
+
             // Straight-line extension of the nearest node toward a random sample; returns the
             // node added, if any.
-            const auto explore = [&]() -> std::optional<std::size_t>
+            const auto sample_frontier = [&]() -> std::size_t
             {
-                auto sample = rng->next();
+                if (settings.frontier_tau <= 0.F)
+                {
+                    if (settings.frontier_pool > 1 and not top_nodes.empty())
+                    {
+                        thin_state ^= thin_state << 13;
+                        thin_state ^= thin_state >> 17;
+                        thin_state ^= thin_state << 5;
+                        return top_nodes[(thin_state >> 8) % top_nodes.size()].second;
+                    }
+
+                    return frontier_index;
+                }
+
+                const float tau = settings.frontier_tau;
+                const float width = 1.F / static_cast<float>(n_t_bins);
+                const std::size_t top = std::min<std::size_t>(n_t_bins - 1, static_cast<std::size_t>(std::max(0.F, t_front) * static_cast<float>(n_t_bins)));
+                const auto level_weight = [&](std::size_t b) -> float
+                {
+                    if (t_bins[b].empty()) { return 0.F; }
+                    const float tb = (b == top) ? t_front : (static_cast<float>(b) + 0.5F) * width;
+                    const float delta = t_front - tb;
+                    return (delta > 9.F * tau) ? 0.F : std::exp(-delta / tau);
+                };
+                const auto next01 = [&]()
+                {
+                    front_state ^= front_state << 13;
+                    front_state ^= front_state >> 17;
+                    front_state ^= front_state << 5;
+                    return static_cast<float>(front_state >> 8) / 16777216.F;
+                };
+
+                float total = 0.F;
+                for (std::size_t b = top + 1; b-- > 0;)
+                {
+                    const float w = level_weight(b);
+                    if (w == 0.F and static_cast<float>(top - b) * width > 9.F * tau) { break; }
+                    total += w;
+                }
+
+                float u = next01() * total;
+                std::size_t chosen = top;
+                for (std::size_t b = top + 1; b-- > 0;)
+                {
+                    const float w = level_weight(b);
+                    if (w > 0.F) { chosen = b; if (u < w) { break; } u -= w; }
+                    if (static_cast<float>(top - b) * width > 9.F * tau) { break; }
+                }
+
+                const auto &level = t_bins[chosen];
+                return level[static_cast<std::size_t>(next01() * static_cast<float>(level.size())) % level.size()];
+            };
+
+            using SampleType = std::decay_t<decltype(rng->next())>;
+            std::optional<SampleType> shared_sample;
+            const auto explore = [&](std::size_t mode) -> std::optional<std::size_t>
+            {
+                explore_calls++;
+                cur_mode = mode;
+                const bool reuse = (mode == 0 and shared_sample.has_value());
+                auto sample = reuse ? *shared_sample : rng->next();
+                if (mode == 0)
+                {
+                    shared_sample.reset();
+                }
 
                 if constexpr (LocalPlanner::projecting)
                 {
                     // A sample on the manifold (at its own parameter), so the nearest node is the nearest on it
                     if (settings.project_samples and not lp.project(sample))
                     {
+                        sample_project_failures++;
                         return std::nullopt;
                     }
+                }
+
+                if (mode == 1)
+                {
+                    shared_sample = sample;
                 }
 
                 typename Traits::StateBuffer sample_array;
                 sample.to_array(sample_array.data());
 
-                const auto nearest = tree.nearest(sample_array.data());
-                if (not nearest)
+                std::size_t nearest_index = (mode == 1) ? sample_frontier() : frontier_index;
+                float nearest_distance = 0.F;
+                if (mode == 0)
                 {
+                    const auto nearest = tree.nearest(sample_array.data());
+                    if (not nearest)
+                    {
+                        return std::nullopt;
+                    }
+
+                    nearest_index = nearest->first;
+                    nearest_distance = nearest->second;
+                }
+
+                if (settings.dynamic_domain and radii[nearest_index] < nearest_distance)
+                {
+                    dd_rejects++;
                     return std::nullopt;
                 }
 
-                const auto [nearest_index, nearest_distance] = *nearest;
+                if constexpr (Traits::extra > 0)
+                {
+                    const float pick_t = buffer_index(nearest_index)[ambient_dimension];
+                    pick_bins[std::min<std::size_t>(20, static_cast<std::size_t>(std::max(0.F, pick_t) * 100.F))]++;
+                    {
+                        const float gap = t_front - pick_t;
+                        static constexpr std::array<float, 7> gedges{1e-3F, 3e-3F, 0.01F, 0.03F, 0.1F, 0.3F, 0.6F};
+                        std::size_t gb = 7;
+                        for (std::size_t e = 0; e < 7; ++e) { if (gap < gedges[e]) { gb = e; break; } }
+                        pick_gap[gb]++;
+                    }
+                    {
+                        const float dts = sample_array[ambient_dimension] - pick_t;
+                        const float a = std::fabs(dts);
+                        static constexpr std::array<float, 8> edges{1e-4F, 3e-4F, 1e-3F, 3e-3F, 0.01F, 0.03F, 0.1F, 0.3F};
+                        std::size_t bin = 8;
+                        for (std::size_t e = 0; e < 8; ++e) { if (a < edges[e]) { bin = e; break; } }
+                        (dts >= 0.F ? dt_ahead : dt_behind)[bin]++;
+                    }
+                }
+
                 auto target = sample;
                 float target_distance = nearest_distance;
                 if constexpr (Traits::extra > 0)
                 {
+                    // the tree measured with its own weight of t: the step is measured with the run's
+                    const auto step_distance = [&](const auto &to)
+                    {
+                        const auto node_array = Configuration(buffer_index(nearest_index)).to_array();
+                        const auto to_array = to.to_array();
+                        float d2 = 0.F;
+                        for (auto j = 0U; j < ambient_dimension; ++j)
+                        {
+                            const float diff = to_array[j] - node_array[j];
+                            d2 += diff * diff * joint_weight2[j];
+                        }
+
+                        const float dt = parameter_weight * (to_array[ambient_dimension] - node_array[ambient_dimension]);
+                        return std::sqrt(d2 + dt * dt);
+                    };
+
+                    if (separate_nn_weight)
+                    {
+                        target_distance = step_distance(sample);
+                    }
+
                     // monotone_t: a sample behind the nearest node in t is steered toward at the node's t
                     if (settings.monotone_t)
                     {
@@ -379,7 +658,11 @@ namespace vamp::planning
                         if (Space::parameter(sample) < t_nearest)
                         {
                             target = Space::make_state(Space::to_ambient(sample), t_nearest);
-                            if (weighted_joints)
+                            if (separate_nn_weight)
+                            {
+                                target_distance = step_distance(target);
+                            }
+                            else if (weighted_joints)
                             {
                                 const auto node_array = Configuration(buffer_index(nearest_index)).to_array();
                                 const auto target_array = target.to_array();
@@ -401,6 +684,110 @@ namespace vamp::planning
                     }
                 }
 
+                if constexpr (Traits::extra > 0)
+                {
+                    if (settings.t_step_cap > 0.F)
+                    {
+                        // decoupled step: the joints move by at most `range` toward the sample (joint metric alone), t by at most t_step_cap
+                        const auto node_array = Configuration(buffer_index(nearest_index)).to_array();
+                        auto target_array = target.to_array();
+                        const bool own_base_step = settings.base_step_max > 0.F;
+                        const bool feedforward = settings.base_feedforward and settings.ref_t.size() >= 2 and
+                                                 settings.ref_xy.size() == 2 * settings.ref_t.size();
+                        const auto fixed = [&](std::size_t j)
+                        { return (settings.step_fix_base_xy or own_base_step or feedforward) and joint_weight[j] < 0.5F; };
+                        float d2 = 0.F;
+                        for (auto j = 0U; j < ambient_dimension; ++j)
+                        {
+                            if (fixed(j)) { continue; }
+                            const float diff = target_array[j] - node_array[j];
+                            d2 += diff * diff * joint_weight2[j];
+                        }
+
+                        const float dq = std::sqrt(d2);
+                        const float fraction = (dq > settings.range) ? settings.range / dq : 1.F;
+                        const float dt = target_array[ambient_dimension] - node_array[ambient_dimension];
+                        const float t_move = std::max(-settings.t_step_cap, std::min(settings.t_step_cap, dt));
+                        for (auto j = 0U; j < ambient_dimension; ++j)
+                        {
+                            target_array[j] = fixed(j) ? node_array[j] : node_array[j] + (target_array[j] - node_array[j]) * fraction;
+                        }
+
+                        if (feedforward)
+                        {
+                            // hands' xy centroid at t, interpolated along the reference
+                            const auto centroid = [&](float t, float &cx, float &cy)
+                            {
+                                const auto &rt = settings.ref_t;
+                                const auto &rxy = settings.ref_xy;
+                                const std::size_t n = rt.size();
+                                std::size_t hi = std::upper_bound(rt.begin(), rt.end(), t) - rt.begin();
+                                hi = std::min(std::max<std::size_t>(hi, 1), n - 1);
+                                const std::size_t lo = hi - 1;
+                                const float span = rt[hi] - rt[lo];
+                                const float u = span > 1e-9F ? std::min(1.F, std::max(0.F, (t - rt[lo]) / span)) : 0.F;
+                                cx = rxy[2 * lo] + u * (rxy[2 * hi] - rxy[2 * lo]);
+                                cy = rxy[2 * lo + 1] + u * (rxy[2 * hi + 1] - rxy[2 * lo + 1]);
+                            };
+                            std::array<std::size_t, 2> bj{0, 0};
+                            std::size_t seen = 0;
+                            for (auto j = 0U; j < ambient_dimension and seen < 2; ++j)
+                            {
+                                if (joint_weight[j] < 0.5F) { bj[seen++] = j; }
+                            }
+
+                            const float t_node = node_array[ambient_dimension];
+                            float c0x, c0y, c1x, c1y;
+                            centroid(t_node, c0x, c0y);
+                            centroid(t_node + t_move, c1x, c1y);
+                            float ex = 0.F, ey = 0.F;
+                            if (free_index >= 2 and seen == 2)
+                            {
+                                const auto offset = [&](std::size_t i, float &ox, float &oy)
+                                {
+                                    const float *node = buffer_index(i);
+                                    float cx, cy;
+                                    centroid(node[ambient_dimension], cx, cy);
+                                    ox = node[bj[0]] - cx;
+                                    oy = node[bj[1]] - cy;
+                                };
+                                float ax, ay, bx, by;
+                                offset(static_cast<std::size_t>(xorshift01(base_state) * static_cast<float>(free_index)) % free_index, ax, ay);
+                                offset(static_cast<std::size_t>(xorshift01(base_state) * static_cast<float>(free_index)) % free_index, bx, by);
+                                ex = ax - bx;
+                                ey = ay - by;
+                            }
+
+                            if (seen == 2)
+                            {
+                                target_array[bj[0]] = node_array[bj[0]] + (c1x - c0x) + ex;
+                                target_array[bj[1]] = node_array[bj[1]] + (c1y - c0y) + ey;
+                            }
+                        }
+
+                        if (own_base_step)
+                        {
+                            // a step of the base of its own: random direction, length log-uniform in [base_step_min, base_step_max]
+                            const float lo_len = std::max(settings.base_step_min, 1e-4F);
+                            const float len = lo_len * std::pow(settings.base_step_max / lo_len, xorshift01(base_state));
+                            const float angle = 6.2831853F * xorshift01(base_state);
+                            std::size_t seen = 0;
+                            for (auto j = 0U; j < ambient_dimension and seen < 2; ++j)
+                            {
+                                if (joint_weight[j] < 0.5F)
+                                {
+                                    target_array[j] = node_array[j] + len * (seen == 0 ? std::cos(angle) : std::sin(angle));
+                                    seen++;
+                                }
+                            }
+                        }
+
+                        target_array[ambient_dimension] = node_array[ambient_dimension] + t_move;
+                        target = Configuration(target_array);
+                        target_distance = std::min(dq, settings.range);
+                    }
+                }
+
                 const auto extension = lp.steer(
                     Configuration(buffer_index(nearest_index)),
                     target,
@@ -408,9 +795,102 @@ namespace vamp::planning
                     settings.range,
                     true,
                     environment);
+                explore_failures[failure_index(extension)]++;
+                fail_mode[cur_mode][failure_index(extension)]++;
+                if constexpr (LocalPlanner::projecting)
+                {
+                    if (failure_index(extension) == 3)
+                    {
+                        if (settings.capture_drift > 0 and (drift_seen++ % 50) == 0 and
+                            drift_examples.size() < settings.capture_drift * (4 + 3 * state_dim_cap))
+                        {
+                            const auto enc = [](float x) { return static_cast<std::size_t>((x + 100.F) * 1e6F); };
+                            const auto node_arr = Configuration(buffer_index(nearest_index)).to_array();
+                            const auto targ_arr = target.to_array();
+                            const auto &dg = lp.diagnostics();
+                            drift_examples.push_back(enc(static_cast<float>(cur_mode)));
+                            drift_examples.push_back(enc(dg.drift));
+                            drift_examples.push_back(enc(dg.step_length));
+                            drift_examples.push_back(enc(static_cast<float>(dg.projection.iterations)));
+                            for (std::size_t j = 0; j < state_dim_cap; ++j) { drift_examples.push_back(enc(node_arr[j])); }
+                            for (std::size_t j = 0; j < state_dim_cap; ++j) { drift_examples.push_back(enc(targ_arr[j])); }
+                            for (std::size_t j = 0; j < state_dim_cap; ++j) { drift_examples.push_back(enc(dg.endpoint[j])); }
+                        }
+
+                        const float sl = lp.diagnostics().step_length;
+                        drift_step[cur_mode][(sl < 0.03125F) ? 0 : (sl < 0.1F) ? 1 : (sl < 0.3F) ? 2 : (sl < settings.range * 0.999F) ? 3 : 4]++;
+                    }
+                }
+                if constexpr (Traits::extra > 0)
+                {
+                    const auto na = Configuration(buffer_index(nearest_index)).to_array();
+                    const auto ta = target.to_array();
+                    const float sc = (target_distance > settings.range) ? settings.range / target_distance : 1.F;
+                    float disp = 0.F;
+                    for (auto j = 0U; j < ambient_dimension; ++j)
+                    {
+                        if (joint_weight[j] < 0.5F) { disp = std::max(disp, std::fabs(ta[j] - na[j]) * sc); }
+                    }
+
+                    static constexpr std::array<float, 8> bedges{0.01F, 0.03F, 0.1F, 0.3F, 1.F, 3.F, 10.F, 30.F};
+                    std::size_t bb = 8;
+                    for (std::size_t k = 0; k < 8; ++k) { if (disp < bedges[k]) { bb = k; break; } }
+                    const auto tb = std::min<std::size_t>(9, static_cast<std::size_t>(std::max(0.F, na[ambient_dimension]) * 10.F));
+                    t_all[tb]++;
+                    const bool failed = extension.status == SteerStatus::Trapped or extension.status == SteerStatus::Rejected;
+                    if (not failed) { base_ok[bb]++; }
+                    if constexpr (LocalPlanner::projecting)
+                    {
+                        if (failed and static_cast<std::size_t>(lp.diagnostics().failure) == 2)
+                        {
+                            base_noproj[bb]++;
+                            t_noproj[tb]++;
+                        }
+                    }
+                }
+
+                if constexpr (LocalPlanner::projecting)
+                {
+                    if ((extension.status == SteerStatus::Trapped or extension.status == SteerStatus::Rejected) and
+                        static_cast<std::size_t>(lp.diagnostics().failure) == 2)
+                    {
+                        const auto &pd = lp.diagnostics().projection;
+                        proj_exit[std::min<std::size_t>(3, static_cast<std::size_t>(pd.exit))]++;
+                        proj_iters += pd.iterations;
+                        if (pd.exit == constraint::ProjectionExit::Drifted) { drift_kind[pd.drift_from_start ? 1 : 0]++; }
+                        if (pd.exit == constraint::ProjectionExit::Drifted)
+                        {
+                            static constexpr std::array<float, 5> tedges{0.1F, 0.3F, 1.F, 2.F, 3.F};
+                            std::size_t tb2 = 5;
+                            for (std::size_t k = 0; k < 5; ++k) { if (pd.drift_threshold < tedges[k]) { tb2 = k; break; } }
+                            drift_thr[tb2]++;
+                            static constexpr std::array<float, 6> redges{1.1F, 1.5F, 2.F, 5.F, 20.F, 100.F};
+                            const float th = std::max(pd.drift_threshold, 1e-9F);
+                            std::size_t rb = 6;
+                            for (std::size_t k = 0; k < 6; ++k) { if (pd.drift_move_prev / th < redges[k]) { rb = k; break; } }
+                            drift_ratio_prev[rb]++;
+                            rb = 6;
+                            for (std::size_t k = 0; k < 6; ++k) { if (pd.drift_move_start / th < redges[k]) { rb = k; break; } }
+                            drift_ratio_start[rb]++;
+                        }
+                        static constexpr std::array<float, 8> pedges{1e-3F, 3e-3F, 0.01F, 0.03F, 0.1F, 0.3F, 1.F, 3.F};
+                        const float e = std::sqrt(std::max(0.F, pd.best_error));
+                        std::size_t b = 8;
+                        for (std::size_t k = 0; k < 8; ++k) { if (e < pedges[k]) { b = k; break; } }
+                        proj_err[b]++;
+                    }
+                }
+
 
                 if (extension.status == SteerStatus::Trapped or extension.status == SteerStatus::Rejected)
                 {
+                    if (settings.dynamic_domain)
+                    {
+                        radii[nearest_index] = (radii[nearest_index] == std::numeric_limits<float>::max())
+                                                   ? settings.radius
+                                                   : std::max(radii[nearest_index] * (1.F - settings.alpha), settings.min_radius);
+                    }
+
                     extend_counter_failed++;
                     // std::cout << extend_counter_failed << ": Steer failed: " << static_cast<int>(extension.status) << " for config "
                             //   << Configuration(buffer_index(nearest_index)) << " toward " << sample
@@ -423,11 +903,17 @@ namespace vamp::planning
                     if (settings.monotone_t and
                         not monotone_chain(buffer_index(nearest_index)[ambient_dimension], extension.waypoints))
                     {
+                        monotone_rejects++;
                         return std::nullopt;
                     }
                 }
 
                 extend_counter_succeeded++;
+                if (settings.dynamic_domain and radii[nearest_index] != std::numeric_limits<float>::max())
+                {
+                    radii[nearest_index] *= (1.F + settings.alpha);
+                }
+
                 // std::cout << extend_counter_succeeded << ": Steer succeeded: " << static_cast<int>(extension.status) << " for config "
                         //   << Configuration(buffer_index(nearest_index)) << " toward " << sample
                         //   << std::endl;
@@ -489,7 +975,7 @@ namespace vamp::planning
                 const std::size_t n_extensions = std::ceil(lp.connect_slack * distance / settings.range);
                 Configuration prior(buffer_index(from_index));
                 std::size_t prior_index = from_index;
-                for (std::size_t i = 0; i < n_extensions and free_index < settings.max_samples; ++i)
+                for (std::size_t i = 0; i < n_extensions and has_room(); ++i)
                 {
                     const float remaining = Traits::distance(prior, target);
                     const bool final_step = (i == n_extensions - 1) or (remaining <= settings.range);
@@ -618,14 +1104,33 @@ namespace vamp::planning
             add_node(start, 0);
             walk(0);
 
-            while (not solution and iter++ < settings.max_iterations and free_index < settings.max_samples)
+            while (not solution and iter++ < settings.max_iterations and has_room())
             {
-                if (const auto added = explore())
+                if (settings.frontier_attempt)
                 {
-                    walk(*added);
-                    if (not solution and goal_free > 0)
+                    att_calls[1]++;
+                    if (const auto front = explore(1))
                     {
-                        join_start_node(*added);
+                        att_ok[1]++;
+                        walk(*front);
+                        if (not solution and goal_free > 0)
+                        {
+                            join_start_node(*front);
+                        }
+                    }
+                }
+
+                att_calls[0]++;
+                if (not solution and has_room())
+                {
+                    if (const auto added = explore(0))
+                    {
+                        att_ok[0]++;
+                        walk(*added);
+                        if (not solution and goal_free > 0)
+                        {
+                            join_start_node(*added);
+                        }
                     }
                 }
 
@@ -674,6 +1179,123 @@ namespace vamp::planning
             result.nanoseconds = vamp::utils::get_elapsed_nanoseconds(start_time);
             result.iterations = iter;
             result.size.emplace_back(tree.size());
+
+            // diagnostics: successful and failed extensions toward samples, and (for a curve Space) how many nodes lie in each
+            // twentieth of the curve (t in [0, 1])
+            result.size.emplace_back(extend_counter_succeeded);
+            result.size.emplace_back(extend_counter_failed);
+            result.size.emplace_back(explore_calls);
+            result.size.emplace_back(sample_project_failures);
+            for (const auto b : pick_bins)
+            {
+                result.size.emplace_back(b);
+            }
+            if constexpr (Traits::extra > 0)
+            {
+                std::array<std::size_t, 20> bins{};
+                for (std::size_t i = 0; i < free_index; ++i)
+                {
+                    const float t = buffer_index(i)[ambient_dimension];
+                    bins[std::min<std::size_t>(19, static_cast<std::size_t>(std::max(0.F, t) * 20.F))]++;
+                }
+
+                for (const auto b : bins)
+                {
+                    result.size.emplace_back(b);
+                }
+
+                // diagnostics for the RB-Y1 (torso joints 3 to 8 of the ambient configuration): for each 0.05 of t up to 0.4,
+                // the number of distinct cells (0.3 rad grid) the nodes' torso values fall in, and each torso joint's min and
+                // max, as (value + 10) * 1e5
+                constexpr std::size_t first_torso = 3;
+                constexpr std::size_t n_torso = 6;
+                if constexpr (ambient_dimension >= first_torso + n_torso)
+                {
+                    for (std::size_t band = 0; band < 8; ++band)
+                    {
+                        std::unordered_set<std::uint64_t> cells;
+                        std::array<float, n_torso> lo;
+                        std::array<float, n_torso> hi;
+                        lo.fill(1e9F);
+                        hi.fill(-1e9F);
+                        for (std::size_t i = 0; i < free_index; ++i)
+                        {
+                            const float *node = buffer_index(i);
+                            const float t = node[ambient_dimension];
+                            if (t < 0.05F * static_cast<float>(band) or t >= 0.05F * static_cast<float>(band + 1))
+                            {
+                                continue;
+                            }
+
+                            std::uint64_t key = 1469598103934665603ULL;
+                            for (std::size_t j = 0; j < n_torso; ++j)
+                            {
+                                const float v = node[first_torso + j];
+                                lo[j] = std::min(lo[j], v);
+                                hi[j] = std::max(hi[j], v);
+                                key = (key ^ static_cast<std::uint64_t>(static_cast<std::int64_t>(std::floor(v / 0.3F)) + 1000)) *
+                                      1099511628211ULL;
+                            }
+
+                            cells.insert(key);
+                        }
+
+                        result.size.emplace_back(cells.size());
+                        for (std::size_t j = 0; j < n_torso; ++j)
+                        {
+                            result.size.emplace_back(
+                                lo[j] > hi[j] ? 0 : static_cast<std::size_t>((lo[j] + 10.F) * 1e5F));
+                            result.size.emplace_back(
+                                lo[j] > hi[j] ? 0 : static_cast<std::size_t>((hi[j] + 10.F) * 1e5F));
+                        }
+                    }
+                }
+            }
+
+            for (const auto c : explore_failures)
+            {
+                result.size.emplace_back(c);
+            }
+
+            result.size.emplace_back(monotone_rejects);
+            for (const auto c : walk_failures)
+            {
+                result.size.emplace_back(c);
+            }
+
+            result.size.emplace_back(walk_steps);
+            for (const auto c : dt_ahead) { result.size.emplace_back(c); }
+            for (const auto c : dt_behind) { result.size.emplace_back(c); }
+            result.size.emplace_back(dd_rejects);
+            for (const auto c : proj_exit) { result.size.emplace_back(c); }
+            for (const auto c : proj_err) { result.size.emplace_back(c); }
+            result.size.emplace_back(proj_iters);
+            for (const auto c : drift_kind) { result.size.emplace_back(c); }
+            for (const auto c : t_all) { result.size.emplace_back(c); }
+            for (const auto c : t_noproj) { result.size.emplace_back(c); }
+            for (const auto c : base_noproj) { result.size.emplace_back(c); }
+            for (const auto c : base_ok) { result.size.emplace_back(c); }
+            for (const auto c : drift_thr) { result.size.emplace_back(c); }
+            for (const auto c : drift_ratio_prev) { result.size.emplace_back(c); }
+            for (const auto c : drift_ratio_start) { result.size.emplace_back(c); }
+            for (const auto c : pick_gap) { result.size.emplace_back(c); }
+            result.size.emplace_back(static_cast<std::size_t>(t_front * 1e6F));
+            result.size.emplace_back(walks_total);
+            result.size.emplace_back(walks_past);
+            result.size.emplace_back(walks_cap);
+            for (const auto c : walk_gap) { result.size.emplace_back(c); }
+            for (const auto c : walk_gap_past) { result.size.emplace_back(c); }
+            result.size.emplace_back(tree_count);
+            for (const auto c : att_calls) { result.size.emplace_back(c); }
+            for (const auto c : att_ok) { result.size.emplace_back(c); }
+            for (const auto c : att_walks) { result.size.emplace_back(c); }
+            for (const auto c : att_walks_past) { result.size.emplace_back(c); }
+            for (const auto &m : fail_mode) { for (const auto c : m) { result.size.emplace_back(c); } }
+            for (const auto &m : drift_step) { for (const auto c : m) { result.size.emplace_back(c); } }
+            result.size.emplace_back(state_dim_cap);
+            result.size.emplace_back(drift_examples.size());
+            for (const auto c : drift_examples) { result.size.emplace_back(c); }
+
             return result;
         }
     };

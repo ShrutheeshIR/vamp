@@ -62,6 +62,7 @@ namespace vamp::planning::constraint
         float step_length{0.F};           // the step the steer asked for (min(distance, range)), in the planner's metric
         float drift_limit{0.F};           // 2 x step_length: the largest allowed distance of the endpoint from the start
         float drift{0.F};                 // the winning lane's distance from the start in joints (set once a lane won)
+        std::array<float, 32> endpoint{}; // the winning lane's projected state (first state_dimension entries), set once a lane won
         int winner_lane{-1};              // the first lane of the perturbed step that projected (-1: none)
         ProjectionDiagnostics projection; // how the steer's own projection (project_any) ended
         // trace of the local path (set when the steer got that far)
@@ -201,7 +202,8 @@ namespace vamp::planning::constraint
             const bool reach = distance < range;
             const float step_length = (reach) ? distance : range;
             diag_.step_length = step_length;
-            diag_.drift_limit = 2.F * step_length;
+            const float drift_basis = std::max(step_length, constraints.settings().drift_floor);
+            diag_.drift_limit = 2.F * drift_basis;
             const auto vector = (target - from) * ((reach) ? 1.F : range / distance);
 
             // Perturb the step length per lane so projection has fallbacks when the exact
@@ -224,7 +226,7 @@ namespace vamp::planning::constraint
 
             renormalize(block);
             const auto winner = on_manifold(
-                block, [&](Block &q) { return constraints.project_any(q, step_length); });
+                block, [&](Block &q) { return constraints.project_any(q, step_length * constraints.settings().drift_scale); });
             diag_.projection = constraints.last_projection();
             if (winner < 0)
             {
@@ -247,8 +249,10 @@ namespace vamp::planning::constraint
                 }
             }
 
+            static_assert(state_dimension <= 32);
+            for (auto j = 0U; j < state_dimension; ++j) { diag_.endpoint[j] = next_arr[j]; }
             diag_.drift = std::sqrt(drift2);
-            if (drift2 > 4.F * step_length * step_length)
+            if (drift2 > 4.F * drift_basis * drift_basis)
             {
                 diag_.failure = SteerFailure::Drift;
                 return {SteerStatus::Trapped, chain_};

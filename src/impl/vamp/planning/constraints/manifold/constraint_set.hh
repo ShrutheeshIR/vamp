@@ -29,6 +29,10 @@ namespace vamp::planning::constraint
         ProjectionExit exit{ProjectionExit::Converged};
         std::size_t iterations{0};  // steps taken
         float best_error{0.F};      // the smallest squared error over the lanes at the end
+        float drift_threshold{0.F};    // Drifted: the guard's threshold (weighted joint distance)
+        float drift_move_prev{0.F};    // Drifted: the smallest over the lanes of the weighted joint move of the last iteration
+        float drift_move_start{0.F};   // Drifted: the smallest over the lanes of the weighted joint distance from the projection's start
+        bool drift_from_start{false};  // Drifted: the guard tripped on the distance from the projection's start (else from the previous iterate)
     };
 
     // Runtime collection of constraints defining a manifold, with the iterative-projection
@@ -451,6 +455,8 @@ namespace vamp::planning::constraint
             Block prev;
 
             auto exit = ProjectionExit::MaxIterations;
+            bool from_start = false;
+            std::array<float, 3> drift_info{0.F, 0.F, 0.F};
             std::size_t iterations = 0;
             auto dist = squared_error(q);
             for (std::size_t i = 0; i < settings_.max_iterations and not converged(dist); ++i)
@@ -467,9 +473,23 @@ namespace vamp::planning::constraint
                     break;
                 }
 
-                if (drifted(metric_squared_distance(q, prev)) or drifted(metric_squared_distance(q, start)))
+                const auto d2_prev = metric_squared_distance(q, prev);
+                const auto d2_start = metric_squared_distance(q, start);
+                const bool drift_prev = settings_.drift_check_prev and drifted(d2_prev);
+                const bool drift_start = settings_.drift_check_start and drifted(d2_start);
+                if (drift_prev or drift_start)
                 {
                     exit = ProjectionExit::Drifted;
+                    from_start = drift_start and not drift_prev;
+                    float mp = d2_prev[{0, 0}];
+                    float ms = d2_start[{0, 0}];
+                    for (auto lane = 1U; lane < rake; ++lane)
+                    {
+                        mp = std::min(mp, d2_prev[{0, lane}]);
+                        ms = std::min(ms, d2_start[{0, lane}]);
+                    }
+
+                    drift_info = {std::sqrt(threshold2), std::sqrt(mp), std::sqrt(ms)};
                     break;
                 }
             }
@@ -485,7 +505,7 @@ namespace vamp::planning::constraint
                 best = std::min(best, dist[{0, lane}]);
             }
 
-            last_projection_ = {exit, iterations, best};
+            last_projection_ = {exit, iterations, best, drift_info[0], drift_info[1], drift_info[2], from_start};
             return dist;
         }
 

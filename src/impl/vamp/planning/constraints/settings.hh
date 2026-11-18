@@ -28,6 +28,16 @@ namespace vamp::planning::constraint
         // Convergence threshold on the squared constraint-violation error.
         float tolerance = 1e-6F;
 
+        // Multiplies the step length the constrained local planner hands a steer's projection as its drift bound (the
+        // guard trips beyond 2 x step length x drift_scale).
+        float drift_scale = 1.F;
+        // Experiment: the drift check after a steer's projection uses max(step_length, drift_floor) in place of step_length, so a
+        // short step (a sample close to the node) is not held to a tiny limit. 0 (the default) is the unchanged check.
+        float drift_floor = 0.F;
+        // Experiment: if false, the previous-iterate drift check is skipped (only the from-start check remains).
+        bool drift_check_prev = true;
+        bool drift_check_start = true;
+
         // Iteration cap for a single projection.
         std::size_t max_iterations = 15;
 

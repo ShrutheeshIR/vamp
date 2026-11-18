@@ -13,6 +13,14 @@ namespace vamp::planning
     // configuration (dynamic_domain, radius, alpha, min_radius, balance, tree_ratio, start_tree_first) are not used.
     struct TaskSpaceRRTCSettings : RRTCSettings
     {
+        // RRTC's dynamic domain, off by default here (RRTCSettings turns it on): a node whose extensions toward samples
+        // failed only accepts samples within its own radius (`radius` after the first failure, shrinking by (1 - alpha)
+        // per failure down to `min_radius`, growing by (1 + alpha) per success), in the planner's metric.
+        TaskSpaceRRTCSettings()
+        {
+            dynamic_domain = false;
+        }
+
         // Steps taken by the goal-directed walk that follows each exploration step.
         std::size_t max_greedy_steps = 20;
 
@@ -45,6 +53,66 @@ namespace vamp::planning
         // advance more slowly per step (about range / w when far from the goal), a smaller one faster. 0 (the default)
         // is 1 / the number of joints: the whole curve costs as much as one joint's rad on average.
         float parameter_weight = 0.;
+
+        // For a Space with a curve parameter t: the weight of t in the nearest-neighbor query alone, in rad per unit of t.
+        // Negative (the default) is the same as parameter_weight. The step length and the goal walk always measure with
+        // parameter_weight, so a large parameter_weight keeps a step close to the curve while a small nn_parameter_weight lets a
+        // random sample pick the node with the most similar joints at any t, not the node nearest in t (with a large weight,
+        // samples ahead of the tree all extend its frontier).
+        float nn_parameter_weight = -1.F;
+
+        // For a Space with a curve parameter t: if positive, an exploration step is decoupled. The joints move toward the sample by
+        // at most `range` (measured in the joints alone, the joint weights but no t), and t moves toward the sample's t by at most
+        // this much, instead of every coordinate moving the same fraction of the way (range / distance). 0 (the default) keeps
+        // the shared fraction. The goal-directed walk is unchanged.
+        float t_step_cap = 0.F;
+
+        // Experiment, off by default (1 keeps every node): the goal-directed walk adds every node it creates to the path
+        // structure (so a solution path stays continuous), but only this fraction of them to the nearest-neighbor tree, which
+        // is the part `max_samples` bounds. After a walk ends, node k of its n nodes is kept with probability
+        // min(1, 2 f k / (n + 1)) (later nodes more likely) and the last is always kept. The buffer holds every node
+        // (up to 2 / f x max_samples).
+        float walk_keep_fraction = 1.F;
+
+        // Experiment, off by default: every iteration makes two extension attempts toward the same random sample. The first
+        // starts at the frontier (the node with the highest t, no nearest-neighbor query), the second at the nearest node
+        // as usual (set nn_parameter_weight small for the nearest in the joints alone). Needs t_step_cap > 0 (the decoupled
+        // step), since the frontier's distance to the sample is not measured. Each successful attempt is followed by a walk.
+        bool frontier_attempt = false;
+
+        // With frontier_attempt: if positive, the first attempt starts at a node drawn by its t instead of always the
+        // highest-t node: a t level is drawn with probability proportional to exp(-(t_front - t) / tau) over the non-empty
+        // levels (0.005 wide), then a node of that level uniformly. 0 (the default) always takes the frontier node.
+        float frontier_tau = 0.F;
+
+        // With frontier_attempt (and frontier_tau = 0): if above 1, the first attempt starts at one of the `frontier_pool`
+        // nodes with the highest t, chosen uniformly. 0 or 1: always the highest-t node.
+        std::size_t frontier_pool = 0;
+
+        // Debugging, off by default: keep up to this many examples of steers that failed the drift check (every 50th such
+        // failure of each kind), each with the node's state, the step's target state and the projected state.
+        std::size_t capture_drift = 0;
+
+        // With t_step_cap (the decoupled step), experiment, off by default: the planar x and y of a mobile base (the joints
+        // with a metric weight below 0.5) do not move toward the sample in an exploration step: they stay at the node's
+        // values and are left out of the step's distance. The projection still moves them as the curve requires.
+        bool step_fix_base_xy = false;
+
+        // With t_step_cap, experiment, off by default (0): the planar x and y of a mobile base take a step of their own in an
+        // exploration step: a random direction in the plane and a length drawn log-uniformly in [base_step_min, base_step_max]
+        // (metres), so most steps are short (about the distance the hands move for the t step) and some are long enough to
+        // reorient. These joints are left out of the step's distance, as with step_fix_base_xy.
+        float base_step_min = 0.F;
+        float base_step_max = 0.F;
+
+        // With t_step_cap, experiment, off by default: the base x and y step with the hands. Their step is the displacement of
+        // the centroid of the reference hands' xy between the node's t and the step's t (feed-forward, read from `ref_xy`
+        // at the parameters `ref_t`, linearly interpolated) plus an exploration term: the difference between the base-minus-
+        // hands offsets of two random nodes, so the base reorients by about as much as the nodes' offsets already differ.
+        // Needs ref_t (L values, increasing) and ref_xy (2 L values). These joints are left out of the step's distance.
+        bool base_feedforward = false;
+        std::vector<float> ref_t;
+        std::vector<float> ref_xy;
 
         // For planning in a CurveSpace (the Python task_space_rrtc_curve): after a solve, insert states until consecutive
         // ones are at most this far apart in the joints (infinity norm, rad), each interpolated in (q, t), projected back
